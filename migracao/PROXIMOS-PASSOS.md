@@ -12,6 +12,11 @@
 | Sistema (app) e migrações 0005–0008 | branch `claude/trusting-tesla-e5u50x` (sessão "Desenvolvimento do sistema", `session_01RxZddnY3mA77HY8MtevrQ7`) |
 | Banco | Supabase "secreto" `ogflxjolbwrzayjtxvhj` (sa-east-1) |
 
+## 🔀 Levar este trabalho para o `main`
+- A sessão de desenvolvimento avisou em 14/11/2026 que a dona definiu o `main` como versão oficial: toda mudança entra por PR.
+- O PR [anacbertolin/secreto#2](https://github.com/anacbertolin/secreto/pull/2) leva o sistema para o `main`.
+- **Pendente, com confirmação da dona:** abrir um PR da branch `claude/beautiful-meitner-8eu6jk` para o `main` **depois** que o PR #2 entrar. Antes, atualizar a branch com o `main` e resolver o conflito no CLAUDE.md, mantendo as duas seções.
+
 ## ✅ Já feito
 1. **Banco (migração `migracao_staging`, aplicada):**
    - Schema privado `legacy_micrologos` com as tabelas `cargas`, `mapa_ids` (de-para legacy_id → uuid), `ocorrencias` e `fusoes_pacientes`.
