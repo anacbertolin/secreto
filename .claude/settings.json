@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "mcp__Supabase",
-      "mcp__Railway"
+      "mcp__Supabase__*",
+      "mcp__Railway",
+      "mcp__Railway__*"
     ]
   }
 }
