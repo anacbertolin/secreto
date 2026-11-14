@@ -25,3 +25,13 @@
   - Rodar `get_advisors` (security e performance) depois de toda mudança de estrutura.
   - Manter dados no Brasil (sa-east-1).
 - Mudanças de estrutura do banco: usar migrações (`apply_migration`), nunca SQL solto para DDL.
+
+## Sistema (app web) — `app/`
+- React + Vite + TypeScript, servido como site estático (`npm run build` → `npm start`) no Railway (serviço `secreto`, pasta raiz `/app`).
+- Fala direto com o Supabase usando só a chave **publicável**; quem protege os dados são as regras RLS.
+- Login: e-mail + senha (Supabase Auth). Só e-mails cadastrados e ativos em `profissionais` conseguem criar conta
+  (gatilho `somente_equipe` em `auth.users`). Senhas temporárias são criadas pelo admin na tela Equipe
+  (função Edge `equipe-acesso`); a pessoa troca no primeiro acesso.
+- Identidade visual: Consumed · Clínica de Olhos (logos em `app/public`, dados da clínica em `app/src/lib/marca.ts`).
+- Módulos v1: Agenda, Recepção, Pacientes, Consultório/Prontuário (PEP oftalmológico), Exames e laudos, Cadastros.
+- Arquivos de exames: bucket privado `exames` no Storage (até 50 MB por arquivo).
