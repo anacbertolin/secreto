@@ -25,3 +25,8 @@
   - Rodar `get_advisors` (security e performance) depois de toda mudança de estrutura.
   - Manter dados no Brasil (sa-east-1).
 - Mudanças de estrutura do banco: usar migrações (`apply_migration`), nunca SQL solto para DDL.
+
+## Migração do Micrologos
+- Roteiro técnico: `migracao/README.md` · Guia para a dona: `migracao/GUIA-PASSO-A-PASSO.md`.
+- Dados crus entram no schema privado `legacy_micrologos` (migração `0100_migracao_staging`); de-para em `legacy_micrologos.mapa_ids`.
+- **Nunca** commitar arquivos exportados (dados de pacientes). Ficam fora do repositório e no Storage `migracao-micrologos`.
