@@ -36,7 +36,11 @@
     (entradas em `site/ferramentas/entrada/`). Use se o site original mudar antes da troca de DNS.
 - **Publicado em:** https://site-production-8c641078.up.railway.app (Railway, serviço `site`,
   região us-east4, Root Directory `/site`, healthcheck `/`).
-  - O serviço `site` publica a partir do branch **`main`** (deploy automático a cada push no `main`).
+  - Fonte do serviço `site` (conferido em 2026-11-14 15h): branch **`claude/youthful-cori-erycnr`**,
+    de OUTRA sessão, que partiu desta cópia e trocou a marca para "Hospital de Olhos da Baixada".
+    Não trocar a fonte do serviço sem combinar com a dona (trocar desfaria a marca nova no ar).
+  - Há várias sessões trabalhando em paralelo em branches `claude/*`. Antes de mexer no site ou no
+    Railway, rode `git ls-remote --heads origin` e veja a fonte atual do serviço (`describe-service`).
 - **Supabase:** tabela `public.site_mensagens` (migração `site_mensagens`) guarda o que visitantes
   enviam. RLS ligado; `anon`/`authenticated` só podem INSERIR (sem leitura). Chave publicável
   (pública) está no `site-copia.js`. A dona vê as mensagens no painel: Table Editor → site_mensagens.
@@ -52,6 +56,8 @@
 
 ## Próximos passos (pendentes)
 1. Dona comparar o site provisório com o original e aprovar.
+1b. Juntar ao `main` o branch da outra sessão do site (`claude/youthful-cori-erycnr`, marca nova) e
+    então apontar o serviço `site` para `main` — só com o aval da dona.
 2. Troca de DNS — antes, verificar com a dona:
    - se os e-mails `@consumedolhos.com.br` rodam na Hostinger (manter registros MX/e-mail intactos);
    - login do registro do domínio (provavelmente Registro.br);
