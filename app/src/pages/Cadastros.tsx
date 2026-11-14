@@ -19,7 +19,7 @@ export function Equipe() {
       </div>
       <Aviso tipo="info">
         <b>Recepção:</b> cadastro, agenda e convênios (não vê prontuário). <b>Enfermagem/Técnico:</b> pré-consulta, refração, exames e leitura do prontuário.
-        <b> Médico:</b> tudo do prontuário, laudos e receitas. <b>Administração:</b> equipe e cadastros (não vê prontuário).
+        <b> Médico:</b> tudo do prontuário, laudos e receitas. <b>Faturamento:</b> contas, guias, lotes e glosas (não vê prontuário). <b>Administração:</b> equipe e cadastros (não vê prontuário).
       </Aviso>
       <Aviso>{erro}</Aviso>
       {carregando ? <Carregando /> : (
@@ -54,7 +54,7 @@ export function Equipe() {
 function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional>; aoFechar: () => void; aoSalvar: () => void }) {
   const [f, setF] = useState<Record<string, string | boolean>>({
     nome: p.nome ?? "", email: p.email ?? "", funcao: p.funcao ?? "recepcao", conselho: p.conselho ?? "", numero_conselho: p.numero_conselho ?? "",
-    uf_conselho: p.uf_conselho ?? "", especialidade: p.especialidade ?? "", rqe: p.rqe ?? "", ativo: p.ativo ?? true,
+    uf_conselho: p.uf_conselho ?? "", especialidade: p.especialidade ?? "", rqe: p.rqe ?? "", cbo: (p as { cbo?: string | null }).cbo ?? "", ativo: p.ativo ?? true,
   });
   const [erro, setErro] = useState("");
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
@@ -64,7 +64,8 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
     if (!String(f.nome).trim()) return setErro("Informe o nome.");
     if (f.ativo && !email.includes("@")) return setErro("Quem está ativo precisa de e-mail (é o login no sistema).");
     const v: Record<string, unknown> = { ...f, email: email || null, nome: String(f.nome).trim() };
-    for (const k of ["conselho", "numero_conselho", "uf_conselho", "especialidade", "rqe"]) v[k] = String(v[k]).trim() || null;
+    for (const k of ["conselho", "numero_conselho", "uf_conselho", "especialidade", "rqe", "cbo"]) v[k] = String(v[k] ?? "").trim() || null;
+    if (f.funcao === "medico" && !v.cbo) v.cbo = "225265";
     if (v.uf_conselho) v.uf_conselho = String(v.uf_conselho).toUpperCase().slice(0, 2);
     if (f.funcao === "medico" && !v.conselho) v.conselho = "CRM";
     const r = p.id ? await supabase.from("profissionais").update(v).eq("id", p.id) : await supabase.from("profissionais").insert(v);
@@ -90,6 +91,7 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
             <Campo rotulo="Número"><input value={f.numero_conselho as string} onChange={set("numero_conselho")} /></Campo>
             <Campo rotulo="UF do conselho"><input value={f.uf_conselho as string} onChange={set("uf_conselho")} maxLength={2} placeholder="RJ" /></Campo>
             {f.funcao === "medico" && <Campo rotulo="RQE"><input value={f.rqe as string} onChange={set("rqe")} /></Campo>}
+            {f.funcao === "medico" && <Campo rotulo="CBO (para as guias)"><input value={f.cbo as string} onChange={set("cbo")} placeholder="225265 (oftalmologista)" /></Campo>}
             <Campo rotulo="Especialidade / área" className="inteiro"><input value={f.especialidade as string} onChange={set("especialidade")} placeholder="Ex.: Oftalmologia — Retina" /></Campo>
           </>
         )}
@@ -156,7 +158,7 @@ function CadastroSimples(props: {
     <div>
       <div className="cabecalho">
         <div><h1>{props.titulo}</h1><p className="sub" style={{ margin: 0 }}>{props.sub}</p></div>
-        <button className="primario" onClick={() => setEdit(Object.fromEntries(props.campos.map((c) => [c.k, c.tipo === "sim_nao" ? true : c.opcoes?.[0]?.[0] ?? ""])))}>➕ Novo</button>
+        <button className="primario" onClick={() => setEdit(Object.fromEntries(props.campos.map((c) => [c.k, c.tipo === "sim_nao" ? c.k !== "exige_senha" : c.tipo === "numero" ? (c.k === "dias_retorno" ? 30 : 15) : c.opcoes?.[0]?.[0] ?? ""])))}>➕ Novo</button>
       </div>
       <Aviso>{erro}</Aviso>
       {carregando ? <Carregando /> : (
@@ -204,8 +206,17 @@ export function Convenios() {
   return (
     <>
       <CadastroSimples titulo="Convênios" sub="Convênios aceitos pela clínica e os planos de cada um" tabela="convenios"
-        campos={[{ k: "nome", rotulo: "Nome do convênio" }, { k: "registro_ans", rotulo: "Registro ANS" }]}
-        colunas={[{ k: "nome", rotulo: "Convênio" }, { k: "registro_ans", rotulo: "Registro ANS" }]}
+        campos={[
+          { k: "nome", rotulo: "Nome do convênio" }, { k: "registro_ans", rotulo: "Registro ANS da operadora" },
+          { k: "codigo_prestador", rotulo: "Código da clínica neste convênio (código do prestador)" },
+          { k: "dias_retorno", rotulo: "Prazo de retorno sem cobrança (dias)", tipo: "numero" },
+          { k: "exige_senha", rotulo: "Exige senha de autorização para consulta", tipo: "sim_nao" },
+          { k: "observacoes_faturamento", rotulo: "Regras de faturamento (aparecem na conta)" },
+        ]}
+        colunas={[
+          { k: "nome", rotulo: "Convênio" }, { k: "registro_ans", rotulo: "Registro ANS" }, { k: "codigo_prestador", rotulo: "Cód. prestador" },
+          { k: "exige_senha", rotulo: "Senha", fmt: (v) => (v ? "Exige" : "—") },
+        ]}
         acaoExtra={(d) => <button className="mini" onClick={() => setPlanosDe({ id: d.id as string, nome: d.nome as string })}>Planos</button>} />
       {planosDe && <PlanosConvenio convenio={planosDe} aoFechar={() => setPlanosDe(null)} />}
     </>

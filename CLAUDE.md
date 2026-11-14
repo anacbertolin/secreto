@@ -100,7 +100,10 @@
   (gatilho `somente_equipe` em `auth.users`). Senhas temporárias são criadas pelo admin na tela Equipe
   (função Edge `equipe-acesso`); a pessoa troca no primeiro acesso.
 - Identidade visual: Consumed · Clínica de Olhos (logos em `app/public`, dados da clínica em `app/src/lib/marca.ts`).
-- Módulos v1: Agenda, Recepção, Pacientes, Consultório/Prontuário (PEP oftalmológico), Exames e laudos, Cadastros.
+- Módulos v1: Agenda, Recepção, Pacientes, Consultório/Prontuário (PEP oftalmológico), Exames e laudos, Cadastros,
+  **Faturamento** (contas/guias, lotes, glosas, produção; migrações 0009–0010; função de equipe `faturamento`).
+- Testes de tela com login: NÃO publicar a função `equipe-acesso` com chave mestra/bootstrap (o sistema de segurança
+  bloqueia e está certo). Peça à dona um acesso de teste criado por ela na tela Equipe.
 - Arquivos de exames: bucket privado `exames` no Storage (até 50 MB por arquivo).
 - Importação do Micrologos (migração 0008): `prontuario_legado` (PEP antigo, só leitura, aparece na linha do tempo),
   `paciente_documentos` + bucket privado `documentos` (SHA-256), `convenio_planos` + `plano_id`,

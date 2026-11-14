@@ -147,3 +147,38 @@ CEP 26255-140, tel. (21) 2667-0532. **O CNPJ ainda falta**: a dona precisa infor
 - PR #2 juntou o sistema ao `main` (merge em 14/11). O serviço `sistema` do Railway passou a publicar a partir do `main`.
 - **Autorização permanente da dona:** Claude aprova e faz o merge dos PRs e o deploy sozinho, sem pedir
   (detalhes do fluxo no CLAUDE.md, seção "Como as mudanças entram").
+
+---
+
+## 14/11/2026 (noite) — Faturamento de convênios v1
+### O que entrou
+- **Migrações 0009 e 0010** (aplicadas): nova função de equipe `faturamento` (vê contas, guias, lotes e o cadastro
+  dos pacientes, **não** vê prontuário); `procedimentos` (código TUSS, tabela 22/19/20/18/00/98), `precos` (por
+  convênio e plano, com data de vigência; convênio vazio = particular), `contas` (cada conta = uma guia: consulta,
+  SP/SADT ou particular), `conta_itens` (com glosa e recurso por item) e `lotes`.
+  Convênios ganharam código do prestador, "exige senha", prazo de retorno e regras de faturamento.
+  Profissionais ganharam `cbo` (padrão 225265 para médico).
+- **Contas automáticas:** na chegada do paciente (consulta → item padrão "Consulta em consultório" TUSS 10101012 com
+  o preço da tabela); exame realizado → item numa guia SP/SADT separada (mesmo dia/paciente/convênio).
+  Retorno não gera conta. Falta/cancelamento cancela a conta ainda aberta.
+- **Travas:** conta faturada/paga/cancelada não muda itens (só glosa e recurso); cancelar exige motivo; conta
+  cancelada não reabre.
+- **Telas:** Faturamento (Contas com pendências, Lotes, Glosas e recursos, Produção por convênio e por médico),
+  detalhe da conta (dados da guia, itens, receber particular), detalhe do lote (enviar com protocolo, registrar
+  pagamento, planilha CSV), Procedimentos e preços (com vínculo tipo de exame → procedimento), impressão de guia
+  de consulta / SP-SADT (espelho para conferência e assinatura), recibo particular e relação de guias do lote.
+  Recepção pede a senha de autorização na chegada quando o convênio exige.
+### Testes
+- Regras do banco testadas na cópia local (Postgres 16): conta automática com preço, SP/SADT separada para exame,
+  enfermagem e médico sem acesso às contas, faturamento sem acesso ao prontuário, trava após faturar, glosa
+  permitida depois de faturar, cancelamento exige motivo, falta cancela conta aberta. Corrigido um erro na trava
+  (a glosa era bloqueada por causa do campo calculado `valor_total`).
+- **Telas não testadas no navegador com login real.** Criar usuários de teste exigia publicar a função de senhas
+  com uma "chave mestra" temporária; o sistema de segurança bloqueou (com razão). Os 3 usuários TESTE criados para
+  isso ficaram **desativados**, sem senha (não foram apagados para não mexer na auditoria).
+  Próximo teste de tela: a dona cria um acesso de teste pela tela Equipe (🔑) ou testa ela mesma.
+### Ainda não feito no faturamento (precisa de informação da clínica ou dos convênios)
+- Arquivo XML TISS para envio eletrônico (cada operadora tem versão e regras próprias; validar com o convênio).
+- Repasse médico (faltam as regras por médico).
+- Integração com portal/Orizon, SUS (BPA/APAC), DMED, NFS-e.
+- Tabela TUSS completa e preços: virão da importação do Micrologos (avisar a sessão de migração).

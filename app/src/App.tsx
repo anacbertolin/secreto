@@ -14,19 +14,23 @@ import Atendimento from "./pages/Atendimento";
 import Exames, { ExameDetalhe } from "./pages/Exames";
 import Imprimir from "./pages/Imprimir";
 import { Equipe, Convenios, Locais, Horarios, CatalogoExames, Modelos } from "./pages/Cadastros";
+import Faturamento, { ContaDetalhe, LoteDetalhe } from "./pages/Faturamento";
+import Procedimentos from "./pages/Procedimentos";
 
 interface ItemMenu { para: string; rotulo: string; icone: string; funcoes?: Funcao[]; grupo?: string }
 
 const MENU: ItemMenu[] = [
   { para: "/", rotulo: "Início", icone: "🏠" },
   { para: "/agenda", rotulo: "Agenda", icone: "📅" },
-  { para: "/recepcao", rotulo: "Recepção", icone: "🛎️" },
+  { para: "/recepcao", rotulo: "Recepção", icone: "🛎️", funcoes: ["medico", "enfermagem", "recepcao", "admin"] },
   { para: "/pacientes", rotulo: "Pacientes", icone: "👤" },
   { para: "/consultorio", rotulo: "Consultório", icone: "🩺", funcoes: ["medico", "enfermagem"] },
   { para: "/exames", rotulo: "Exames e laudos", icone: "🔬", funcoes: ["medico", "enfermagem"] },
+  { para: "/faturamento", rotulo: "Faturamento", icone: "🧾", funcoes: ["faturamento", "recepcao", "admin"] },
   { grupo: "Cadastros", para: "/cadastros/equipe", rotulo: "Equipe", icone: "👥", funcoes: ["admin"] },
   { para: "/cadastros/horarios", rotulo: "Horários e bloqueios", icone: "🕒", funcoes: ["recepcao", "admin"] },
-  { para: "/cadastros/convenios", rotulo: "Convênios", icone: "💳", funcoes: ["recepcao", "admin"] },
+  { para: "/cadastros/convenios", rotulo: "Convênios", icone: "💳", funcoes: ["recepcao", "admin", "faturamento"] },
+  { para: "/cadastros/procedimentos", rotulo: "Procedimentos e preços", icone: "💲", funcoes: ["faturamento", "admin"] },
   { para: "/cadastros/locais", rotulo: "Salas e consultórios", icone: "🚪", funcoes: ["recepcao", "admin"] },
   { para: "/cadastros/exames", rotulo: "Tipos de exame", icone: "📋", funcoes: ["recepcao", "admin"] },
   { para: "/cadastros/modelos", rotulo: "Modelos de texto", icone: "📝", funcoes: ["medico", "enfermagem"] },
@@ -110,9 +114,13 @@ export default function App() {
           <Route path="/atendimento/:id" element={<Protegida funcoes={["medico", "enfermagem"]}><Atendimento /></Protegida>} />
           <Route path="/exames" element={<Protegida funcoes={["medico", "enfermagem"]}><Exames /></Protegida>} />
           <Route path="/exames/:id" element={<Protegida funcoes={["medico", "enfermagem"]}><ExameDetalhe /></Protegida>} />
+          <Route path="/faturamento" element={<Protegida funcoes={["faturamento", "recepcao", "admin"]}><Faturamento /></Protegida>} />
+          <Route path="/faturamento/conta/:id" element={<Protegida funcoes={["faturamento", "recepcao", "admin"]}><ContaDetalhe /></Protegida>} />
+          <Route path="/faturamento/lote/:id" element={<Protegida funcoes={["faturamento", "admin"]}><LoteDetalhe /></Protegida>} />
+          <Route path="/cadastros/procedimentos" element={<Protegida funcoes={["faturamento", "admin"]}><Procedimentos /></Protegida>} />
           <Route path="/cadastros/equipe" element={<Protegida funcoes={["admin"]}><Equipe /></Protegida>} />
           <Route path="/cadastros/horarios" element={<Protegida funcoes={["recepcao", "admin"]}><Horarios /></Protegida>} />
-          <Route path="/cadastros/convenios" element={<Protegida funcoes={["recepcao", "admin"]}><Convenios /></Protegida>} />
+          <Route path="/cadastros/convenios" element={<Protegida funcoes={["recepcao", "admin", "faturamento"]}><Convenios /></Protegida>} />
           <Route path="/cadastros/locais" element={<Protegida funcoes={["recepcao", "admin"]}><Locais /></Protegida>} />
           <Route path="/cadastros/exames" element={<Protegida funcoes={["recepcao", "admin"]}><CatalogoExames /></Protegida>} />
           <Route path="/cadastros/modelos" element={<Protegida funcoes={["medico", "enfermagem"]}><Modelos /></Protegida>} />

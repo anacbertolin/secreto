@@ -1,7 +1,10 @@
 import { supabase } from "./supabase";
 import type { Profissional } from "./auth";
 
-export interface Convenio { id: string; nome: string; registro_ans: string | null; ativo: boolean }
+export interface Convenio {
+  id: string; nome: string; registro_ans: string | null; ativo: boolean;
+  codigo_prestador?: string | null; exige_senha?: boolean; dias_retorno?: number; observacoes_faturamento?: string | null;
+}
 export interface Local { id: string; nome: string; tipo: string; ativo: boolean }
 export interface Horario {
   id: string; profissional_id: string; dia_semana: number; hora_inicio: string; hora_fim: string;
@@ -65,4 +68,12 @@ export function filtroBuscaPaciente<Q extends { or: (f: string) => Q; eq: (c: st
   if (/^\d{1,7}$/.test(t)) return q.or(`numero_prontuario.eq.${Number(t)},prontuario_anterior.eq.${t}`);
   if (n.length >= 8 && /^[\d()\-\s]+$/.test(t)) return q.or(`telefone.ilike.%${n}%,prontuario_anterior.eq.${n}`);
   return q.or(`nome.ilike.%${limpo}%,nome_social.ilike.%${limpo}%,prontuario_anterior.eq.${limpo.trim()}${comMae ? `,nome_mae.ilike.%${limpo}%` : ""}`);
+}
+
+export interface Procedimento { id: string; codigo: string | null; tabela: string; descricao: string; tipo: string; padrao_consulta: boolean; ativo: boolean }
+
+export async function listaProcedimentos(): Promise<Procedimento[]> {
+  const { data, error } = await supabase.from("procedimentos").select("*").eq("ativo", true).order("descricao");
+  if (error) throw error;
+  return (data ?? []) as Procedimento[];
 }

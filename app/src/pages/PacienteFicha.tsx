@@ -7,6 +7,7 @@ import { HistoricoSaude } from "../components/Clinico";
 import { ItemLegado, DocumentosPaciente, type RegistroLegado } from "../components/Legado";
 import { NovoAgendamento } from "../components/AgendamentoModais";
 import { listaProfissionais, listaConvenios, listaLocais, nomePor, type Agendamento } from "../lib/dados";
+import { STATUS_CONTA, TIPO_GUIA, fmtMoeda } from "../lib/util";
 import {
   STATUS_AGENDA, STATUS_EXAME, TIPOS_AGENDA, fmtCPF, fmtData, fmtDataHora, fmtHora, fmtTelefone, idade, nomeExibicao,
 } from "../lib/util";
@@ -80,6 +81,7 @@ export default function PacienteFicha() {
         {clinico && <button className={aba === "exames" ? "ativa" : ""} onClick={() => setAba("exames")}>Exames</button>}
         {clinico && <button className={aba === "documentos" ? "ativa" : ""} onClick={() => setAba("documentos")}>Documentos</button>}
         <button className={aba === "agenda" ? "ativa" : ""} onClick={() => setAba("agenda")}>Agendamentos</button>
+        {pode("recepcao", "faturamento", "admin") && <button className={aba === "contas" ? "ativa" : ""} onClick={() => setAba("contas")}>Contas</button>}
         <button className={aba === "dados" ? "ativa" : ""} onClick={() => setAba("dados")}>Dados cadastrais</button>
       </div>
 
@@ -110,6 +112,7 @@ export default function PacienteFicha() {
           {ags.dados?.length === 0 && <div className="vazio">Nenhum agendamento.</div>}
         </div>
       )}
+      {aba === "contas" && <ContasPaciente pacienteId={id!} convenios={base.dados?.convenios ?? []} />}
       {aba === "dados" && <DadosCadastrais p={p} convenio={nomePor(base.dados?.convenios, p.convenio_id as string)} />}
 
       {agendar && base.dados && (
@@ -215,6 +218,33 @@ function ExamesPaciente({ pacienteId }: { pacienteId: string }) {
         </tbody>
       </table>
       {dados?.length === 0 && <div className="vazio">Nenhum exame.</div>}
+    </div>
+  );
+}
+
+function ContasPaciente({ pacienteId, convenios }: { pacienteId: string; convenios: { id: string; nome: string }[] }) {
+  const nav = useNavigate();
+  const { dados, erro } = useCarregar(async () => ok(
+    await supabase.from("contas").select("id, data_atendimento, convenio_id, tipo_guia, numero_guia_prestador, valor_total, valor_pago, status")
+      .eq("paciente_id", pacienteId).order("data_atendimento", { ascending: false }),
+  ) as { id: string; data_atendimento: string; convenio_id: string | null; tipo_guia: string; numero_guia_prestador: string; valor_total: number; valor_pago: number | null; status: string }[], [pacienteId]);
+  return (
+    <div className="painel rolagem">
+      <Aviso>{erro}</Aviso>
+      <table className="tabela">
+        <thead><tr><th>Data</th><th>Convênio</th><th>Guia</th><th style={{ textAlign: "right" }}>Valor</th><th>Situação</th></tr></thead>
+        <tbody>
+          {(dados ?? []).map((c) => (
+            <tr key={c.id} className="clicavel" onClick={() => nav(`/faturamento/conta/${c.id}`)}>
+              <td>{fmtData(c.data_atendimento)}</td><td>{nomePor(convenios, c.convenio_id) || "Particular"}</td>
+              <td>{TIPO_GUIA[c.tipo_guia]} nº {c.numero_guia_prestador}</td>
+              <td style={{ textAlign: "right" }}>{fmtMoeda(c.valor_total)}</td>
+              <td><Etiqueta cor={STATUS_CONTA[c.status].cor}>{STATUS_CONTA[c.status].rotulo}</Etiqueta></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {dados?.length === 0 && <div className="vazio">Nenhuma conta.</div>}
     </div>
   );
 }
