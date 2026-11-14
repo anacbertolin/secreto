@@ -21,3 +21,13 @@ Ela roda no Railway, no serviço **site**.
   Se refizer a cópia do site, rode de novo: `python3 ferramentas/trocar_marca.py public`.
 - Continuam com o nome antigo de propósito (só mudam quando forem trocados fora do site):
   o endereço consumedolhos.com.br, o Instagram/Facebook e a busca do mapa do Google.
+
+## Imagens mais leves
+- `ferramentas/otimizar_imagens.py public` reduz fotos grandes (máx. 1920 px), recomprime e cria
+  uma versão WebP ao lado de cada imagem (`foto.jpg.webp`). O `Caddyfile` entrega o WebP a quem aceita;
+  os endereços nas páginas não mudam.
+
+## Ordem para refazer o site do zero
+1. `python3 ferramentas/preparar_copia.py <download>/consumedolhos.com.br ferramentas/entrada public`
+2. `python3 ferramentas/trocar_marca.py public`
+3. `python3 ferramentas/otimizar_imagens.py public`

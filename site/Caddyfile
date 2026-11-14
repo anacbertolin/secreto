@@ -29,6 +29,17 @@
 		Strict-Transport-Security "max-age=31536000"
 		-Server
 	}
+	# Imagens: se o navegador aceita WebP e existe "foto.jpg.webp" ao lado, entrega a versão leve.
+	# (criadas por ferramentas/otimizar_imagens.py; o endereço na página não muda)
+	@webp {
+		header Accept *image/webp*
+		path *.jpg *.jpeg *.png *.JPG *.JPEG *.PNG
+		file {path}.webp
+	}
+	rewrite @webp {path}.webp
+	@imagem path *.jpg *.jpeg *.png *.JPG *.JPEG *.PNG *.webp
+	header @imagem Vary Accept
+
 	header /wp-content/* Cache-Control "public, max-age=2592000"
 	header /wp-includes/* Cache-Control "public, max-age=2592000"
 

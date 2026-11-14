@@ -34,6 +34,10 @@
     (índice `/busca/indice.json`) e envio de comentários do blog + formulário de contato para o Supabase.
   - `site/ferramentas/preparar_copia.py` = refaz `site/public/` a partir de um novo download
     (entradas em `site/ferramentas/entrada/`). Use se o site original mudar antes da troca de DNS.
+    Depois dele rode `trocar_marca.py` e `otimizar_imagens.py` (ordem em `site/LEIAME.md`).
+  - Imagens otimizadas em 2026-11-14 (pedido da dona: site demorava a carregar): cada imagem tem
+    um `.webp` ao lado, entregue pelo Caddy a quem aceita. Página inicial: imagens de 1,8 MB → ~0,66 MB.
+    CDN do Railway NÃO foi ligado (custo não confirmado) — perguntar à dona antes.
 - **Publicado em:** https://site-production-8c641078.up.railway.app (Railway, serviço `site`,
   região us-east4, Root Directory `/site`, healthcheck `/`).
   - Fonte do serviço `site` (conferido em 2026-11-14 15h): branch **`claude/youthful-cori-erycnr`**,
@@ -42,7 +46,7 @@
   - Há várias sessões trabalhando em paralelo em branches `claude/*`. Antes de mexer no site ou no
     Railway, rode `git ls-remote --heads origin` e veja a fonte atual do serviço (`describe-service`).
 - **Marca:** desde 2026-11-14 o site usa o nome **Hospital de Olhos da Baixada** (antes "Consumed").
-  Logo e ícones em `site/marca/`. A troca é feita por `site/ferramentas/trocar_marca.py`
+  Logo e ícones em `site/public/marca/`. A troca é feita por `site/ferramentas/trocar_marca.py`
   (rodar de novo depois de refazer a cópia). Domínio, Facebook e busca do Google Maps ainda usam o nome antigo.
 - **Supabase:** tabela `public.site_mensagens` (migração `site_mensagens`) guarda o que visitantes
   enviam. RLS ligado; `anon`/`authenticated` só podem INSERIR (sem leitura). Chave publicável
