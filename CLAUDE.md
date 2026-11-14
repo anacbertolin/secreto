@@ -27,7 +27,7 @@
 - Mudanças de estrutura do banco: usar migrações (`apply_migration`), nunca SQL solto para DDL.
 
 ## Sistema (app web) — `app/`
-- React + Vite + TypeScript, servido como site estático (`npm run build` → `npm start`) no Railway (serviço `secreto`, pasta raiz `/app`).
+- React + Vite + TypeScript, servido como site estático (`npm run build` → `npm start`) no Railway (serviço `sistema`, pasta raiz `/app`, ramo `claude/trusting-tesla-e5u50x`).
 - Fala direto com o Supabase usando só a chave **publicável**; quem protege os dados são as regras RLS.
 - Login: e-mail + senha (Supabase Auth). Só e-mails cadastrados e ativos em `profissionais` conseguem criar conta
   (gatilho `somente_equipe` em `auth.users`). Senhas temporárias são criadas pelo admin na tela Equipe
