@@ -17,6 +17,63 @@
   - Workspace: "anacbertolin's Projects" (`4ddac66d-395d-4818-8895-cfd0b50da2c2`) — plano Hobby
   - Projeto: `generous-smile` (`154b859a-9285-4396-8f26-a4dfa59ac13c`), ambiente `production`
   - Conectado ao GitHub (repositório `anacbertolin/secreto`) para deploy automático.
+  - Serviços no projeto:
+    - `sistema` (`d327757c-981f-4f82-ae0e-7179625a7ea9`) — **o sistema da clínica** (agenda, recepção, prontuário,
+      exames). Pasta raiz `/app`. Publica a partir do `main` (ver seção "Sistema").
+    - `secreto` (`7284d56c-4c07-426b-b479-69ed3a9c45da`) — rascunho antigo ("staged", nunca publicado, sem pasta raiz).
+      NÃO usar: o sistema roda no serviço `sistema`. Não aceitar o rascunho (o build falharia).
+    - `site` (`825f64cf-f877-4a67-8e0d-c90a487cc6d3`) — site público da clínica (ver seção abaixo).
+- **Rede do ambiente de nuvem "secreto"** (sessões Claude): hosts liberados incluem
+  `consumedolhos.com.br`, `www.consumedolhos.com.br` e `site-production-8c641078.up.railway.app`.
+  O host do Supabase (`*.supabase.co`) NÃO está liberado — testar o banco pelas ferramentas MCP.
+
+## Site público da clínica (consumedolhos.com.br) — estado em 2026-11-14
+- **O que é:** cópia fiel (estática) do site atual, que é WordPress + Elementor hospedado na
+  Hostinger e feito por uma agência. A dona pediu cópia **exata**, para depois apontar o DNS.
+- **Onde está:** pasta `site/` do repositório (leia `site/LEIAME.md`).
+  - `site/public/` = site pronto; `site/Caddyfile` + `site/Dockerfile` = servidor (Caddy).
+  - `site/extra/site-copia.js` = substitui o WordPress: busca local em `/busca/`
+    (índice `/busca/indice.json`) e envio de comentários do blog + formulário de contato para o Supabase.
+  - `site/ferramentas/preparar_copia.py` = refaz `site/public/` a partir de um novo download
+    (entradas em `site/ferramentas/entrada/`). Use se o site original mudar antes da troca de DNS.
+- **Publicado em:** https://site-production-8c641078.up.railway.app (Railway, serviço `site`,
+  região us-east4, Root Directory `/site`, healthcheck `/`).
+  - Fonte do serviço `site` (conferido em 2026-11-14 15h): branch **`claude/youthful-cori-erycnr`**,
+    de OUTRA sessão, que partiu desta cópia e trocou a marca para "Hospital de Olhos da Baixada".
+    Não trocar a fonte do serviço sem combinar com a dona (trocar desfaria a marca nova no ar).
+  - Há várias sessões trabalhando em paralelo em branches `claude/*`. Antes de mexer no site ou no
+    Railway, rode `git ls-remote --heads origin` e veja a fonte atual do serviço (`describe-service`).
+- **Supabase:** tabela `public.site_mensagens` (migração `site_mensagens`) guarda o que visitantes
+  enviam. RLS ligado; `anon`/`authenticated` só podem INSERIR (sem leitura). Chave publicável
+  (pública) está no `site-copia.js`. A dona vê as mensagens no painel: Table Editor → site_mensagens.
+- **Decisões da dona:**
+  - Manter a cópia exata; não "melhorar" nada sem ela pedir.
+  - Nome do médico: manter **"Dr. Max Oliveira Guimarães"**. Testamos trocar para o apelido
+    "Dr. Golozão" e a equipe NÃO aprovou — revertido. Não usar apelidos de médicos no site.
+- **Defeitos que já existem no site original (copiados de propósito, ainda não corrigidos):**
+  páginas rascunho públicas (Homez, Página de exemplo, Procedimentos2, Exames2, Video Background, Link);
+  texto de código quebrado "[vc_column…]" visível na página Equipe; botões nas páginas Equipe e
+  Convênios apontando para `homologacao.consumedolhos.com.br`; imagem `assist.png` inexistente.
+  Oferecer correção quando a dona quiser.
+
+## Próximos passos (pendentes)
+1. Dona comparar o site provisório com o original e aprovar.
+1b. Juntar ao `main` o branch da outra sessão do site (`claude/youthful-cori-erycnr`, marca nova) e
+    então apontar o serviço `site` para `main` — só com o aval da dona.
+2. Troca de DNS — antes, verificar com a dona:
+   - se os e-mails `@consumedolhos.com.br` rodam na Hostinger (manter registros MX/e-mail intactos);
+   - login do registro do domínio (provavelmente Registro.br);
+   - contrato/aviso com a agência atual.
+   Depois: adicionar domínio próprio no Railway (`generate-domain` com `domain`) e passar a ela os registros DNS.
+3. Opcional: aviso por e-mail quando chegar mensagem em `site_mensagens` (hoje ninguém é avisado).
+4. Se o site original mudar antes da troca, baixar de novo e rodar `preparar_copia.py`.
+5. (Resolvido) O aviso do Supabase sobre `public.abrir_atendimento` (SECURITY DEFINER) é intencional:
+   a função confere se quem chama é médico ou enfermagem (ver `docs/sistema/HISTORICO.md`).
+
+## Como as mudanças entram (decisão da dona, 14/11/2026)
+- O **`main` é a versão oficial**. Cada sessão trabalha no seu ramo `claude/*` e manda o trabalho por **PR para o `main`**.
+- A dona revisa e aprova o PR; só então a mudança vai para o `main` e, de lá, para o ar (Railway publica sozinho).
+- Nunca empurrar direto no `main` nem reescrever o histórico dele.
 
 ## Regras para dados de saúde (LGPD)
 - Prontuário é dado pessoal sensível. Sempre:
@@ -29,7 +86,7 @@
 ## Sistema (app web) — `app/`
 - **Memória do projeto:** leia `docs/sistema/HISTORICO.md` antes de mexer no sistema (o que foi feito, decisões,
   combinados com a sessão de migração, pendências). Acrescente uma seção ao fim a cada dia de trabalho.
-- React + Vite + TypeScript, servido como site estático (`npm run build` → `npm start`) no Railway (serviço `sistema`, pasta raiz `/app`, ramo `claude/trusting-tesla-e5u50x`).
+- React + Vite + TypeScript, servido como site estático (`npm run build` → `npm start`) no Railway (serviço `sistema`, pasta raiz `/app`).
 - Fala direto com o Supabase usando só a chave **publicável**; quem protege os dados são as regras RLS.
 - Login: e-mail + senha (Supabase Auth). Só e-mails cadastrados e ativos em `profissionais` conseguem criar conta
   (gatilho `somente_equipe` em `auth.users`). Senhas temporárias são criadas pelo admin na tela Equipe

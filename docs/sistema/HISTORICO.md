@@ -17,7 +17,7 @@ levantamento público do Micrologos (branch `claude/stoic-johnson-8ky6di`, pasta
 |---|---|
 | Sistema no ar | https://sistema-production-addc59db.up.railway.app |
 | Código das telas | `app/` (React + Vite + TypeScript) |
-| Ramo do GitHub que vai ao ar | `claude/trusting-tesla-e5u50x` (deploy automático a cada push) |
+| Ramo do GitHub que vai ao ar | **`main`** (a partir do PR que junta o sistema; antes era `claude/trusting-tesla-e5u50x`) |
 | Hospedagem | Railway, projeto `generous-smile`, serviço **`sistema`** (id `d327757c-981f-4f82-ae0e-7179625a7ea9`), pasta raiz `/app` |
 | Banco | Supabase `secreto` (`ogflxjolbwrzayjtxvhj`, São Paulo) |
 | Migrações | `supabase/migrations/0001`–`0008` (todas aplicadas) |
@@ -26,7 +26,7 @@ levantamento público do Micrologos (branch `claude/stoic-johnson-8ky6di`, pasta
 
 Outros serviços do mesmo projeto Railway, que **não são do sistema** e em que não se deve mexer:
 - `site`: site público, feito por outra sessão (ramo `claude/loving-clarke-acyn66`).
-- `secreto`: só um rascunho ("staged") apontando para o ramo `main`, que não existe.
+- `secreto`: só um rascunho ("staged"), nunca publicado. Não usar.
 
 ### Identidade visual
 Consumed · Clínica de Olhos (site consumedolhos.com.br). Logo preto e branco com o "O" em forma de olho.
@@ -127,10 +127,20 @@ CEP 26255-140, tel. (21) 2667-0532. **O CNPJ ainda falta**: a dona precisa infor
 - [ ] Próximos módulos sugeridos, nesta ordem: faturamento de convênios (TISS), assinatura digital
       ICP-Brasil, confirmação por WhatsApp, financeiro, centro cirúrgico/estoque, relatórios, portal do
       paciente, lista completa de CID-10 e de medicamentos.
-- [ ] Futuro: juntar o ramo `claude/trusting-tesla-e5u50x` num ramo principal (`main`) e apontar o Railway
-      para ele.
+- [x] Juntar o sistema ao `main` por PR e apontar o serviço `sistema` do Railway para o `main` (14/11).
 
 ### Avisos do Supabase que são esperados
 - `abrir_atendimento` SECURITY DEFINER executável por usuários logados: é intencional.
 - Tabelas de `legacy_micrologos` com RLS e sem políticas: são da sessão de migração, fechadas de propósito.
 - "Índice não usado": normal enquanto o banco está vazio.
+
+---
+
+## 14/11/2026 (fim do dia): `main` como versão oficial
+- A sessão do site criou o `main` (PR #1, aprovado pela dona) com o site e as migrações 0001–0004.
+- A dona decidiu: o `main` é a versão oficial e toda mudança entra por PR.
+- O sistema (telas + migrações 0005–0008 + histórico) foi mandado ao `main` por PR, sem conflitos.
+  Depois da aprovação, o serviço `sistema` do Railway passa a publicar a partir do `main`.
+- Atenção à **marca**: o sistema usa "Consumed · Clínica de Olhos" (como o site atual). Outra sessão
+  (ramo `claude/youthful-cori-erycnr`) trocou a marca do site para "Hospital de Olhos da Baixada". Se a dona
+  confirmar a troca de nome, ajustar também `app/src/lib/marca.ts` e os logos de `app/public/`.

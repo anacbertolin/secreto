@@ -1,0 +1,44 @@
+{
+	admin off
+	auto_https off
+}
+
+:{$PORT:8080} {
+	root * /srv
+	encode zstd gzip
+
+	# Endereços antigos de busca do WordPress (/?s=... e /page/2/?s=...) vão para a nova busca
+	@buscaAntiga {
+		path / /page/*
+		query s=*
+	}
+	redir @buscaAntiga /busca/?s={query.s} 302
+
+	# Script de cache do LiteSpeed (WordPress) espera uma resposta JSON
+	@lsVary path /wp-content/plugins/litespeed-cache/guest.vary.php
+	header @lsVary Content-Type application/json
+	respond @lsVary "{}" 200
+
+	# Endereços que só existiam no WordPress
+	@wp path /wp-admin* /wp-login.php /xmlrpc.php /wp-json* /wp-comments-post.php /feed* */feed/
+	respond @wp 404
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	header /wp-content/* Cache-Control "public, max-age=2592000"
+	header /wp-includes/* Cache-Control "public, max-age=2592000"
+
+	file_server
+
+	handle_errors {
+		@naoEncontrado expression {err.status_code} == 404
+		handle @naoEncontrado {
+			rewrite * /404.html
+			file_server
+		}
+	}
+}
