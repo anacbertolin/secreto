@@ -13,8 +13,6 @@
 - **Supabase** (banco de dados — guarda prontuários e demais dados)
   - Organização: "Hospital de Olhos da Baixada" (`alqrkumhvyexvrmxaugj`) — plano Pro (assinado pela dona)
   - Projeto principal: **secreto** — id `ogflxjolbwrzayjtxvhj`, região **sa-east-1 (São Paulo)**
-  - Projeto antigo "anacbertolin's Project" (`bupwiwbhbvencfvyxioc`, us-east-1): vazio,
-    **não usar**. A dona vai apagá-lo pelo painel (Project Settings → General → Delete project).
 - **Railway** (hospedagem — onde o sistema e servidores MCP rodam)
   - Workspace: "anacbertolin's Projects" (`4ddac66d-395d-4818-8895-cfd0b50da2c2`) — plano Hobby
   - Projeto: `generous-smile` (`154b859a-9285-4396-8f26-a4dfa59ac13c`), ambiente `production`
