@@ -36,8 +36,7 @@
     (entradas em `site/ferramentas/entrada/`). Use se o site original mudar antes da troca de DNS.
 - **Publicado em:** https://site-production-8c641078.up.railway.app (Railway, serviço `site`,
   região us-east4, Root Directory `/site`, healthcheck `/`).
-  - ATENÇÃO: hoje o serviço `site` publica a partir do branch **`claude/loving-clarke-acyn66`**.
-    Depois que esse branch for juntado ao `main`, trocar a fonte do serviço `site` para `main`.
+  - O serviço `site` publica a partir do branch **`main`** (deploy automático a cada push no `main`).
 - **Supabase:** tabela `public.site_mensagens` (migração `site_mensagens`) guarda o que visitantes
   enviam. RLS ligado; `anon`/`authenticated` só podem INSERIR (sem leitura). Chave publicável
   (pública) está no `site-copia.js`. A dona vê as mensagens no painel: Table Editor → site_mensagens.
@@ -53,15 +52,14 @@
 
 ## Próximos passos (pendentes)
 1. Dona comparar o site provisório com o original e aprovar.
-2. Juntar o branch `claude/loving-clarke-acyn66` ao `main` (só com pedido dela) e mudar a fonte do serviço `site` para `main`.
-3. Troca de DNS — antes, verificar com a dona:
+2. Troca de DNS — antes, verificar com a dona:
    - se os e-mails `@consumedolhos.com.br` rodam na Hostinger (manter registros MX/e-mail intactos);
    - login do registro do domínio (provavelmente Registro.br);
    - contrato/aviso com a agência atual.
    Depois: adicionar domínio próprio no Railway (`generate-domain` com `domain`) e passar a ela os registros DNS.
-4. Opcional: aviso por e-mail quando chegar mensagem em `site_mensagens` (hoje ninguém é avisado).
-5. Se o site original mudar antes da troca, baixar de novo e rodar `preparar_copia.py`.
-6. Fora do site: o Supabase avisa que a função `public.abrir_atendimento` (SECURITY DEFINER) pode
+3. Opcional: aviso por e-mail quando chegar mensagem em `site_mensagens` (hoje ninguém é avisado).
+4. Se o site original mudar antes da troca, baixar de novo e rodar `preparar_copia.py`.
+5. Fora do site: o Supabase avisa que a função `public.abrir_atendimento` (SECURITY DEFINER) pode
    ser chamada por qualquer usuário logado — revisar quando voltar ao prontuário.
 
 ## Regras para dados de saúde (LGPD)
