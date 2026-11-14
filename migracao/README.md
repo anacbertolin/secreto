@@ -91,3 +91,18 @@ Ordem de carga e regras gerais: ver `docs/micrologos/04-migracao-de-dados.md`.
   - O gatilho `tg_bloquear_se_finalizado` impede inserir itens num atendimento finalizado: inserir os itens antes de finalizar, ou usar `prontuario_legado`.
   - O gatilho `horarios_status` preenche horários quando o status muda: na carga, inserir já com os horários históricos.
   - O gatilho `somente_equipe` bloqueia contas de quem não está ativo.
+
+### Migração 0008 aplicada pela sessão de desenvolvimento (14/11/2026, ramo `claude/trusting-tesla-e5u50x`), conferida no banco
+- **Número do prontuário:** `numero_prontuario` continua "generated always". Na carga usar `overriding system value` e depois `setval`. Também existe a coluna `pacientes.prontuario_anterior` (text, entra na busca): usar só quando o paciente tiver outro número antigo; caso contrário, deixar nula.
+- **Auditoria:** dentro da transação de cada carga, rodar `set local app.migracao = 'on'`.
+- **Profissionais:** `profissionais.email` aceita nulo quando `ativo = false` (check `profissionais_email_se_ativo`).
+- **`public.prontuario_legado`:**
+  - Colunas: paciente_id, data, profissional_id, tipo (padrão 'atendimento'), titulo, conteudo, formato ('texto' ou 'html'), arquivo_caminho (bucket `documentos`), assinatura (jsonb, chave `assinado_em` no formato ISO), metadados (jsonb).
+  - Só leitura para médico e enfermagem; quem grava é o service_role.
+- **`public.paciente_documentos`:**
+  - tipo: laudo, exame, receita, atestado, termo, foto, documento_pessoal ou outro.
+  - titulo e nome_arquivo são obrigatórios; caminho é único.
+  - sha256 em hex minúsculo; origem = 'micrologos'.
+  - Os arquivos têm de ir para o bucket **`documentos`** (limite de 50 MB), no caminho `<paciente_id>/micrologos/<arquivo>`. O bucket `migracao-micrologos` serve só de entrada.
+- **Convênios:** `public.convenio_planos` (convenio_id, nome, codigo, ativo; nome único por convênio) e `plano_id` opcional em pacientes e agendamentos.
+- **Pendente (avisar a dona antes de apagar):** o paciente nº 3 foi criado em 14/11 às 14:54 pela conta da dona. Ele pode colidir com a numeração do Micrologos e precisa ser removido antes da carga final. A sequência de `numero_prontuario` está em 3.
