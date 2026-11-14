@@ -144,3 +144,6 @@ CEP 26255-140, tel. (21) 2667-0532. **O CNPJ ainda falta**: a dona precisa infor
 - Atenção à **marca**: o sistema usa "Consumed · Clínica de Olhos" (como o site atual). Outra sessão
   (ramo `claude/youthful-cori-erycnr`) trocou a marca do site para "Hospital de Olhos da Baixada". Se a dona
   confirmar a troca de nome, ajustar também `app/src/lib/marca.ts` e os logos de `app/public/`.
+- PR #2 juntou o sistema ao `main` (merge em 14/11). O serviço `sistema` do Railway passou a publicar a partir do `main`.
+- **Autorização permanente da dona:** Claude aprova e faz o merge dos PRs e o deploy sozinho, sem pedir
+  (detalhes do fluxo no CLAUDE.md, seção "Como as mudanças entram").

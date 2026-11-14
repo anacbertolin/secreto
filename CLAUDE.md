@@ -19,7 +19,7 @@
   - Conectado ao GitHub (repositório `anacbertolin/secreto`) para deploy automático.
   - Serviços no projeto:
     - `sistema` (`d327757c-981f-4f82-ae0e-7179625a7ea9`) — **o sistema da clínica** (agenda, recepção, prontuário,
-      exames). Pasta raiz `/app`. Publica a partir do `main` (ver seção "Sistema").
+      exames). Pasta raiz `/app`. Publica a partir do `main` (desde 14/11/2026, depois do PR #2).
     - `secreto` (`7284d56c-4c07-426b-b479-69ed3a9c45da`) — rascunho antigo ("staged", nunca publicado, sem pasta raiz).
       NÃO usar: o sistema roda no serviço `sistema`. Não aceitar o rascunho (o build falharia).
     - `site` (`825f64cf-f877-4a67-8e0d-c90a487cc6d3`) — site público da clínica (ver seção abaixo).
@@ -72,8 +72,16 @@
 
 ## Como as mudanças entram (decisão da dona, 14/11/2026)
 - O **`main` é a versão oficial**. Cada sessão trabalha no seu ramo `claude/*` e manda o trabalho por **PR para o `main`**.
-- A dona revisa e aprova o PR; só então a mudança vai para o `main` e, de lá, para o ar (Railway publica sozinho).
-- Nunca empurrar direto no `main` nem reescrever o histórico dele.
+- **Autorização permanente da dona (14/11/2026): Claude abre o PR, faz o merge e o deploy sozinho, sem pedir.**
+  Fluxo de toda mudança: commit no ramo `claude/*` da sessão → PR para o `main` → merge (método "merge")
+  → Railway publica sozinho a partir do `main` → conferir que o deploy terminou e o sistema/site responde.
+  - Antes do merge, confira: sem conflito com o `main` (se houver, junte o `main` no ramo e resolva),
+    verificações automáticas (CI) verdes e o build passando (`npm run build` em `app/` quando mexer no sistema).
+  - Mudança de banco: aplique a migração (`apply_migration`) e rode `get_advisors` antes do merge.
+  - Depois do merge, avise a dona em linguagem simples o que entrou no ar.
+  - A autorização não muda as regras de "avise antes": apagar dados, ações sem volta e aumento de custo continuam
+    exigindo aviso à dona antes.
+- Nunca empurrar direto no `main` nem reescrever o histórico dele (sempre via PR).
 
 ## Regras para dados de saúde (LGPD)
 - Prontuário é dado pessoal sensível. Sempre:
