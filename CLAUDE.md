@@ -35,3 +35,9 @@
 - Identidade visual: Consumed · Clínica de Olhos (logos em `app/public`, dados da clínica em `app/src/lib/marca.ts`).
 - Módulos v1: Agenda, Recepção, Pacientes, Consultório/Prontuário (PEP oftalmológico), Exames e laudos, Cadastros.
 - Arquivos de exames: bucket privado `exames` no Storage (até 50 MB por arquivo).
+- Importação do Micrologos (migração 0008): `prontuario_legado` (PEP antigo, só leitura, aparece na linha do tempo),
+  `paciente_documentos` + bucket privado `documentos` (SHA-256), `convenio_planos` + `plano_id`,
+  e-mail opcional para profissional inativo, auditoria pulada com `set app.migracao = 'on'`.
+  Decisão da dona: o paciente mantém o MESMO nº de prontuário do Micrologos (carga com OVERRIDING SYSTEM VALUE + setval).
+  A coluna `prontuario_anterior` fica disponível para outros números antigos, se necessário.
+- Dados de teste do v1 apagados em 14/11/2026 (com autorização). A função Edge `limpeza-teste` está desativada (responde 410).

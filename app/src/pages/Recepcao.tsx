@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase, msgErro } from "../lib/supabase";
 import { useCarregar, ok, Aviso, Carregando, Modal, Campo, Etiqueta } from "../components/ui";
 import { NovoAgendamento, DetalheAgendamento } from "../components/AgendamentoModais";
-import { listaProfissionais, listaConvenios, listaLocais, nomePor, SELECT_AGENDA, type Agendamento, type Convenio } from "../lib/dados";
+import { listaProfissionais, listaConvenios, listaLocais, listaPlanos, nomePor, SELECT_AGENDA, type Agendamento, type Convenio } from "../lib/dados";
 import {
   STATUS_AGENDA, TIPOS_AGENDA, fmtDataLonga, fmtHora, fmtEspera, inicioDoDia, minutosDesde, somaDias, nomeExibicao, idade, soNumeros, fmtTelefone,
 } from "../lib/util";
@@ -145,12 +145,14 @@ export default function Recepcao() {
 /** Na chegada, a recepção confere telefone e convênio antes de mandar para a sala de espera */
 function ConfirmarChegada(props: { ag: Agendamento; convenios: Convenio[]; aoFechar: () => void; aoSalvar: () => void }) {
   const a = props.ag;
+  const planos = useCarregar(listaPlanos, []);
   const { dados: pac, erro: erroPac } = useCarregar(async () => ok(await supabase.from("pacientes").select("*").eq("id", a.paciente_id).single()) as Record<string, string | null>, [a.paciente_id]);
   const [f, setF] = useState<Record<string, string>>({});
   const [erro, setErro] = useState("");
   useEffect(() => {
     if (pac) setF({
       telefone: pac.telefone ?? "", convenio_id: a.convenio_id ?? pac.convenio_id ?? "",
+      plano_id: (a.convenio_id ?? pac.convenio_id) === pac.convenio_id ? pac.plano_id ?? "" : "",
       convenio_carteirinha: pac.convenio_carteirinha ?? "", convenio_validade: pac.convenio_validade ?? "",
     });
   }, [pac, a.convenio_id]);
@@ -162,11 +164,12 @@ function ConfirmarChegada(props: { ag: Agendamento; convenios: Convenio[]; aoFec
     const r1 = await supabase.from("pacientes").update({
       telefone: soNumeros(f.telefone) || null,
       convenio_id: f.convenio_id || null,
+      plano_id: f.plano_id || null,
       convenio_carteirinha: f.convenio_carteirinha || null,
       convenio_validade: f.convenio_validade || null,
     }).eq("id", a.paciente_id);
     if (r1.error) return setErro(msgErro(r1.error));
-    const r2 = await supabase.from("agendamentos").update({ status: "chegou", convenio_id: f.convenio_id || null }).eq("id", a.id);
+    const r2 = await supabase.from("agendamentos").update({ status: "chegou", convenio_id: f.convenio_id || null, plano_id: f.plano_id || null }).eq("id", a.id);
     if (r2.error) return setErro(msgErro(r2.error));
     props.aoSalvar();
   }
@@ -187,13 +190,21 @@ function ConfirmarChegada(props: { ag: Agendamento; convenios: Convenio[]; aoFec
       <div className="grade g2">
         <Campo rotulo="Telefone"><input value={fmtTelefone(f.telefone)} onChange={(e) => setF({ ...f, telefone: e.target.value })} /></Campo>
         <Campo rotulo="Convênio deste atendimento">
-          <select value={f.convenio_id ?? ""} onChange={(e) => setF({ ...f, convenio_id: e.target.value })}>
+          <select value={f.convenio_id ?? ""} onChange={(e) => setF({ ...f, convenio_id: e.target.value, plano_id: "" })}>
             <option value="">Particular</option>
             {props.convenios.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
         </Campo>
         {f.convenio_id && (
           <>
+            {(planos.dados ?? []).some((x) => x.convenio_id === f.convenio_id) && (
+              <Campo rotulo="Plano">
+                <select value={f.plano_id ?? ""} onChange={(e) => setF({ ...f, plano_id: e.target.value })}>
+                  <option value="">—</option>
+                  {(planos.dados ?? []).filter((x) => x.convenio_id === f.convenio_id).map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+                </select>
+              </Campo>
+            )}
             <Campo rotulo="Nº da carteirinha"><input value={f.convenio_carteirinha ?? ""} onChange={(e) => setF({ ...f, convenio_carteirinha: e.target.value })} /></Campo>
             <Campo rotulo="Validade da carteirinha"><input type="date" value={f.convenio_validade ?? ""} onChange={(e) => setF({ ...f, convenio_validade: e.target.value })} /></Campo>
           </>

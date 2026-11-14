@@ -43,3 +43,26 @@ export async function listaLocais(): Promise<Local[]> {
 export function nomePor<T extends { id: string; nome: string }>(lista: T[] | null | undefined, id?: string | null) {
   return lista?.find((x) => x.id === id)?.nome ?? "";
 }
+
+export interface Plano { id: string; convenio_id: string; nome: string; codigo: string | null; ativo: boolean }
+
+export async function listaPlanos(): Promise<Plano[]> {
+  const { data, error } = await supabase.from("convenio_planos").select("*").eq("ativo", true).order("nome");
+  if (error) throw error;
+  return (data ?? []) as Plano[];
+}
+
+/**
+ * Filtro de busca de paciente: nome / nome social (e nome da mãe), CPF, telefone,
+ * nº do prontuário novo ou nº do prontuário antigo (Micrologos).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function filtroBuscaPaciente<Q extends { or: (f: string) => Q; eq: (c: string, v: unknown) => Q; ilike: (c: string, v: string) => Q }>(q: Q, termo: string, comMae = false): Q {
+  const t = termo.trim();
+  const n = t.replace(/\D/g, "");
+  const limpo = t.replace(/[%,()"]/g, " ");
+  if (n.length === 11 && /^[\d.\-\s]+$/.test(t)) return q.or(`cpf.eq.${n},prontuario_anterior.eq.${n}`);
+  if (/^\d{1,7}$/.test(t)) return q.or(`numero_prontuario.eq.${Number(t)},prontuario_anterior.eq.${t}`);
+  if (n.length >= 8 && /^[\d()\-\s]+$/.test(t)) return q.or(`telefone.ilike.%${n}%,prontuario_anterior.eq.${n}`);
+  return q.or(`nome.ilike.%${limpo}%,nome_social.ilike.%${limpo}%,prontuario_anterior.eq.${limpo.trim()}${comMae ? `,nome_mae.ilike.%${limpo}%` : ""}`);
+}

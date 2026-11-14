@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { supabase, msgErro } from "../lib/supabase";
 import { fmtCPF, fmtData, idade, nomeExibicao, fmtTelefone } from "../lib/util";
+import { filtroBuscaPaciente } from "../lib/dados";
 
 export function Modal(props: {
   titulo: string;
@@ -59,6 +60,8 @@ export interface PacienteResumo {
   cpf: string | null;
   telefone: string | null;
   convenio_id: string | null;
+  plano_id?: string | null;
+  prontuario_anterior?: string | null;
 }
 
 /** Busca de paciente por nome, CPF, telefone ou nº do prontuário */
@@ -83,16 +86,11 @@ export function BuscaPaciente(props: {
     timer.current = window.setTimeout(async () => {
       let q = supabase
         .from("pacientes")
-        .select("id, numero_prontuario, nome, nome_social, data_nascimento, cpf, telefone, convenio_id")
+        .select("id, numero_prontuario, prontuario_anterior, nome, nome_social, data_nascimento, cpf, telefone, convenio_id, plano_id")
         .eq("ativo", true)
         .order("nome")
         .limit(15);
-      const num = t.replace(/\D/g, "");
-      if (num.length === 11 && /^[\d.\-\s]+$/.test(t)) q = q.eq("cpf", num);
-      else if (num.length >= 8 && /^[\d()\-\s]+$/.test(t)) q = q.ilike("telefone", `%${num}%`);
-      else if (/^\d{1,7}$/.test(t)) q = q.eq("numero_prontuario", Number(t));
-      else q = q.or(`nome.ilike.%${t.replace(/[%,()]/g, " ")}%,nome_social.ilike.%${t.replace(/[%,()]/g, " ")}%`);
-      const { data, error } = await q;
+      const { data, error } = await filtroBuscaPaciente(q, t);
       if (error) setErro(msgErro(error));
       else {
         setErro("");
@@ -129,7 +127,7 @@ export function BuscaPaciente(props: {
             >
               <div><b>{nomeExibicao(p)}</b></div>
               <div className="muted pequeno">
-                Pront. {p.numero_prontuario}
+                Pront. {p.numero_prontuario}{p.prontuario_anterior && ` (antigo ${p.prontuario_anterior})`}
                 {p.data_nascimento && ` · ${fmtData(p.data_nascimento)} (${idade(p.data_nascimento)})`}
                 {p.cpf && ` · CPF ${fmtCPF(p.cpf)}`}
                 {p.telefone && ` · ${fmtTelefone(p.telefone)}`}

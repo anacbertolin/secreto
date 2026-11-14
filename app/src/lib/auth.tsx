@@ -6,7 +6,7 @@ import type { Funcao } from "./util";
 export interface Profissional {
   id: string;
   nome: string;
-  email: string;
+  email: string | null;
   funcao: Funcao;
   conselho: string | null;
   numero_conselho: string | null;

@@ -30,13 +30,13 @@ export function Equipe() {
               {(dados ?? []).map((p) => (
                 <tr key={p.id} style={{ opacity: p.ativo ? 1 : 0.5 }}>
                   <td><b>{p.nome}</b>{!p.ativo && <> <Etiqueta cor="cinza">inativo</Etiqueta></>}{p.especialidade && <div className="muted pequeno">{p.especialidade}</div>}</td>
-                  <td>{p.email}</td>
+                  <td>{p.email ?? <span className="muted">— (sem login)</span>}</td>
                   <td>{FUNCOES[p.funcao]}</td>
                   <td>{p.conselho && `${p.conselho} ${p.numero_conselho ?? ""}/${p.uf_conselho ?? ""}`}</td>
                   <td style={{ textAlign: "right" }}>
                     <div className="linha" style={{ justifyContent: "flex-end" }}>
                       <button className="mini" onClick={() => setEdit(p)}>Editar</button>
-                      {p.ativo && <button className="mini" onClick={() => setAcesso(p)}>🔑 Senha de acesso</button>}
+                      {p.ativo && p.email && <button className="mini" onClick={() => setAcesso(p)}>🔑 Senha de acesso</button>}
                     </div>
                   </td>
                 </tr>
@@ -60,8 +60,10 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
   async function salvar() {
     setErro("");
-    if (!String(f.nome).trim() || !String(f.email).includes("@")) return setErro("Informe nome e e-mail.");
-    const v: Record<string, unknown> = { ...f, email: String(f.email).trim().toLowerCase(), nome: String(f.nome).trim() };
+    const email = String(f.email ?? "").trim().toLowerCase();
+    if (!String(f.nome).trim()) return setErro("Informe o nome.");
+    if (f.ativo && !email.includes("@")) return setErro("Quem está ativo precisa de e-mail (é o login no sistema).");
+    const v: Record<string, unknown> = { ...f, email: email || null, nome: String(f.nome).trim() };
     for (const k of ["conselho", "numero_conselho", "uf_conselho", "especialidade", "rqe"]) v[k] = String(v[k]).trim() || null;
     if (v.uf_conselho) v.uf_conselho = String(v.uf_conselho).toUpperCase().slice(0, 2);
     if (f.funcao === "medico" && !v.conselho) v.conselho = "CRM";
@@ -136,6 +138,7 @@ function SenhaAcesso({ p, aoFechar }: { p: Profissional; aoFechar: () => void })
 function CadastroSimples(props: {
   titulo: string; sub: string; tabela: string; campos: { k: string; rotulo: string; tipo?: "texto" | "numero" | "sim_nao" | "select"; opcoes?: [string, string][] }[];
   colunas: { k: string; rotulo: string; fmt?: (v: unknown) => string }[];
+  acaoExtra?: (d: Record<string, unknown>) => React.ReactNode;
 }) {
   const { dados, erro, carregando, recarregar } = useCarregar(async () => ok(await supabase.from(props.tabela).select("*").order("ativo", { ascending: false }).order("nome")) as Record<string, unknown>[], []);
   const [edit, setEdit] = useState<Record<string, unknown> | null>(null);
@@ -165,6 +168,7 @@ function CadastroSimples(props: {
                 <tr key={d.id as string} style={{ opacity: d.ativo ? 1 : 0.5 }}>
                   {props.colunas.map((c) => <td key={c.k}>{c.fmt ? c.fmt(d[c.k]) : (d[c.k] as string) ?? "—"}</td>)}
                   <td style={{ textAlign: "right" }}>
+                    {props.acaoExtra?.(d)}{props.acaoExtra && " "}
                     <button className="mini" onClick={() => setEdit(d)}>Editar</button>{" "}
                     <button className="mini" onClick={async () => { await supabase.from(props.tabela).update({ ativo: !d.ativo }).eq("id", d.id as string); recarregar(); }}>{d.ativo ? "Desativar" : "Reativar"}</button>
                   </td>
@@ -195,11 +199,57 @@ function CadastroSimples(props: {
   );
 }
 
-export const Convenios = () => (
-  <CadastroSimples titulo="Convênios" sub="Planos de saúde aceitos pela clínica" tabela="convenios"
-    campos={[{ k: "nome", rotulo: "Nome do convênio" }, { k: "registro_ans", rotulo: "Registro ANS" }]}
-    colunas={[{ k: "nome", rotulo: "Convênio" }, { k: "registro_ans", rotulo: "Registro ANS" }]} />
-);
+export function Convenios() {
+  const [planosDe, setPlanosDe] = useState<{ id: string; nome: string } | null>(null);
+  return (
+    <>
+      <CadastroSimples titulo="Convênios" sub="Convênios aceitos pela clínica e os planos de cada um" tabela="convenios"
+        campos={[{ k: "nome", rotulo: "Nome do convênio" }, { k: "registro_ans", rotulo: "Registro ANS" }]}
+        colunas={[{ k: "nome", rotulo: "Convênio" }, { k: "registro_ans", rotulo: "Registro ANS" }]}
+        acaoExtra={(d) => <button className="mini" onClick={() => setPlanosDe({ id: d.id as string, nome: d.nome as string })}>Planos</button>} />
+      {planosDe && <PlanosConvenio convenio={planosDe} aoFechar={() => setPlanosDe(null)} />}
+    </>
+  );
+}
+
+function PlanosConvenio({ convenio, aoFechar }: { convenio: { id: string; nome: string }; aoFechar: () => void }) {
+  const { dados, erro, recarregar } = useCarregar(async () => ok(await supabase.from("convenio_planos").select("*").eq("convenio_id", convenio.id).order("ativo", { ascending: false }).order("nome")) as { id: string; nome: string; codigo: string | null; ativo: boolean }[], [convenio.id]);
+  const [novo, setNovo] = useState({ nome: "", codigo: "" });
+  const [e2, setE2] = useState("");
+  async function incluir() {
+    setE2("");
+    if (!novo.nome.trim()) return setE2("Informe o nome do plano.");
+    const { error } = await supabase.from("convenio_planos").insert({ convenio_id: convenio.id, nome: novo.nome.trim(), codigo: novo.codigo.trim() || null });
+    if (error) return setE2(msgErro(error));
+    setNovo({ nome: "", codigo: "" }); recarregar();
+  }
+  async function alternar(id: string, ativo: boolean) {
+    const { error } = await supabase.from("convenio_planos").update({ ativo: !ativo }).eq("id", id);
+    if (error) setE2(msgErro(error));
+    recarregar();
+  }
+  return (
+    <Modal titulo={`Planos — ${convenio.nome}`} aoFechar={aoFechar} rodape={<button onClick={aoFechar}>Fechar</button>}>
+      <Aviso>{erro || e2}</Aviso>
+      <table className="tabela">
+        <tbody>
+          {(dados ?? []).map((x) => (
+            <tr key={x.id} style={{ opacity: x.ativo ? 1 : 0.5 }}>
+              <td><b>{x.nome}</b></td><td className="muted">{x.codigo}</td>
+              <td style={{ textAlign: "right" }}><button className="mini" onClick={() => alternar(x.id, x.ativo)}>{x.ativo ? "Desativar" : "Reativar"}</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {dados?.length === 0 && <p className="muted">Nenhum plano cadastrado. Sem planos, o paciente fica só com o convênio.</p>}
+      <div className="linha" style={{ marginTop: 12 }}>
+        <input style={{ flex: 2, minWidth: 160 }} placeholder="Nome do plano (ex.: Enfermaria, Apartamento)" value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} />
+        <input style={{ flex: 1, minWidth: 100 }} placeholder="Código" value={novo.codigo} onChange={(e) => setNovo({ ...novo, codigo: e.target.value })} />
+        <button className="primario" onClick={incluir}>Incluir</button>
+      </div>
+    </Modal>
+  );
+}
 
 const TIPOS_LOCAL: [string, string][] = [["consultorio", "Consultório"], ["sala_exame", "Sala de exames"], ["centro_cirurgico", "Centro cirúrgico"], ["outro", "Outro"]];
 export const Locais = () => (

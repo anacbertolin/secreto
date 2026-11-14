@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase, msgErro } from "../lib/supabase";
 import { useCarregar, ok, Aviso, Carregando, Campo } from "../components/ui";
-import { listaConvenios } from "../lib/dados";
+import { listaConvenios, listaPlanos, filtroBuscaPaciente } from "../lib/dados";
 import { fmtCPF, fmtData, fmtTelefone, idade, nomeExibicao, soNumeros, cpfValido } from "../lib/util";
 
 interface PacLinha {
-  id: string; numero_prontuario: number; nome: string; nome_social: string | null; data_nascimento: string | null;
+  id: string; numero_prontuario: number; prontuario_anterior: string | null; nome: string; nome_social: string | null; data_nascimento: string | null;
   cpf: string | null; telefone: string | null; convenios: { nome: string } | null;
 }
 
@@ -20,20 +20,10 @@ export default function Pacientes() {
 
   const { dados, erro, carregando } = useCarregar(async () => {
     let q = supabase.from("pacientes")
-      .select("id, numero_prontuario, nome, nome_social, data_nascimento, cpf, telefone, convenios(nome)")
+      .select("id, numero_prontuario, prontuario_anterior, nome, nome_social, data_nascimento, cpf, telefone, convenios(nome)")
       .eq("ativo", true).limit(50);
-    const n = soNumeros(termo);
     if (!termo) q = q.order("criado_em", { ascending: false });
-    else {
-      q = q.order("nome");
-      if (n.length === 11 && /^[\d.\-\s]+$/.test(termo)) q = q.eq("cpf", n);
-      else if (n.length >= 8 && /^[\d()\-\s]+$/.test(termo)) q = q.ilike("telefone", `%${n}%`);
-      else if (/^\d{1,7}$/.test(termo)) q = q.eq("numero_prontuario", Number(termo));
-      else {
-        const t = termo.replace(/[%,()]/g, " ");
-        q = q.or(`nome.ilike.%${t}%,nome_social.ilike.%${t}%,nome_mae.ilike.%${t}%`);
-      }
-    }
+    else q = filtroBuscaPaciente(q.order("nome"), termo, true);
     return ok(await q) as unknown as PacLinha[];
   }, [termo]);
   const nav = useNavigate();
@@ -43,7 +33,7 @@ export default function Pacientes() {
       <div className="cabecalho">
         <div>
           <h1>Pacientes</h1>
-          <p className="sub" style={{ margin: 0 }}>Busque por nome, CPF, telefone, nome da mãe ou nº do prontuário</p>
+          <p className="sub" style={{ margin: 0 }}>Busque por nome, CPF, telefone, nome da mãe ou nº do prontuário (novo ou do Micrologos)</p>
         </div>
         <Link className="botao primario" to="/pacientes/novo">➕ Novo paciente</Link>
       </div>
@@ -57,7 +47,7 @@ export default function Pacientes() {
               <tbody>
                 {(dados ?? []).map((p) => (
                   <tr key={p.id} className="clicavel" onClick={() => nav(`/pacientes/${p.id}`)}>
-                    <td>{p.numero_prontuario}</td>
+                    <td>{p.numero_prontuario}{p.prontuario_anterior && <div className="muted pequeno">antigo {p.prontuario_anterior}</div>}</td>
                     <td><b>{nomeExibicao(p)}</b></td>
                     <td>{p.data_nascimento ? `${fmtData(p.data_nascimento)} (${idade(p.data_nascimento)})` : "—"}</td>
                     <td>{fmtCPF(p.cpf) || "—"}</td>
@@ -80,7 +70,7 @@ const VAZIO: Record<string, string> = {
   nome: "", nome_social: "", data_nascimento: "", sexo: "nao_informado", cpf: "", cns: "", rg: "", nome_mae: "",
   profissao: "", telefone: "", telefone_secundario: "", email: "", cep: "", logradouro: "", numero: "",
   complemento: "", bairro: "", cidade: "", uf: "", responsavel_nome: "", responsavel_telefone: "",
-  responsavel_parentesco: "", convenio_id: "", convenio_carteirinha: "", convenio_validade: "", observacoes: "",
+  responsavel_parentesco: "", convenio_id: "", plano_id: "", convenio_carteirinha: "", prontuario_anterior: "", convenio_validade: "", observacoes: "",
 };
 
 export function PacienteEditar() {
@@ -90,6 +80,8 @@ export function PacienteEditar() {
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const convs = useCarregar(listaConvenios, []);
+  const planos = useCarregar(listaPlanos, []);
+  const planosDoConvenio = (planos.dados ?? []).filter((x) => x.convenio_id === f.convenio_id);
   const pac = useCarregar(async () => (id ? ok(await supabase.from("pacientes").select("*").eq("id", id).single()) : null), [id]);
 
   useEffect(() => {
@@ -164,7 +156,8 @@ export function PacienteEditar() {
           <Campo rotulo="RG"><input value={f.rg} onChange={set("rg")} /></Campo>
           <Campo rotulo="Cartão SUS (CNS)"><input value={f.cns} onChange={set("cns")} inputMode="numeric" /></Campo>
           <Campo rotulo="Nome da mãe" className="span2"><input value={f.nome_mae} onChange={set("nome_mae")} /></Campo>
-          <Campo rotulo="Profissão" className="span2"><input value={f.profissao} onChange={set("profissao")} /></Campo>
+          <Campo rotulo="Profissão"><input value={f.profissao} onChange={set("profissao")} /></Campo>
+          <Campo rotulo="Nº do prontuário no Micrologos"><input value={f.prontuario_anterior} onChange={set("prontuario_anterior")} /></Campo>
         </div>
       </div>
       <div className="painel">
@@ -186,11 +179,19 @@ export function PacienteEditar() {
         <h2>Convênio</h2>
         <div className="grade g4">
           <Campo rotulo="Convênio">
-            <select value={f.convenio_id} onChange={set("convenio_id")}>
+            <select value={f.convenio_id} onChange={(e) => setF({ ...f, convenio_id: e.target.value, plano_id: "" })}>
               <option value="">Particular</option>
               {(convs.dados ?? []).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </Campo>
+          {planosDoConvenio.length > 0 && (
+            <Campo rotulo="Plano">
+              <select value={f.plano_id} onChange={set("plano_id")}>
+                <option value="">—</option>
+                {planosDoConvenio.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+              </select>
+            </Campo>
+          )}
           <Campo rotulo="Nº da carteirinha"><input value={f.convenio_carteirinha} onChange={set("convenio_carteirinha")} /></Campo>
           <Campo rotulo="Validade"><input type="date" value={f.convenio_validade} onChange={set("convenio_validade")} /></Campo>
         </div>

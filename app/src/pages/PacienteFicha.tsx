@@ -4,6 +4,7 @@ import { supabase, msgErro } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Etiqueta } from "../components/ui";
 import { HistoricoSaude } from "../components/Clinico";
+import { ItemLegado, DocumentosPaciente, type RegistroLegado } from "../components/Legado";
 import { NovoAgendamento } from "../components/AgendamentoModais";
 import { listaProfissionais, listaConvenios, listaLocais, nomePor, type Agendamento } from "../lib/dados";
 import {
@@ -22,8 +23,12 @@ export default function PacienteFicha() {
   const [erro, setErro] = useState("");
 
   const base = useCarregar(async () => {
-    const [medicos, convenios, locais] = await Promise.all([listaProfissionais(["medico"]), listaConvenios(), listaLocais()]);
-    return { medicos, convenios, locais };
+    const [medicos, convenios, locais, todos] = await Promise.all([
+      listaProfissionais(["medico"]), listaConvenios(), listaLocais(),
+      // inclui profissionais inativos (médicos antigos), só para mostrar nomes no histórico
+      supabase.from("profissionais").select("id, nome").then((r) => ok(r) as { id: string; nome: string }[]),
+    ]);
+    return { medicos, convenios, locais, todos };
   }, []);
   const pac = useCarregar(async () => ok(await supabase.from("pacientes").select("*").eq("id", id!).single()) as Pac, [id]);
   const ags = useCarregar(async () => ok(await supabase.from("agendamentos").select("*").eq("paciente_id", id!).order("inicio", { ascending: false }).limit(100)) as Agendamento[], [id]);
@@ -51,7 +56,7 @@ export default function PacienteFicha() {
         <div>
           <h1>{nomeExibicao(p as { nome: string; nome_social: string | null })}</h1>
           <p className="sub" style={{ margin: 0 }}>
-            Prontuário nº <b>{p.numero_prontuario}</b>
+            Prontuário nº <b>{p.numero_prontuario}</b>{p.prontuario_anterior && <> (no Micrologos: {p.prontuario_anterior})</>}
             {p.data_nascimento && ` · ${fmtData(p.data_nascimento as string)} (${idade(p.data_nascimento as string)})`}
             {p.telefone && ` · ${fmtTelefone(p.telefone as string)}`}
             {" · "}{nomePor(base.dados?.convenios, p.convenio_id as string) || "Particular"}
@@ -73,6 +78,7 @@ export default function PacienteFicha() {
       <div className="abas">
         {clinico && <button className={aba === "prontuario" ? "ativa" : ""} onClick={() => setAba("prontuario")}>Prontuário</button>}
         {clinico && <button className={aba === "exames" ? "ativa" : ""} onClick={() => setAba("exames")}>Exames</button>}
+        {clinico && <button className={aba === "documentos" ? "ativa" : ""} onClick={() => setAba("documentos")}>Documentos</button>}
         <button className={aba === "agenda" ? "ativa" : ""} onClick={() => setAba("agenda")}>Agendamentos</button>
         <button className={aba === "dados" ? "ativa" : ""} onClick={() => setAba("dados")}>Dados cadastrais</button>
       </div>
@@ -80,10 +86,11 @@ export default function PacienteFicha() {
       {aba === "prontuario" && clinico && (
         <div className="pep">
           <div className="painel"><h2>Saúde</h2><HistoricoSaude pacienteId={id!} /></div>
-          <LinhaDoTempo pacienteId={id!} medicos={base.dados?.medicos ?? []} />
+          <LinhaDoTempo pacienteId={id!} medicos={base.dados?.todos ?? []} />
         </div>
       )}
       {aba === "exames" && clinico && <ExamesPaciente pacienteId={id!} />}
+      {aba === "documentos" && clinico && <DocumentosPaciente pacienteId={id!} />}
       {aba === "agenda" && (
         <div className="painel rolagem">
           <table className="tabela">
@@ -92,7 +99,7 @@ export default function PacienteFicha() {
               {(ags.dados ?? []).map((a) => (
                 <tr key={a.id}>
                   <td>{fmtDataHora(a.inicio)}</td>
-                  <td>{nomePor(base.dados?.medicos, a.profissional_id)}</td>
+                  <td>{nomePor(base.dados?.todos, a.profissional_id)}</td>
                   <td>{TIPOS_AGENDA[a.tipo]}</td>
                   <td>{nomePor(base.dados?.convenios, a.convenio_id) || "Particular"}</td>
                   <td><Etiqueta cor={STATUS_AGENDA[a.status].cor}>{STATUS_AGENDA[a.status].rotulo}</Etiqueta> {a.motivo_cancelamento && <span className="muted pequeno">{a.motivo_cancelamento}</span>}</td>
@@ -106,7 +113,7 @@ export default function PacienteFicha() {
       {aba === "dados" && <DadosCadastrais p={p} convenio={nomePor(base.dados?.convenios, p.convenio_id as string)} />}
 
       {agendar && base.dados && (
-        <NovoAgendamento {...base.dados}
+        <NovoAgendamento medicos={base.dados.medicos} convenios={base.dados.convenios} locais={base.dados.locais}
           inicial={{ paciente: { id: id!, numero_prontuario: p.numero_prontuario as number, nome: p.nome as string, nome_social: p.nome_social as string | null, data_nascimento: p.data_nascimento as string | null, cpf: p.cpf as string | null, telefone: p.telefone as string | null, convenio_id: p.convenio_id as string | null } }}
           aoFechar={() => setAgendar(false)} aoSalvar={() => { setAgendar(false); ags.recarregar(); }} />
       )}
@@ -144,21 +151,36 @@ interface AtendLinha {
 }
 
 function LinhaDoTempo({ pacienteId, medicos }: { pacienteId: string; medicos: { id: string; nome: string }[] }) {
-  const { dados, erro, carregando } = useCarregar(async () => ok(
+  const { dados: atends, erro, carregando } = useCarregar(async () => ok(
     await supabase.from("atendimentos")
       .select("id, inicio, tipo, status, profissional_id, queixa_principal, conduta, diagnosticos(cid10, descricao, olho)")
       .eq("paciente_id", pacienteId).order("inicio", { ascending: false }),
   ) as AtendLinha[], [pacienteId]);
+  // Prontuário antigo (Micrologos) e nomes de médicos antigos (inativos)
+  const legado = useCarregar(async () => {
+    const r = ok(await supabase.from("prontuario_legado")
+      .select("id, data, profissional_id, tipo, titulo, conteudo, formato, arquivo_caminho, assinatura")
+      .eq("paciente_id", pacienteId).order("data", { ascending: false }).limit(500)) as RegistroLegado[];
+    const ids = [...new Set(r.map((x) => x.profissional_id).filter(Boolean))] as string[];
+    const profs = ids.length ? (ok(await supabase.from("profissionais").select("id, nome").in("id", ids)) as { id: string; nome: string }[]) : [];
+    return { r, profs };
+  }, [pacienteId]);
+  type Item = { quando: string; atend?: AtendLinha; leg?: RegistroLegado };
+  const dados: Item[] | null = atends && legado.dados
+    ? [...atends.map((a) => ({ quando: a.inicio, atend: a })), ...legado.dados.r.map((l) => ({ quando: l.data, leg: l }))]
+        .sort((x, y) => y.quando.localeCompare(x.quando))
+    : atends ? atends.map((a) => ({ quando: a.inicio, atend: a })) : null;
+  const nomeProf = (id: string | null) => medicos.find((m) => m.id === id)?.nome ?? legado.dados?.profs.find((m) => m.id === id)?.nome ?? "";
   return (
     <div className="painel">
       <h2>Histórico de atendimentos</h2>
-      <Aviso>{erro}</Aviso>
+      <Aviso>{erro || legado.erro}</Aviso>
       {carregando ? <Carregando /> : dados?.length === 0 ? <div className="vazio">Nenhum atendimento registrado ainda.</div> : (
         <div className="linha-tempo">
-          {dados!.map((a) => (
+          {dados!.map(({ atend: a, leg }) => leg ? <ItemLegado key={leg.id} r={leg} nomeProf={nomeProf(leg.profissional_id)} /> : a && (
             <div key={a.id} className="evento">
               <div className="linha entre">
-                <Link to={`/atendimento/${a.id}`}><b>{fmtData(a.inicio)}</b> · {TIPOS_AGENDA[a.tipo]} · {nomePor(medicos, a.profissional_id)}</Link>
+                <Link to={`/atendimento/${a.id}`}><b>{fmtData(a.inicio)}</b> · {TIPOS_AGENDA[a.tipo]} · {nomeProf(a.profissional_id)}</Link>
                 {a.status === "em_andamento" ? <Etiqueta cor="amarelo">Em andamento</Etiqueta> : <Etiqueta cor="verde">Finalizado</Etiqueta>}
               </div>
               {a.queixa_principal && <div className="pequeno"><span className="muted">Queixa:</span> {a.queixa_principal}</div>}

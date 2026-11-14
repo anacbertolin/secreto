@@ -124,7 +124,7 @@ export default function Imprimir() {
   }
 
   const end = [p.logradouro, p.numero, p.bairro, p.cidade && `${p.cidade}/${p.uf ?? ""}`].filter(Boolean).join(", ");
-  const rodape = [CLINICA.endereco, CLINICA.telefone, CLINICA.cnpj && `CNPJ ${CLINICA.cnpj}`, CLINICA.site].filter(Boolean).join(" · ");
+  const contato = [CLINICA.telefone, CLINICA.cnpj && `CNPJ ${CLINICA.cnpj}`, CLINICA.site].filter(Boolean).join(" · ");
 
   return (
     <div style={{ background: "#e9edf1", minHeight: "100vh", padding: "20px 0" }}>
@@ -135,7 +135,7 @@ export default function Imprimir() {
       <div className="folha">
         <div className="timbre">
           <img src="/logo-escuro.png" alt={CLINICA.nome} style={{ height: 46 }} />
-          <div style={{ textAlign: "right", fontSize: 12, color: "#444" }}>{rodape}</div>
+          <div style={{ textAlign: "right", fontSize: 12, color: "#444", maxWidth: 360 }}>{CLINICA.endereco}<br />{contato}</div>
         </div>
         <div style={{ fontSize: 14 }}>
           <b>Paciente:</b> {p.nome_social ? `${p.nome_social} (${p.nome})` : p.nome}<br />
@@ -146,7 +146,7 @@ export default function Imprimir() {
         <h1>{titulo}</h1>
         {corpo}
         <div className="assinatura">
-          <p>{(CLINICA.endereco.split(",").slice(-1)[0] || "").trim() || "Data"}: {fmtData(data)}</p>
+          <p>{CLINICA.cidade ? `${CLINICA.cidade}, ` : ""}{fmtData(data)}</p>
           <div className="traco" />
           <b>{m.nome}</b><br />
           {m.conselho ?? "CRM"} {m.numero_conselho ?? "_______"}{m.uf_conselho && `/${m.uf_conselho}`}

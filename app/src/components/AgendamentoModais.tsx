@@ -105,6 +105,7 @@ export function NovoAgendamento(props: {
       fim: fim.toISOString(),
       tipo: f.tipo,
       convenio_id: f.convenio_id || null,
+      plano_id: f.convenio_id && f.convenio_id === paciente.convenio_id ? paciente.plano_id ?? null : null,
       local_id: f.local_id || null,
       primeira_vez: f.primeira_vez,
       encaixe: f.encaixe,
