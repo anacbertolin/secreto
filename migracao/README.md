@@ -106,3 +106,29 @@ Ordem de carga e regras gerais: ver `docs/micrologos/04-migracao-de-dados.md`.
   - Os arquivos têm de ir para o bucket **`documentos`** (limite de 50 MB), no caminho `<paciente_id>/micrologos/<arquivo>`. O bucket `migracao-micrologos` serve só de entrada.
 - **Convênios:** `public.convenio_planos` (convenio_id, nome, codigo, ativo; nome único por convênio) e `plano_id` opcional em pacientes e agendamentos.
 - **Pendente (avisar a dona antes de apagar):** o paciente nº 3 foi criado em 14/11 às 14:54 pela conta da dona. Ele pode colidir com a numeração do Micrologos e precisa ser removido antes da carga final. A sequência de `numero_prontuario` está em 3.
+
+### Faturamento v1: migrações 0009 e 0010 (PR #4, no `main` e aplicadas no banco; aviso de 14/11/2026)
+- **Tabelas novas:**
+  - `procedimentos` (codigo, tabela '22'/'19'/'20'/'18'/'00'/'98', descricao, tipo, padrao_consulta);
+  - `precos` (procedimento_id, convenio_id; vazio = particular; plano_id, valor, vigente_de);
+  - `contas` (uma guia por conta; tipo_guia consulta/sadt/particular; status aberta → pronta → faturada → paga/glosada/cancelada);
+  - `conta_itens` (glosa e recurso por item);
+  - `lotes`.
+- **Colunas novas:**
+  - em `convenios`: codigo_prestador, exige_senha, dias_retorno, versao_tiss, observacoes_faturamento;
+  - em `profissionais`: `cbo` (padrão 225265);
+  - em `exames_catalogo`: `procedimento_id`.
+- **Novo papel de profissional:** `faturamento`, no enum `funcao_profissional`.
+- **Gatilhos que já ignoram a carga** quando `app.migracao = 'on'`:
+  - `conta_automatica` (agendamentos): a agenda histórica não abre contas;
+  - `conta_exame` (exames_realizados);
+  - auditoria.
+- **Gatilhos que continuam ativos:**
+  - `preco`: só preenche quando `valor_unitario` vem vazio;
+  - `trava`: bloqueia itens de conta faturada, paga ou cancelada;
+  - `totais`.
+- **Faturamento histórico:**
+  1. Criar a conta com status `aberta`.
+  2. Inserir os itens com `valor_unitario` preenchido.
+  3. Só então atualizar a conta para o status final.
+- **Procedimentos:** o TUSS 10101012 (tabela 22, `padrao_consulta`) já existe, e o índice único é (tabela, codigo). Reaproveitar com `on conflict` / de-para em vez de duplicar.
