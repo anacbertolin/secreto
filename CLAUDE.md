@@ -41,6 +41,9 @@
     Não trocar a fonte do serviço sem combinar com a dona (trocar desfaria a marca nova no ar).
   - Há várias sessões trabalhando em paralelo em branches `claude/*`. Antes de mexer no site ou no
     Railway, rode `git ls-remote --heads origin` e veja a fonte atual do serviço (`describe-service`).
+- **Marca:** desde 2026-11-14 o site usa o nome **Hospital de Olhos da Baixada** (antes "Consumed").
+  Logo e ícones em `site/marca/`. A troca é feita por `site/ferramentas/trocar_marca.py`
+  (rodar de novo depois de refazer a cópia). Domínio, Facebook e busca do Google Maps ainda usam o nome antigo.
 - **Supabase:** tabela `public.site_mensagens` (migração `site_mensagens`) guarda o que visitantes
   enviam. RLS ligado; `anon`/`authenticated` só podem INSERIR (sem leitura). Chave publicável
   (pública) está no `site-copia.js`. A dona vê as mensagens no painel: Table Editor → site_mensagens.

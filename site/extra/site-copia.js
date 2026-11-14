@@ -121,7 +121,7 @@
     var alvo = document.getElementById('busca-resultados');
     if (!alvo) return;
     var termo = (new URLSearchParams(location.search).get('s') || '').trim();
-    document.title = 'Resultados da pesquisa por “' + termo + '” – Consumed';
+    document.title = 'Resultados da pesquisa por “' + termo + '” – Hospital de Olhos da Baixada';
     document.getElementById('busca-titulo').textContent = termo;
     document.getElementById('busca-trilha').textContent = 'Search results for: ' + termo;
     document.querySelectorAll('.search-form input[name="s"]').forEach(function (i) { i.value = termo; });
