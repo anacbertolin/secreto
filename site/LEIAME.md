@@ -14,3 +14,10 @@ Ela roda no Railway, no serviço **site**.
 ## Como refazer a cópia (se o site original mudar antes da troca)
 1. Baixar o site com `wget` (lista de páginas em `ferramentas/entrada/urls.txt`).
 2. `python3 ferramentas/preparar_copia.py <download>/consumedolhos.com.br ferramentas/entrada public`
+
+## Nova marca (Hospital de Olhos da Baixada)
+- Logo e ícones ficam em `public/marca/` (os originais estão em `/marca/arquivos` na raiz do projeto).
+- `ferramentas/trocar_marca.py` troca "Consumed" pelo nome novo em todas as páginas.
+  Se refizer a cópia do site, rode de novo: `python3 ferramentas/trocar_marca.py public`.
+- Continuam com o nome antigo de propósito (só mudam quando forem trocados fora do site):
+  o endereço consumedolhos.com.br, o Instagram/Facebook e a busca do mapa do Google.
