@@ -17,6 +17,9 @@
   - Workspace: "anacbertolin's Projects" (`4ddac66d-395d-4818-8895-cfd0b50da2c2`) — plano Hobby
   - Projeto: `generous-smile` (`154b859a-9285-4396-8f26-a4dfa59ac13c`), ambiente `production`
   - Conectado ao GitHub (repositório `anacbertolin/secreto`) para deploy automático.
+  - Serviço **site** (pasta `/site`): publica a partir do branch `claude/youthful-cori-erycnr`
+    (trocado em 2026-11-14 para lançar a marca Hospital de Olhos da Baixada).
+- **Marca:** nome Hospital de Olhos da Baixada (antes Consumed). Logo em `marca/`.
 
 ## Regras para dados de saúde (LGPD)
 - Prontuário é dado pessoal sensível. Sempre:
