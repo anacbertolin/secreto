@@ -182,3 +182,22 @@ CEP 26255-140, tel. (21) 2667-0532. **O CNPJ ainda falta**: a dona precisa infor
 - Repasse médico (faltam as regras por médico).
 - Integração com portal/Orizon, SUS (BPA/APAC), DMED, NFS-e.
 - Tabela TUSS completa e preços: virão da importação do Micrologos (avisar a sessão de migração).
+
+---
+
+## 14/11/2026 (noite) — Relatórios e listas oficiais
+### Listas
+- **CID-10 completo** (DATASUS, 12.451 códigos) e **medicamentos com registro ativo na ANVISA** (8.805, dos quais
+  200 de uso oftalmológico), gerados por `app/scripts/gerar_listas.py` a partir dos arquivos oficiais e servidos como
+  `app/public/dados/cid10.json` e `medicamentos.json` (dados públicos, sem dados de paciente; carregados só quando
+  alguém busca). Para atualizar: baixar os arquivos (links no topo do script) e rodar o script.
+- Diagnóstico agora busca no CID-10 completo (os CIDs de oftalmologia mais usados aparecem primeiro).
+- Receita de medicamentos busca na lista da ANVISA (oftálmicos primeiro, ⭐ favoritos da clínica) e faz a
+  **conferência alergia × medicamento** (avisa se o nome ou o princípio ativo bate com uma alergia registrada).
+- Detalhe: a ANVISA classifica latanoprosta/bimatoprosta como "PROSTAGLANDINAS"; o script trata como oftálmico.
+### Relatórios (migração 0011 + tela Relatórios)
+- Funções `rel_*` (SECURITY INVOKER: cada função de equipe só vê o que o RLS permite): agenda por médico/convênio/tipo
+  (com % de falta), tempo de espera (média, 90% e atraso), pacientes que mais faltaram, pacientes novos por
+  convênio/cidade, exames (realizados, laudados, horas até o laudo), produção por médico e diagnósticos mais
+  frequentes. Anônimos não executam. Cada tabela exporta planilha e a página imprime.
+- Testado na cópia local (cálculos de espera/atraso conferidos; recepção não vê diagnósticos; anônimo bloqueado).

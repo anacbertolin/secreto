@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { supabase, msgErro } from "../../lib/supabase";
 import { useCarregar, ok, Aviso, Campo } from "../ui";
 import { InserirModelo, limpar, type Ctx } from "./comum";
-import { buscarCID } from "../../lib/cid10";
+import { useEffect } from "react";
+import { buscarCIDCompleto, buscarMedicamento, alergiaConflitante, normalizar, type ItemCID, type ItemMed } from "../../lib/listas";
 import { fmtDataHora, fmtGrau, numOuNulo, isoDia, somaDias } from "../../lib/util";
 
 async function remover(tabela: string, id: string, recarregar: () => void, msg = "Remover este item?") {
@@ -23,7 +24,12 @@ export function Diagnosticos({ ctx }: { ctx: Ctx }) {
   const [manual, setManual] = useState({ cid: "", desc: "" });
   const [e2, setE2] = useState("");
   const d = !ctx.editaMedico;
-  const sugestoes = buscarCID(busca);
+  const [sugestoes, setSugestoes] = useState<ItemCID[]>([]);
+  useEffect(() => {
+    let vivo = true;
+    const t = setTimeout(() => buscarCIDCompleto(busca).then((r) => vivo && setSugestoes(r)).catch(() => {}), 150);
+    return () => { vivo = false; clearTimeout(t); };
+  }, [busca]);
 
   async function incluir(cid10: string, descricao: string) {
     setE2("");
@@ -59,7 +65,7 @@ export function Diagnosticos({ ctx }: { ctx: Ctx }) {
         <div className="secao grade">
           <div className="linha">
             <div className="busca" style={{ flex: 1, minWidth: 260 }}>
-              <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar CID ou doença: catarata, H40.1, miopia…" />
+              <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar no CID-10 completo: catarata, H40.1, miopia…" />
               {sugestoes.length > 0 && (
                 <div className="busca-lista">
                   {sugestoes.map(([c, dsc]) => <button key={c} onClick={() => incluir(c, dsc)}><b>{c}</b> {dsc}</button>)}
@@ -193,6 +199,7 @@ export function ReceitaMedicamentos({ ctx }: { ctx: Ctx }) {
   const { dados, erro, recarregar } = useCarregar(async () => ok(await supabase.from("prescricoes").select("*, prescricao_itens(*)").eq("atendimento_id", ctx.atend.id).order("criado_em")) as Rx[], [ctx.atend.id]);
   const vazio = { medicamento: "", apresentacao: "", posologia: "", olho: "", via: "", duracao: "", quantidade: "", tipo_receita: "simples" };
   const [f, setF] = useState(vazio);
+  const [principio, setPrincipio] = useState("");
   const [e2, setE2] = useState("");
   const d = !ctx.editaMedico;
   const set = (k: keyof typeof vazio) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
@@ -200,6 +207,10 @@ export function ReceitaMedicamentos({ ctx }: { ctx: Ctx }) {
   async function incluir() {
     setE2("");
     if (!f.medicamento || !f.posologia) return setE2("Informe o medicamento e como usar.");
+    // Conferência de alergia × medicamento
+    const { data: alergias } = await supabase.from("alergias").select("substancia").eq("paciente_id", ctx.atend.paciente_id).eq("ativa", true);
+    const conflito = alergiaConflitante(f.medicamento, principio, (alergias ?? []).map((a) => a.substancia as string));
+    if (conflito && !confirm(`⚠️ ATENÇÃO: o paciente tem alergia registrada a "${conflito}".\n\nO medicamento "${f.medicamento}"${principio ? ` (${principio})` : ""} parece ter relação com essa alergia.\n\nPrescrever mesmo assim?`)) return;
     let rx = (dados ?? []).find((r) => r.tipo_receita === f.tipo_receita);
     if (!rx) {
       const r = await supabase.from("prescricoes").insert({ atendimento_id: ctx.atend.id, tipo_receita: f.tipo_receita }).select("*").single();
@@ -211,7 +222,7 @@ export function ReceitaMedicamentos({ ctx }: { ctx: Ctx }) {
       posologia: f.posologia, olho: f.olho, via: f.via, duracao: f.duracao, quantidade: f.quantidade,
     }));
     if (error) return setE2(msgErro(error));
-    setF({ ...vazio, tipo_receita: f.tipo_receita }); recarregar();
+    setF({ ...vazio, tipo_receita: f.tipo_receita }); setPrincipio(""); recarregar();
   }
 
   return (
@@ -240,9 +251,8 @@ export function ReceitaMedicamentos({ ctx }: { ctx: Ctx }) {
         <div className="secao grade">
           <h3>Adicionar medicamento</h3>
           <div className="grade g4">
-            <Campo rotulo="Medicamento *" className="span2">
-              <input list="meds-comuns" value={f.medicamento} onChange={set("medicamento")} placeholder="Comece a digitar…" />
-              <datalist id="meds-comuns">{COMUNS.map((m) => <option key={m} value={m} />)}</datalist>
+            <Campo rotulo="Medicamento * (lista ANVISA)" className="span2">
+              <BuscaMedicamento valor={f.medicamento} aoMudar={(v, p) => { setF({ ...f, medicamento: v }); setPrincipio(p); }} />
             </Campo>
             <Campo rotulo="Apresentação"><input value={f.apresentacao} onChange={set("apresentacao")} placeholder="Frasco 5 mL" /></Campo>
             <Campo rotulo="Quantidade"><input value={f.quantidade} onChange={set("quantidade")} placeholder="1 frasco" /></Campo>
@@ -431,6 +441,37 @@ export function Adendos({ ctx, podeEscrever }: { ctx: Ctx; podeEscrever: boolean
           <textarea rows={3} value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Escreva o adendo…" />
           <div><button className="primario" onClick={salvar} disabled={!texto.trim()}>Registrar adendo</button></div>
         </>
+      )}
+    </div>
+  );
+}
+
+/** Campo de medicamento com sugestões: favoritos oftalmológicos + registro ativo da ANVISA */
+function BuscaMedicamento({ valor, aoMudar }: { valor: string; aoMudar: (v: string, principio: string) => void }) {
+  const [aberta, setAberta] = useState(false);
+  const [res, setRes] = useState<ItemMed[]>([]);
+  useEffect(() => {
+    let vivo = true;
+    const t = setTimeout(() => buscarMedicamento(valor).then((r) => vivo && setRes(r)).catch(() => {}), 200);
+    return () => { vivo = false; clearTimeout(t); };
+  }, [valor]);
+  const q = normalizar(valor.trim());
+  const favoritos = q.length >= 2 ? COMUNS.filter((c) => normalizar(c).includes(q)).slice(0, 6) : [];
+  const rotulo = (m: ItemMed) => (normalizar(m[0]) === normalizar(m[1]) ? m[1].charAt(0).toUpperCase() + m[1].slice(1) : `${m[0]} (${m[1]})`);
+  return (
+    <div className="busca">
+      <input value={valor} placeholder="Nome comercial ou princípio ativo…" onChange={(e) => { aoMudar(e.target.value, ""); setAberta(true); }}
+        onFocus={() => setAberta(true)} onBlur={() => setTimeout(() => setAberta(false), 200)} />
+      {aberta && (favoritos.length > 0 || res.length > 0) && (
+        <div className="busca-lista">
+          {favoritos.map((c) => <button key={c} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { aoMudar(c, c); setAberta(false); }}>⭐ {c}</button>)}
+          {res.map((m) => (
+            <button key={m[0] + m[1]} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { aoMudar(rotulo(m), m[1]); setAberta(false); }}>
+              <div>{m[3] ? "👁️ " : ""}<b>{m[0]}</b> <span className="muted">— {m[1]}</span></div>
+              <div className="muted pequeno">{m[2]}</div>
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );

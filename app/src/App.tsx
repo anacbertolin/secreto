@@ -16,6 +16,7 @@ import Imprimir from "./pages/Imprimir";
 import { Equipe, Convenios, Locais, Horarios, CatalogoExames, Modelos } from "./pages/Cadastros";
 import Faturamento, { ContaDetalhe, LoteDetalhe } from "./pages/Faturamento";
 import Procedimentos from "./pages/Procedimentos";
+import Relatorios from "./pages/Relatorios";
 
 interface ItemMenu { para: string; rotulo: string; icone: string; funcoes?: Funcao[]; grupo?: string }
 
@@ -27,6 +28,7 @@ const MENU: ItemMenu[] = [
   { para: "/consultorio", rotulo: "Consultório", icone: "🩺", funcoes: ["medico", "enfermagem"] },
   { para: "/exames", rotulo: "Exames e laudos", icone: "🔬", funcoes: ["medico", "enfermagem"] },
   { para: "/faturamento", rotulo: "Faturamento", icone: "🧾", funcoes: ["faturamento", "recepcao", "admin"] },
+  { para: "/relatorios", rotulo: "Relatórios", icone: "📊" },
   { grupo: "Cadastros", para: "/cadastros/equipe", rotulo: "Equipe", icone: "👥", funcoes: ["admin"] },
   { para: "/cadastros/horarios", rotulo: "Horários e bloqueios", icone: "🕒", funcoes: ["recepcao", "admin"] },
   { para: "/cadastros/convenios", rotulo: "Convênios", icone: "💳", funcoes: ["recepcao", "admin", "faturamento"] },
@@ -117,6 +119,7 @@ export default function App() {
           <Route path="/faturamento" element={<Protegida funcoes={["faturamento", "recepcao", "admin"]}><Faturamento /></Protegida>} />
           <Route path="/faturamento/conta/:id" element={<Protegida funcoes={["faturamento", "recepcao", "admin"]}><ContaDetalhe /></Protegida>} />
           <Route path="/faturamento/lote/:id" element={<Protegida funcoes={["faturamento", "admin"]}><LoteDetalhe /></Protegida>} />
+          <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/cadastros/procedimentos" element={<Protegida funcoes={["faturamento", "admin"]}><Procedimentos /></Protegida>} />
           <Route path="/cadastros/equipe" element={<Protegida funcoes={["admin"]}><Equipe /></Protegida>} />
           <Route path="/cadastros/horarios" element={<Protegida funcoes={["recepcao", "admin"]}><Horarios /></Protegida>} />
