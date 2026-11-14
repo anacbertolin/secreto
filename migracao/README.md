@@ -53,6 +53,11 @@ O daemon do Docker não está rodando por padrão nesta máquina; iniciar com `d
 
 Ordem de carga e regras gerais: ver `docs/micrologos/04-migracao-de-dados.md`.
 
+## Decisões da dona
+| Data | Decisão |
+|---|---|
+| 14/11/2026 | **Número de prontuário:** manter o MESMO número do Micrologos (opção B). Carga com `overriding system value` e depois `setval` da sequência. Pacientes de teste criados antes da carga final precisam ser removidos (o número pode colidir com o do Micrologos). |
+
 ## Mapeamentos já decididos
 | Micrologos | Sistema novo |
 |---|---|

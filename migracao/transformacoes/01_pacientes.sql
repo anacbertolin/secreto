@@ -45,12 +45,17 @@ order by btrim(b.id_paciente), b._carga_id desc
 on conflict (entidade, legacy_id) do nothing;
 
 -- 4) Inserção nas tabelas oficiais
+-- Decisão da dona (14/11/2026): manter o MESMO número de prontuário do Micrologos.
+-- numero_prontuario é identity "generated always": por isso o OVERRIDING SYSTEM VALUE.
+-- Depois da carga: ajustar a sequência (passo 4b) para os novos pacientes seguirem a numeração.
 insert into public.pacientes (
-  id, nome, data_nascimento, sexo, cpf, cns, rg, nome_mae,
+  id, numero_prontuario, nome, data_nascimento, sexo, cpf, cns, rg, nome_mae,
   telefone, telefone_secundario, email, cep, logradouro, numero, complemento, bairro, cidade, uf,
   convenio_carteirinha, observacoes, ativo, criado_em)
+overriding system value
 select distinct on (m.novo_id)
   m.novo_id,
+  nullif(regexp_replace(coalesce(b.prontuario, b.id_paciente), '\D', '', 'g'), '')::bigint,   -- AJUSTAR coluna do nº de prontuário
   legacy_micrologos.txt(b.nome),
   legacy_micrologos.data(b.dt_nascimento),                                        -- AJUSTAR
   legacy_micrologos.sexo(b.sexo),
@@ -77,6 +82,10 @@ from legacy_micrologos.bruto_pacientes b
 join legacy_micrologos.mapa_ids m on m.entidade = 'paciente' and m.legacy_id = btrim(b.id_paciente)
 order by m.novo_id, b._carga_id desc
 on conflict (id) do nothing;
+
+-- 4b) Novos pacientes continuam a numeração depois do maior número do Micrologos
+select setval(pg_get_serial_sequence('public.pacientes', 'numero_prontuario'),
+              greatest((select max(numero_prontuario) from public.pacientes), 1));
 
 -- 5) Conferência
 select
