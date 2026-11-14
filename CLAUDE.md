@@ -18,8 +18,10 @@
   - Projeto: `generous-smile` (`154b859a-9285-4396-8f26-a4dfa59ac13c`), ambiente `production`
   - Conectado ao GitHub (repositório `anacbertolin/secreto`) para deploy automático.
   - Serviços no projeto:
-    - `secreto` (`7284d56c-4c07-426b-b479-69ed3a9c45da`) — reservado para o sistema de prontuário
-      (ainda só "staged", nunca publicado; deploy do branch `main`).
+    - `sistema` (`d327757c-981f-4f82-ae0e-7179625a7ea9`) — **o sistema da clínica** (agenda, recepção, prontuário,
+      exames). Pasta raiz `/app`. Publica a partir do `main` (ver seção "Sistema").
+    - `secreto` (`7284d56c-4c07-426b-b479-69ed3a9c45da`) — rascunho antigo ("staged", nunca publicado, sem pasta raiz).
+      NÃO usar: o sistema roda no serviço `sistema`. Não aceitar o rascunho (o build falharia).
     - `site` (`825f64cf-f877-4a67-8e0d-c90a487cc6d3`) — site público da clínica (ver seção abaixo).
 - **Rede do ambiente de nuvem "secreto"** (sessões Claude): hosts liberados incluem
   `consumedolhos.com.br`, `www.consumedolhos.com.br` e `site-production-8c641078.up.railway.app`.
@@ -65,8 +67,13 @@
    Depois: adicionar domínio próprio no Railway (`generate-domain` com `domain`) e passar a ela os registros DNS.
 3. Opcional: aviso por e-mail quando chegar mensagem em `site_mensagens` (hoje ninguém é avisado).
 4. Se o site original mudar antes da troca, baixar de novo e rodar `preparar_copia.py`.
-5. Fora do site: o Supabase avisa que a função `public.abrir_atendimento` (SECURITY DEFINER) pode
-   ser chamada por qualquer usuário logado — revisar quando voltar ao prontuário.
+5. (Resolvido) O aviso do Supabase sobre `public.abrir_atendimento` (SECURITY DEFINER) é intencional:
+   a função confere se quem chama é médico ou enfermagem (ver `docs/sistema/HISTORICO.md`).
+
+## Como as mudanças entram (decisão da dona, 14/11/2026)
+- O **`main` é a versão oficial**. Cada sessão trabalha no seu ramo `claude/*` e manda o trabalho por **PR para o `main`**.
+- A dona revisa e aprova o PR; só então a mudança vai para o `main` e, de lá, para o ar (Railway publica sozinho).
+- Nunca empurrar direto no `main` nem reescrever o histórico dele.
 
 ## Regras para dados de saúde (LGPD)
 - Prontuário é dado pessoal sensível. Sempre:
@@ -75,3 +82,21 @@
   - Rodar `get_advisors` (security e performance) depois de toda mudança de estrutura.
   - Manter dados no Brasil (sa-east-1).
 - Mudanças de estrutura do banco: usar migrações (`apply_migration`), nunca SQL solto para DDL.
+
+## Sistema (app web) — `app/`
+- **Memória do projeto:** leia `docs/sistema/HISTORICO.md` antes de mexer no sistema (o que foi feito, decisões,
+  combinados com a sessão de migração, pendências). Acrescente uma seção ao fim a cada dia de trabalho.
+- React + Vite + TypeScript, servido como site estático (`npm run build` → `npm start`) no Railway (serviço `sistema`, pasta raiz `/app`).
+- Fala direto com o Supabase usando só a chave **publicável**; quem protege os dados são as regras RLS.
+- Login: e-mail + senha (Supabase Auth). Só e-mails cadastrados e ativos em `profissionais` conseguem criar conta
+  (gatilho `somente_equipe` em `auth.users`). Senhas temporárias são criadas pelo admin na tela Equipe
+  (função Edge `equipe-acesso`); a pessoa troca no primeiro acesso.
+- Identidade visual: Consumed · Clínica de Olhos (logos em `app/public`, dados da clínica em `app/src/lib/marca.ts`).
+- Módulos v1: Agenda, Recepção, Pacientes, Consultório/Prontuário (PEP oftalmológico), Exames e laudos, Cadastros.
+- Arquivos de exames: bucket privado `exames` no Storage (até 50 MB por arquivo).
+- Importação do Micrologos (migração 0008): `prontuario_legado` (PEP antigo, só leitura, aparece na linha do tempo),
+  `paciente_documentos` + bucket privado `documentos` (SHA-256), `convenio_planos` + `plano_id`,
+  e-mail opcional para profissional inativo, auditoria pulada com `set app.migracao = 'on'`.
+  Decisão da dona: o paciente mantém o MESMO nº de prontuário do Micrologos (carga com OVERRIDING SYSTEM VALUE + setval).
+  A coluna `prontuario_anterior` fica disponível para outros números antigos, se necessário.
+- Dados de teste do v1 apagados em 14/11/2026 (com autorização). A função Edge `limpeza-teste` está desativada (responde 410).
