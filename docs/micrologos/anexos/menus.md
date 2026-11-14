@@ -1,0 +1,363 @@
+
+# menuClinic
+- Dashboard (CLM)
+- Favoritos (CLM)
+- Agenda (CLMATAM)
+- Calendário (CLMATAM)
+- Prontuário - PEP Icons (CLMATAT)
+- Fila de Laudos (CLMATAT)
+- Cirurgia
+- Contas de Pacientes  [contasPaciente] (CLMATCP)
+- Solicitação
+- Cobrança  [cobrancasConvenio] (CLMATCV)
+- Gestão de Retorno  [gestaoDeRetorno] (CLMATRT)
+- Totem (CLMATFT)
+  - Totem Funcionário (CLMATFT)
+  - Totem Paciente (CLMATFT)
+- Chamada TV (CLMATT)
+- Paciente
+- Laudo
+- To Do
+- Sistema
+  - Utilitários
+    - Mensagens Linha Master
+    - Captura Imagem Automático
+    - Avisa Entrada de Paciente
+    - Log de Usuários Avançado
+    - Log de Usuários
+    - Ponto Eletrônico
+- Cadastros (CLMCA)
+  - Unidades  [unidades] (CLMCAUN)
+  - Pacientes  [pacientes] (CLMCAPA)
+  - Staff Médico  [staffMedicos] (CLMCAME)
+  - Convênios / Planos de Saúde  [convenios] (CLMCACO)
+  - Procedimentos  [procedimentos] (CLMCAPC)
+  - Produtos  [produtos] (CLMCAPD)
+  - Serviços  [servicos] (CLMCASE)
+  - Contatos Externos  [contatosExternos]
+  - Tabelas (CLMTA)
+    - Atendimento (CLMTA)
+      - Categorias de Locais de Atendimento  [locaisAtendimentoCategorias] (CLMTALC)
+      - Locais de Atendimento  [locais] (CLMTALO)
+      - Protocolos de Tratamento
+      - Sessões
+        - Aparelhos
+        - Lados
+        - Regiões
+      - Status dos Locais
+      - Equipes Médicas
+      - Especialidades  [especialidades] (CLMTAES)
+      - IBGE Localidade
+      - Representantes
+      - Motivos (Ausência, Canc, Desist, Emerg, Bloqueio)  [motivosAusencia] (CLMTAAU)
+      - CID - 10
+      - Medicamentos Personalizados  [medicamentosPersonalizados] (CLMTAMD)
+      - Medicamentos - Posologias  [medicamentosPosologias] (CLMTAMD)
+      - Medicamentos - Substitutos  [medicamentosSubstitutos] (CLMTAMD)
+      - Categorias de Modelos de Texto do PEP (CLMTACT)
+      - Modelos de Texto do PEP (CLMTATE)
+      - Modelos de email (XXXXXXX)
+      - Ficha de dados
+        - Grupo de Limites
+        - Limites
+        - Campos
+        - Arquétipos
+    - Faturamento (CLMTAF)
+      - Centros de Responsabilidade  [centrosResponsabilidade] (CLMTACR)
+      - Tipos de Pendência  [tiposPendencia] (CLMTATP)
+      - Tipos de Glosas  [tiposGlosa] (CLMTATG)
+      - Turnos  [turnos] (CLMTATU)
+      - Taxas de Turno  [taxasTurno] (CLMTATX)
+      - Classificação de Guias  [classificacaoGuias] (CLMTACG)
+      - Classificação de Atendimentos  [classificacaoAtendimentos] (CLMTACA)
+      - Configuração para Faturamento Automático
+      - Layouts de Convênios
+    - Comissionamento (CLMTAC)
+      - Categorias do Staff Médico  [staffMedicosCategorias] (CLMTAMC)
+      - Donos de Equipamentos
+      - Tipos de Comissão
+    - Produtos / Serviços (CLMTAP)
+      - Categorias de Produtos / Serviços  [produtosCategorias] (CLMTACP)
+      - Unidades de Produtos  [produtosUnidades] (CLMTAUP)
+      - Marcas  [produtosMarcas] (CLMTAMA)
+      - Tempo de Duração Atendimento
+      - Brasíndice
+      - Preços  [tabelasPrecos] (CLMTAPC)
+    - Prescrição
+      - Formas de Aplicação
+      - Intervalos de Aplicação
+    - Laudo
+      - Títulos de Laudo
+      - Frases de Laudo
+    - Pacientes (CLMTAP)
+      - Empresas
+      - Portadores
+      - Profissões  [profissoes] (CLMTAPF)
+      - CEP
+      - Acompanhantes
+      - Tipos de Ocorrência  [tiposOcorrencias] (CLMTATO)
+    - Diversos (CLMTAD)
+      - Feriados  [feriados] (CLMTAFE)
+    - Facilitadores
+- Atendimentos (CLMAT)
+  - Agendas (CLMAT)
+    - Ambulatório
+    - Cirurgia
+    - Gestão de Retorno (CLMATRT)
+    - Fila do Totem
+    - Ocupação
+  - Atendimento (CLMAT)
+    - Atendimento
+    - Centro Cirúrgico (CLMATCC)
+    - Inform. Médicas Pendentes
+    - Laudo Web
+    - Solicitações Procedimentos (CLMATSO)
+    - Orçamentos de Pacientes (CLMATOR)
+  - Faturamento (CLMATCP)
+    - Faturamento
+    - Contas de Pacientes  [contasPaciente] (CLMATCP)
+    - Pendências (CLMATPP)
+    - Lançamentos Extras para Repasse (CLMATEX)
+    - Cobranças (CLMATCV)
+      - Cobranças de Convênios  [cobrancasConvenio] (CLMATCV)
+      - Justificativas de Glosas Técnicas (CLMATGT)
+      - Acompanhamento (CLMATGL)
+    - Repasse (CLMREADRM)
+    - Dmed (Relação p/declaração de serviços médicos) (CLMATDM)
+    - CIHA (Relação p/ declaração junto ao SUS) (CLMATSU)
+  - Solicitações
+    - Requisição/Devolução Internados (CLMATIR)
+    - Prescrição Médica Internados (CLMATPR)
+    - Procedimentos Realizados em Internados (CLMATEX)
+    - Requisição/Devolução Ambulatório (CLMATAR)
+    - Prescrição Médica Ambulatório (CLMATAP)
+    - Requisições Encerradas (CLMATRE)
+    - Requisição/Devolução Consumo de Setor (CLMATCS)
+- Relatórios (CLMRE)
+  - Agenda (CLMREAG)
+    - Agendamentos por Planos de Saúde (CLMREAGCO)
+    - Agendamentos WEB (CLMREAGWE)
+    - Agenda por Médico (CLMREAGWE)
+    - Agenda por Local (CLMREAGLO)
+    - Faltas por Paciente (CLMREAGFA)
+    - Pacotes de Sessão  [relatorioPacoteSessoes] (CLMREAGSE)
+  - Internação (CLMREIN)
+    - Censo Diário (CLMREINCE)
+    - Estatística de Tipo de Acomodação (CLMREINTO)
+  - Atendimentos (CLMREAT)
+    - Cruzamento de Dados do Atendimento (CLMREATCR)
+    - Cruzamento de Dados do Atendimento com Palavra-Chave (CLMREATPC)
+  - Solicitações (CLMRESO)
+    - Requisições por Paciente (CLMRESORP)
+    - Requisições de Setor (CLMRESORR)
+    - Produtos por Prescrição (CLMRESOPP)
+  - Faturamento (CLMREFA)
+    - Atendimentos por Médico (CLMREFA)
+    - Faturamento/Mov.Estoque por Médico (CLMREFA)
+  - Cobrança (CLMRECO)
+    - Valores Resumidos por Plano de Saúde (CLMRECORC)
+    - Cobranças Entregues (CLMRECOCE)
+  - Administrativos (CLMREAD)
+    - Repasse Staff Médico (CLMREADRM)
+    - Pacientes (CLMREADPI)
+  - Auditoria (CLMREAU)
+    - Consistências (CLMREAU)
+    - Conferências (CLMREAU)
+    - Cadastros (CLMREAU)
+  - Planilhas (CLMREPL)
+    - Por Planos de Saúde e Prod./Serv. (CLMREAU)
+    - Por Convênio e Categ.Prod./Serv. (CLMREAU)
+- Ferramentas
+  - Configurações (CLMFECO)
+
+# menuCash
+- Dashboard (CSM)
+- Favoritos (CSM)
+- Fluxo de Caixa (CSMMOFL)
+- Pagar (CSMMOFL)
+- Receber (CSMMOFL)
+- Conta Corrente (CSMMOCC)
+- Notas Fiscais de Saída (CSMEMNF)
+- Notas Fiscais de Entrada (ESMMOCONF)
+- Cadastros (CSMCA)
+  - Emitentes  [emitentes] (CSMCAEM)
+  - Empresas  [empresas] (CSMCAEP)
+  - Portadores  [portadores] (CSMCAPO)
+  - Planos Financeiros  [planosFinanceiros] (CSMCAPF)
+  - Projetos  [projetos] (CSMCAPJ)
+  - Contas Recorrentes  [transacoesRecorrentes] (CSMCATP)
+  - Produtos  [produtos] (CSMCAPR)
+  - Tabelas (CSMTA)
+    - Emitente (CSMTAEM)
+      - Categorias de Emitentes  [emitentesCategorias] (CSMTAEMCE)
+      - Profissões  [profissoes] (CSMTAEMPR)
+      - Tipos de Ocorrência  [tiposOcorrencias] (CSMTAEMTO)
+    - Financeiro (CSMTAFI)
+      - Centros de Responsabilidade  [centrosResponsabilidade] (CSMTAFICR)
+      - Naturezas de Operação  [naturezasOperacao] (CSMTAFINO)
+      - Tipos de Multa  [tiposMulta] (CSMTAFITM)
+      - Moedas / Índices  [moedas] (CSMTAFIMO)
+      - Feriados  [feriados] (CSMTAFE)
+    - Produtos/Serviços (CSMTAPR)
+      - Categorias de Produtos / Serviços  [produtosCategorias] (CSMTAPRCP)
+- Relatórios (CSMRE)
+  - Fluxo de Caixa (CSMREFL)
+    - Projetado da Agenda Semanal  [relatorioProjetadoAgendaSemanal] (CSMREFLDR)
+    - Projetado Diário por Emitente  [relatorioProjetadoDiario] (CSMREFLDR)
+    - DRE e DFC  [relatorioDRE] (CSMREFLDR)
+- Paylogos (CSM)
+  - Links de pagamento  [payLinks] (CSM)
+  - Recebedores  [payRecebedores] (CSM)
+  - Maquininhas  [payMaquininhas] (CSM)
+  - Clientes  [payClientes] (CSM)
+
+# menuBot
+- Efetuar recarga de créditos  [recargaCreditosIABot] (BOT)
+- Dashboard (BOT)
+- Favoritos (BOT)
+- Configurações (BOT)
+  - Canais de Atendimento  [canaisAtendimentoBot] (BOT)
+  - Regras de Envio  [regrasEnvio] (BOT)
+  - E-mail (SMTP)  [configuracoesEmailBot] (BOT)
+  - Configurações Gerais  [configuracoesGeraisBot] (BOT)
+  - URAs  [urasBot] (BOT)
+  - Usuários  [usuariosBot] (BOT)
+  - Mensagens Personalizadas  [mensagensPersonalizadasBot] (BOT)
+  - Agentes de IA  [agentesIA] (BOT)
+- Cadastros (BOT)
+  - Gestão de Funis  [kanbans] (BOT)
+  - Campanhas  [campanhas] (BOT)
+- Relatórios (BOT)
+  - Envios  [relatorioEnviosBot] (BOT)
+  - Consumo de créditos de WhatsApp  [relatorioConsumoWhatsAppCreditosBot] (BOT)
+  - Recargas de créditos de WhatsApp  [relatorioRecargasWhatsAppCreditosBot] (BOT)
+  - Consumo de créditos de SMS  [relatorioConsumoSMSCreditosBot] (BOT)
+  - Recargas de créditos de SMS  [relatorioRecargasSMSCreditosBot] (BOT)
+  - Consumo de créditos de IA  [relatorioConsumoIABot] (BOT)
+  - Recargas de créditos de IA  [relatorioRecargasIABot] (BOT)
+
+# menuAnalytics
+- Indicadores (ANM)
+- Dashboard (ANM)
+- Favoritos (ANM)
+- Relatórios (ANM)
+  - Talk (ANM)
+    - Leads (ANM)
+      - Acompanhamento de Leads  [relatorioLeads] (ANM)
+  - Clinic (ANM)
+    - Pacientes (ANM)
+      - Termos (ANM)
+        - Termos enviados  [relatorioTermos] (ANM)
+
+# menuQuality
+- Favoritos
+- SAC
+- Proposta
+- Agenda Visita
+- Tarefas
+- Voz Chamada
+- Voz Recebida
+  - Manual
+  - Automática
+- Projetos
+- Sistema
+  - Utilitários
+    - Mensagens Linha Master
+    - Bloco de Notas
+    - Log de Usuários Avançado
+    - Log de Usuários
+    - Ponto Eletrônico
+    - Tarefas do Usuário
+    - Escala da Limpeza
+    - Estatísticas
+      - Estatística do SAC
+      - Ocupação do SAC
+      - Estatísticas Gerais
+    - Telefonia
+    - Processamentos
+      - Programação de Eventos
+      - Colocar Versão Atualizador
+      - Padrão MAC
+- Cadastros
+  - Emitentes
+  - Produtos / Serviços
+    - Serviços
+    - Produtos
+  - Representantes
+  - Tabelas
+    - Atendimentos
+      - Categorias de Textos
+      - Textos
+      - Condições de Pagamento
+      - Centros de Responsabilidade
+      - Pacotes
+      - Finalidades
+      - Tipos de Atendimentos
+      - Tipos de Ocorrências
+    - Agenda
+      - Tarefas
+      - Processos
+    - Emitentes
+      - Categorias de Emitente
+      - Tipos de Relação de Emitente
+      - Facilitadores
+    - Produtos / Serviços
+      - Categorias de Produto / Serviço
+      - Unidade de Medida
+      - Grupos
+      - Marcas (Fabricantes)
+      - Preços
+      - Tipos de Comissão
+    - Diversos
+      - Feriados
+      - Moedas Estrangeiras
+      - CEP
+- Agendas
+  - Visitas
+  - Procedimentos
+  - Programação de Eventos
+  - Projetos
+- Atendimentos
+  - Comunicação por Voz
+  - SAC
+  - NAs sem preenchimento
+  - SAC novo (em desenv)
+  - Dúvidas Frequentes
+  - Objetivo Solução de NA
+  - Requisições Encerradas
+- Comercial
+  - Proposta
+  - Administração de Licenças
+  - Resultado Pesquisa Satisfação
+  - Rastreio Emitente
+  - Acompanhamento Web
+- Relatórios
+  - Agenda
+  - Atendimento
+    - Estatísticas de Atendimento
+    - Atendimentos por Peso
+  - Comercial
+    - Contratos ativos por Pacote
+  - Emitentes
+    - Configurado de Emitentes
+  - Administrativos
+    - Ponto Eletrônico
+    - Banco de Horas
+    - ValoresExtrasRepresentantes
+- Ferramentas
+  - Configuração
+    - Sistema
+    - Recebe Mensagem
+    - Volta config. inicial da tela
+  - Manutenção de Arquivos
+    - Manutenção Completa
+    - Cópia dos Dados - Backup
+  - Ocupação dia seguinte
+  - Cascata
+  - Calendário
+  - Perfil
+  - Suporte Autorizado
+- Ajuda
+  - Conteúdo
+  - Sobre o Sistema
+  - Suporte Técnico
