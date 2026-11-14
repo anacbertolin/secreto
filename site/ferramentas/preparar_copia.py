@@ -36,15 +36,10 @@ def process_html(t):
     return t
 
 
-AJUSTES = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ajustes.json'), encoding='utf-8'))
-
-
 def process_file(path):
     with open(path, encoding='utf-8', errors='surrogateescape') as f:
         t = f.read()
     t = process_html(t) if path.endswith('.html') else relativize(t)
-    for a in AJUSTES:  # mudanças de conteúdo pedidas pela clínica (ver ajustes.json)
-        t = t.replace(a['de'], a['para'])
     with open(path, 'w', encoding='utf-8', errors='surrogateescape') as f:
         f.write(t)
 
