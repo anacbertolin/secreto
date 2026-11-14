@@ -1,11 +1,12 @@
 // Utilidades de formatação e rótulos em português
 
-export type Funcao = "medico" | "enfermagem" | "recepcao" | "admin";
+export type Funcao = "medico" | "enfermagem" | "recepcao" | "admin" | "faturamento";
 
 export const FUNCOES: Record<Funcao, string> = {
   medico: "Médico(a)",
   enfermagem: "Enfermagem / Técnico(a)",
   recepcao: "Recepção",
+  faturamento: "Faturamento",
   admin: "Administração",
 };
 
@@ -157,4 +158,40 @@ export function senhaAleatoria(): string {
   const arr = new Uint32Array(10);
   crypto.getRandomValues(arr);
   return Array.from(arr, (x) => chars[x % chars.length]).join("");
+}
+
+export const STATUS_CONTA: Record<string, { rotulo: string; cor: string }> = {
+  aberta: { rotulo: "Em conferência", cor: "amarelo" },
+  pronta: { rotulo: "Pronta p/ lote", cor: "azul" },
+  faturada: { rotulo: "Enviada", cor: "roxo" },
+  paga: { rotulo: "Paga", cor: "verde" },
+  glosada: { rotulo: "Paga c/ glosa", cor: "vermelho" },
+  cancelada: { rotulo: "Cancelada", cor: "cinza" },
+};
+
+export const STATUS_LOTE: Record<string, { rotulo: string; cor: string }> = {
+  aberto: { rotulo: "Montando", cor: "amarelo" },
+  enviado: { rotulo: "Enviado", cor: "roxo" },
+  pago: { rotulo: "Pago", cor: "verde" },
+  pago_parcial: { rotulo: "Pago c/ glosa", cor: "vermelho" },
+  cancelado: { rotulo: "Cancelado", cor: "cinza" },
+};
+
+export const TIPO_GUIA: Record<string, string> = { consulta: "Guia de Consulta", sadt: "Guia SP/SADT", particular: "Particular" };
+
+export const FORMAS_PAGAMENTO: Record<string, string> = {
+  dinheiro: "Dinheiro", pix: "PIX", debito: "Cartão de débito", credito: "Cartão de crédito",
+  boleto: "Boleto", transferencia: "Transferência", cortesia: "Cortesia",
+};
+
+export function fmtMoeda(v?: number | string | null): string {
+  if (v === null || v === undefined || v === "") return "—";
+  return Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+/** "jan/2026" */
+export function fmtCompetencia(d?: string | null): string {
+  if (!d) return "";
+  const dt = new Date(d + "T12:00:00");
+  return dt.toLocaleDateString("pt-BR", { month: "short", year: "numeric" }).replace(". de ", "/").replace(" de ", "/");
 }

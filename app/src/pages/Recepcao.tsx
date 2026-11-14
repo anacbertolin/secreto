@@ -171,6 +171,11 @@ function ConfirmarChegada(props: { ag: Agendamento; convenios: Convenio[]; aoFec
     if (r1.error) return setErro(msgErro(r1.error));
     const r2 = await supabase.from("agendamentos").update({ status: "chegou", convenio_id: f.convenio_id || null, plano_id: f.plano_id || null }).eq("id", a.id);
     if (r2.error) return setErro(msgErro(r2.error));
+    // a conta é aberta sozinha na chegada; aqui completamos a senha de autorização
+    if (f.convenio_id && f.senha) {
+      await supabase.from("contas").update({ senha_autorizacao: f.senha || null, data_autorizacao: f.senha ? new Date().toISOString().slice(0, 10) : null })
+        .eq("agendamento_id", a.id).eq("status", "aberta");
+    }
     props.aoSalvar();
   }
 
@@ -204,6 +209,9 @@ function ConfirmarChegada(props: { ag: Agendamento; convenios: Convenio[]; aoFec
                   {(planos.dados ?? []).filter((x) => x.convenio_id === f.convenio_id).map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
                 </select>
               </Campo>
+            )}
+            {props.convenios.find((c) => c.id === f.convenio_id)?.exige_senha && (
+              <Campo rotulo="Senha de autorização do convênio *"><input value={f.senha ?? ""} onChange={(e) => setF({ ...f, senha: e.target.value })} /></Campo>
             )}
             <Campo rotulo="Nº da carteirinha"><input value={f.convenio_carteirinha ?? ""} onChange={(e) => setF({ ...f, convenio_carteirinha: e.target.value })} /></Campo>
             <Campo rotulo="Validade da carteirinha"><input type="date" value={f.convenio_validade ?? ""} onChange={(e) => setF({ ...f, convenio_validade: e.target.value })} /></Campo>
