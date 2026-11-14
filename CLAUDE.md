@@ -27,6 +27,8 @@
 - Mudanças de estrutura do banco: usar migrações (`apply_migration`), nunca SQL solto para DDL.
 
 ## Sistema (app web) — `app/`
+- **Memória do projeto:** leia `docs/sistema/HISTORICO.md` antes de mexer no sistema (o que foi feito, decisões,
+  combinados com a sessão de migração, pendências). Acrescente uma seção ao fim a cada dia de trabalho.
 - React + Vite + TypeScript, servido como site estático (`npm run build` → `npm start`) no Railway (serviço `sistema`, pasta raiz `/app`, ramo `claude/trusting-tesla-e5u50x`).
 - Fala direto com o Supabase usando só a chave **publicável**; quem protege os dados são as regras RLS.
 - Login: e-mail + senha (Supabase Auth). Só e-mails cadastrados e ativos em `profissionais` conseguem criar conta
