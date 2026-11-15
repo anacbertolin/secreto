@@ -277,3 +277,16 @@ Feito por cima da tela da sessão do WhatsApp (PR anacbertolin/secreto#6), combi
   paciente e, ao abrir, a conversa NÃO é marcada como lida (para não sumir o aviso da recepção). O contador e o som
   de mensagem nova aparecem só para recepção e administração. Fechar o envio também na função/banco: sessão do WhatsApp.
 - Testado com dados simulados no navegador (sem login real): lista, filtros, assumir, janela de 24 h, ficha.
+
+### 15/11/2026 (mais tarde) — quem vê e quem atende (migração 0014)
+- **Decisão da dona:** "Quem usa para atender o cliente é a recepção, mas todos devem poder ver as conversas, até
+  para ajudar a gerir o negócio."
+- **Migração 0014 `whatsapp_todos_veem`** (aplicada): conversas, mensagens e modelos são lidos por médico,
+  enfermagem, recepção, admin **e faturamento**. Mexer na conversa (marcar lida, ligar paciente, arquivar,
+  responsável) só recepção e admin, para quem só olha não zerar as não lidas da recepção. Testado no banco real dentro
+  de uma transação desfeita: faturamento e médico veem e não alteram; recepção altera.
+- **whatsapp-enviar (versão 2):** `estado` e `midia` para toda a equipe ativa; `texto`, `retomar` e `lembretes` só
+  recepção e admin.
+- Botão 💬 WhatsApp da ficha aparece para todos. A tela `/whatsapp` está com a sessão "Interface de comunicação
+  WhatsApp" (session_01RxZddpBY3PXj2AGWj8jLji): ela acrescenta responsável, Realtime (migração 0013_whatsapp_tela),
+  contador de não lidas e ficha ao lado; combinado que o menu fica para todos e os botões de enviar só para recepção/admin.
