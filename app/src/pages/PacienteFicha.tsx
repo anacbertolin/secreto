@@ -4,6 +4,7 @@ import { supabase, msgErro } from "../lib/supabase";
 import { EvolucaoPaciente } from "../components/Evolucao";
 import { CirurgiasPaciente } from "./Cirurgias";
 import { CompararExames } from "../components/CompararExames";
+import { BotaoResumoIA } from "../components/ResumoIA";
 import type { PacienteResumo } from "../components/ui";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Etiqueta } from "../components/ui";
@@ -74,6 +75,7 @@ export default function PacienteFicha() {
             <Link className="botao" to={`/whatsapp?paciente=${id}`}>💬 WhatsApp</Link>
           )}
           {eu?.funcao === "medico" && <button onClick={novoAtendimentoSemAgenda}>🩺 Atender sem agendamento</button>}
+          {clinico && <BotaoResumoIA pacienteId={id!} />}
         </div>
       </div>
       <Aviso>{erro}</Aviso>

@@ -7,6 +7,7 @@ import { HistoricoSaude } from "../components/Clinico";
 import { BarraFluxoAtendimento } from "../components/Fluxo";
 import { EvolucaoPaciente } from "../components/Evolucao";
 import { BotaoProtocolo } from "../components/Protocolos";
+import { BotaoResumoIA } from "../components/ResumoIA";
 import { DesenhoOlhos } from "../components/pep/Desenho";
 import type { AtendimentoCompleto, Ctx } from "../components/pep/comum";
 import { CamposAtendimento, PreConsulta, Refracao, ExameOftalmologico } from "../components/pep/SecoesExame";
@@ -86,6 +87,7 @@ export default function Atendimento() {
         </div>
         <div className="linha">
           <Link className="botao" to={`/pacientes/${pac.id}`}>📁 Histórico do paciente</Link>
+          <BotaoResumoIA pacienteId={pac.id} />
           {ctx.editaMedico && <BotaoProtocolo atendId={atend.id} pacienteId={pac.id} aoAplicar={() => { protocoloAplicado.current = true; recarregar(); }} />}
           {ctx.editaMedico && <button className="primario" onClick={finalizar}>✅ Finalizar atendimento</button>}
           {aberto && !souResponsavel && eu?.funcao === "enfermagem" && <button onClick={() => nav("/consultorio")}>Concluir pré-consulta</button>}
