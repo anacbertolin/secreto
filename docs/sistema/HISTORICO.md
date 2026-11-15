@@ -674,3 +674,17 @@ Respostas: (1) IA do prontuário **aprovada**; (2) receita digital pela **Memed*
 - **Para usar:** (1) admin preenche CPF/nascimento dos médicos na Equipe; (2) liga em Receita digital (ambiente de teste) e testa
   num dia útil; (3) dona pede as chaves de produção à Memed (formulário "Autorização para Credenciais de Produção"), cadastra
   `MEMED_API_KEY`/`MEMED_SECRET_KEY` no Supabase, informa o CNES e troca para Produção.
+
+### Teste com login real no sistema publicado (15/11/2026, autorizado pela dona: "pode fazer")
+- Contas de teste: os perfis TESTE (médico, recepção) já existentes foram reativados e foi criado "TESTE Enfermagem (apagar)";
+  logins criados direto em `auth.users`/`auth.identities` com senha aleatória guardada só na sessão (o banco recebeu só o hash).
+  Roteiro Playwright contra https://sistema-production-addc59db.up.railway.app com o Supabase real:
+  recepção (paciente, agenda, chegada, 💧 dilatação pela tela, 📢 chamada + TV, link do portal) → enfermagem (abriu pela fila,
+  pré-consulta) → médico (protocolo de glaucoma, desenho, evolução + acompanhamento, diagnóstico, receita, óculos, impressão com
+  QR, folha de colírios, pedido de resumo IA, finalizar, páginas novas) → anônimo (conferência do QR "autêntico", portal com
+  data de nascimento). **Nenhum erro de página nem de permissão (4xx) nas telas.** As 2 falhas do roteiro eram do próprio
+  roteiro (nome esperado na TV e leitura antecipada da janela do protocolo).
+- Achado e corrigido: nomes longos passavam da borda do cartão na Recepção.
+- **Limpeza pendente:** a limpeza (apagar os 3 pacientes "TESTE Paciente Silva (apagar)" e o que eles geraram, apagar os logins
+  de teste e desativar os perfis TESTE) ficou esperando uma confirmação do Supabase que não foi respondida — **não foi feita**.
+  Enquanto isso, os 3 logins de teste (`teste.*@example.com`) continuam ativos. Fazer a limpeza assim que a dona confirmar.
