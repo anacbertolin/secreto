@@ -740,3 +740,19 @@ Api4Com, Nvoip e Twilio, escolheu **testar com a Api4Com** (PABX em nuvem brasil
 2. Pedir à Api4Com o endereço **WSS** e o **domínio SIP** para ramal pelo navegador.
 3. Admin: Cadastros → Telefone → preencher, cadastrar ramais (quem usa + senha) → **Ligar**.
 4. Cada atendente usa fone com microfone; na primeira ligação o navegador pede o microfone → Permitir.
+
+## 15/11/2026 (noite) — Telefone: primeiro teste real com a Api4Com
+- **Conta Api4Com:** domínio SIP `consumed0303.api4com.com`, WSS `wss://consumed0303.api4com.com:6443` (porta 6443,
+  conforme developers.api4com.com). 1 ramal (**1000**), ligado à admin (Ana Bertolin). Configuração e senha gravadas no
+  banco (`telefonia_config`, `telefonia_ramais`, `interno.telefonia_senhas`). Saldo de teste: R$ 5.
+- **Número que aparece para quem recebe (BINA da conta): (21) 96476-0292.**
+- **Correção (PR #37):** a central (plataforma Kazoo) recusava toda ligação discada como `21999998888`. Agora o sistema
+  disca `+55 + DDD + número` (`destinoNaCentral` em `app/src/lib/telefone.tsx`); ramais e 0800 vão como estão. Quando a
+  central recusa, a tela mostra o motivo.
+- **Resultado:** ligação pelo sistema para um celular completou, com áudio nos dois sentidos. ✅ Para um número
+  específico (celular do Gelson) a central responde "Unavailable" — provável bloqueio da operadora/aparelho de destino,
+  não do sistema. Ainda a testar: ligação **chegando** no sistema (ligar para 21 96476-0292) e transferência.
+- **Acesso da sessão à Api4Com:** o token fica salvo no ambiente de nuvem "secreto" (enviado no cabeçalho
+  `X-Access-Token`, que a API aceita). A listagem de chamadas (`GET /calls`) não aceitou esse acesso.
+- Pendente: um ramal por atendente (5) — aumenta a mensalidade da Api4Com, decidir com a dona; linhas "não atendeu"
+  dos testes em `ligacoes` (apagar só com ok da dona).
