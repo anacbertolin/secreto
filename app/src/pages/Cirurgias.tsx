@@ -5,7 +5,8 @@ import { supabase, msgErro } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Campo, Modal, Etiqueta, BuscaPaciente, type PacienteResumo } from "../components/ui";
 import { NovoAgendamento } from "../components/AgendamentoModais";
-import { listaConvenios, listaLocais, listaProfissionais, nomePor } from "../lib/dados";
+import { listaConvenios, listaLocais, listaProfissionais, listaProcedimentos, nomePor } from "../lib/dados";
+import { saldosDisponiveis, type Saldo } from "./Estoque";
 import { fmtData, fmtDataHora, fmtHora, fmtTelefone, inicioDoDia, isoDia, numOuNulo, somaDias, fmtGrau } from "../lib/util";
 
 export const PROCEDIMENTOS = [
@@ -45,7 +46,7 @@ interface Cirurgia {
   prioridade: string; observacoes: string | null; comprimento_axial: number | null; k1: number | null; k2: number | null; acd: number | null;
   formula: string | null; constante_a: number | null; refracao_alvo: number | null; lio_fabricante: string | null; lio_modelo: string | null;
   lio_dioptria: number | null; lio_lote: string | null; lio_serie: string | null; lio_validade: string | null; lio_registro_anvisa: string | null;
-  checklist: Record<string, string>; inicio_em: string | null; fim_em: string | null; descricao_cirurgica: string | null;
+  checklist: Record<string, string>; procedimento_id?: string | null; inicio_em: string | null; fim_em: string | null; descricao_cirurgica: string | null;
   intercorrencias: string | null; motivo_cancelamento: string | null; finalizada_em: string | null; criado_em: string;
   pacientes?: { nome: string; nome_social: string | null; numero_prontuario: number; data_nascimento: string | null; telefone: string | null };
 }
@@ -203,6 +204,9 @@ export function RegistrarInjecao({ inicial, aoFechar, aoSalvar }: { inicial: { p
   const [pac, setPac] = useState<{ id: string; nome: string } | null>(null);
   const [f, setF] = useState({ olho: inicial.olho ?? "OD", medicamento: inicial.medicamento ?? MEDICAMENTOS_IV[0], dose: "", lote: "", validade: "", protocolo: "tratar_e_estender", proxima_semanas: "4", indicacao_cid10: "", indicacao: "", senha_autorizacao: "", intercorrencias: "" });
   const [erro, setErro] = useState("");
+  const [procId, setProcId] = useState("");
+  const procs = useCarregar(async () => (await listaProcedimentos()).filter((p) => p.tipo === "procedimento"), []);
+  const meds = useCarregar(() => saldosDisponiveis("medicamento").catch(() => [] as Saldo[]), []);
   useEffect(() => {
     if (inicial.paciente_id) supabase.from("pacientes").select("id, nome").eq("id", inicial.paciente_id).single().then(({ data }) => data && setPac(data as { id: string; nome: string }));
   }, [inicial.paciente_id]);
@@ -213,7 +217,7 @@ export function RegistrarInjecao({ inicial, aoFechar, aoSalvar }: { inicial: { p
     const { error } = await supabase.from("injecoes_intravitreas").insert({
       paciente_id: pac.id, olho: f.olho, medicamento: f.medicamento, dose: f.dose || null, lote: f.lote.trim(), validade: f.validade || null,
       protocolo: f.protocolo, proxima_semanas: sem, indicacao_cid10: f.indicacao_cid10 || null, indicacao: f.indicacao || null,
-      senha_autorizacao: f.senha_autorizacao || null, intercorrencias: f.intercorrencias || null,
+      senha_autorizacao: f.senha_autorizacao || null, intercorrencias: f.intercorrencias || null, procedimento_id: procId || null,
     });
     if (error) return setErro(msgErro(error));
     aoSalvar();
@@ -232,7 +236,13 @@ export function RegistrarInjecao({ inicial, aoFechar, aoSalvar }: { inicial: { p
           <datalist id="meds-iv">{MEDICAMENTOS_IV.map((m) => <option key={m} value={m} />)}</datalist>
         </Campo>
         <Campo rotulo="Dose (opcional)"><input value={f.dose} onChange={(e) => setF({ ...f, dose: e.target.value })} /></Campo>
-        <Campo rotulo="Lote *"><input value={f.lote} onChange={(e) => setF({ ...f, lote: e.target.value })} /></Campo>
+        <Campo rotulo="Lote *">
+          <input list="lotes-iv" value={f.lote} onChange={(e) => {
+            const l = (meds.dados ?? []).find((m) => m.lote === e.target.value);
+            setF({ ...f, lote: e.target.value, ...(l ? { validade: l.validade ?? "" } : {}) });
+          }} />
+          <datalist id="lotes-iv">{(meds.dados ?? []).map((m) => <option key={m.lote_id} value={m.lote}>{m.descricao} · saldo {Number(m.saldo)} · val. {fmtData(m.validade)}</option>)}</datalist>
+        </Campo>
         <Campo rotulo="Validade"><input type="date" value={f.validade} onChange={(e) => setF({ ...f, validade: e.target.value })} /></Campo>
         <Campo rotulo="Protocolo">
           <select value={f.protocolo} onChange={(e) => setF({ ...f, protocolo: e.target.value })}>
@@ -242,6 +252,12 @@ export function RegistrarInjecao({ inicial, aoFechar, aoSalvar }: { inicial: { p
         <Campo rotulo="Próxima em (semanas)"><input inputMode="numeric" value={f.proxima_semanas} onChange={(e) => setF({ ...f, proxima_semanas: e.target.value.replace(/\D/g, "") })} placeholder="vazio = sem previsão" /></Campo>
         <Campo rotulo="CID da indicação"><input value={f.indicacao_cid10} onChange={(e) => setF({ ...f, indicacao_cid10: e.target.value.toUpperCase() })} placeholder="H35.3" /></Campo>
         <Campo rotulo="Indicação" className="span2"><input value={f.indicacao} onChange={(e) => setF({ ...f, indicacao: e.target.value })} placeholder="DMRI exsudativa, edema macular diabético…" /></Campo>
+        <Campo rotulo="Código para faturar" className="span2">
+          <select value={procId} onChange={(e) => setProcId(e.target.value)}>
+            <option value="">— não lançar na conta —</option>
+            {(procs.dados ?? []).map((p) => <option key={p.id} value={p.id}>{p.codigo} · {p.descricao}</option>)}
+          </select>
+        </Campo>
         <Campo rotulo="Senha do convênio"><input value={f.senha_autorizacao} onChange={(e) => setF({ ...f, senha_autorizacao: e.target.value })} /></Campo>
         <Campo rotulo="Intercorrências" className="inteiro"><input value={f.intercorrencias} onChange={(e) => setF({ ...f, intercorrencias: e.target.value })} placeholder="Sem intercorrências" /></Campo>
       </div>
@@ -263,6 +279,9 @@ export function CirurgiaDetalhe() {
     const [medicos, convenios, locais] = await Promise.all([listaProfissionais(["medico"]), listaConvenios(), listaLocais()]);
     return { medicos, convenios, locais };
   }, []);
+  const procs = useCarregar(async () => (await listaProcedimentos()).filter((p) => ["cirurgia", "procedimento"].includes(p.tipo)), []);
+  const lentes = useCarregar(() => saldosDisponiveis("lio").catch(() => [] as Saldo[]), []);
+  const [escolherLente, setEscolherLente] = useState(false);
   const c = useCarregar(async () => ok(await supabase.from("cirurgias").select(SELECT_CIR).eq("id", id!).single()) as Cirurgia, [id]);
   useEffect(() => { if (c.dados) setF(c.dados); }, [c.dados]);
 
@@ -277,7 +296,7 @@ export function CirurgiaDetalhe() {
     const num = (k: keyof Cirurgia) => numOuNulo(f[k] as unknown);
     const dados = {
       status: f.status, data_prevista: f.data_prevista || null, sala: f.sala || null, equipe: f.equipe || null, anestesia: f.anestesia || null,
-      senha_autorizacao: f.senha_autorizacao || null, prioridade: f.prioridade, observacoes: f.observacoes || null, convenio_id: f.convenio_id || null,
+      senha_autorizacao: f.senha_autorizacao || null, prioridade: f.prioridade, procedimento_id: f.procedimento_id || null, observacoes: f.observacoes || null, convenio_id: f.convenio_id || null,
       comprimento_axial: num("comprimento_axial"), k1: num("k1"), k2: num("k2"), acd: num("acd"), formula: f.formula || null,
       constante_a: num("constante_a"), refracao_alvo: num("refracao_alvo"), lio_fabricante: f.lio_fabricante || null, lio_modelo: f.lio_modelo || null,
       lio_dioptria: num("lio_dioptria"), lio_lote: f.lio_lote || null, lio_serie: f.lio_serie || null, lio_validade: f.lio_validade || null,
@@ -356,13 +375,20 @@ export function CirurgiaDetalhe() {
             </Campo>
             <Campo rotulo="Senha de autorização"><input value={f.senha_autorizacao ?? ""} onChange={set("senha_autorizacao")} /></Campo>
             <Campo rotulo="Prioridade"><select value={f.prioridade ?? "eletiva"} onChange={set("prioridade")}><option value="eletiva">Eletiva</option><option value="prioritaria">Prioritária</option><option value="urgencia">Urgência</option></select></Campo>
+            <Campo rotulo="Código para faturar" className="span2">
+              <select value={f.procedimento_id ?? ""} onChange={set("procedimento_id")}>
+                <option value="">— não lançar na conta —</option>
+                {(procs.dados ?? []).map((p) => <option key={p.id} value={p.id}>{p.codigo} · {p.descricao}</option>)}
+              </select>
+            </Campo>
             <Campo rotulo="Equipe (auxiliar, anestesista…)"><input value={f.equipe ?? ""} onChange={set("equipe")} /></Campo>
             <Campo rotulo="Observações" className="inteiro"><input value={f.observacoes ?? ""} onChange={set("observacoes")} /></Campo>
           </div>
         </div>
 
         <div className="painel">
-          <h2>Biometria e lente intraocular (LIO)</h2>
+          <div className="linha entre"><h2>Biometria e lente intraocular (LIO)</h2>
+            {!travada && <button className="mini" onClick={() => setEscolherLente(true)}>📦 Escolher lente do estoque ({(lentes.dados ?? []).length})</button>}</div>
           <div className="grade g6">
             <Campo rotulo="Comp. axial (mm)"><input inputMode="decimal" value={f.comprimento_axial ?? ""} onChange={set("comprimento_axial")} /></Campo>
             <Campo rotulo="K1 (D)"><input inputMode="decimal" value={f.k1 ?? ""} onChange={set("k1")} /></Campo>
@@ -411,6 +437,29 @@ export function CirurgiaDetalhe() {
       </fieldset>
       {travada && eu?.funcao === "medico" && <p className="muted pequeno">Para corrigir algo depois de finalizada, registre um adendo no atendimento do paciente.</p>}
 
+      {escolherLente && (
+        <Modal titulo="📦 Lentes disponíveis no estoque" largo aoFechar={() => setEscolherLente(false)}>
+          {(() => {
+            const alvo = numOuNulo(f.lio_dioptria as unknown);
+            const L = [...(lentes.dados ?? [])].sort((a, b) => (alvo == null ? 0 : Math.abs(Number(a.dioptria ?? 99) - alvo) - Math.abs(Number(b.dioptria ?? 99) - alvo)));
+            if (!L.length) return <div className="vazio">Nenhuma lente com saldo no estoque.</div>;
+            return (
+              <table className="tabela">
+                <thead><tr><th>Lente</th><th>Dioptria</th><th>Lote / série</th><th>Validade</th><th></th></tr></thead>
+                <tbody>{L.map((l) => (
+                  <tr key={l.lote_id}>
+                    <td>{l.fabricante} {l.modelo}<div className="muted pequeno">{l.descricao}</div></td>
+                    <td><b>{fmtGrau(l.dioptria)}</b></td><td>{l.lote}{l.serie && <div className="muted pequeno">série {l.serie}</div>}</td>
+                    <td>{fmtData(l.validade)}</td>
+                    <td><button className="mini primario" onClick={() => { setF({ ...f, lio_fabricante: l.fabricante, lio_modelo: l.modelo, lio_dioptria: l.dioptria, lio_lote: l.lote, lio_serie: l.serie, lio_validade: l.validade }); setEscolherLente(false); }}>Usar esta</button></td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            );
+          })()}
+          <p className="muted pequeno">As mais próximas da dioptria calculada aparecem primeiro. Ao finalizar a cirurgia, a lente sai sozinha do estoque.</p>
+        </Modal>
+      )}
       {retornos && (
         <Modal titulo="📅 Retornos pós-operatórios" aoFechar={() => setRetornos(false)} rodape={<button onClick={() => setRetornos(false)}>Fechar</button>}>
           <p style={{ marginTop: 0 }}>Sugestão de retornos a partir da data da cirurgia. Clique para marcar na agenda.</p>

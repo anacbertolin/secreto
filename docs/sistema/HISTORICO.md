@@ -474,3 +474,28 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
   tonômetro, OCT, biômetro — depende das marcas/modelos), IA de ditado/resumo do prontuário (LGPD + aval), portal do
   paciente, faturamento automático da cirurgia (falar com a sessão do faturamento), estoque de lentes/medicamentos,
   desenho do fundo de olho, comparação lado a lado de imagens de exames, RNDS.
+
+---
+
+## 15/11/2026 (tarde) — Rodada 2 da sessão "melhorias" (dona pediu: "segue com todas as frentes")
+
+### Estoque e faturamento automático de cirurgias e injeções (migração 0024, aplicada)
+- **`estoque_itens`** (lente por modelo+dioptria, medicamento, material; código para faturar; estoque mínimo),
+  **`estoque_lotes`** (lote, nº de série da lente — único por item —, validade, NF, custo, consignado) e
+  **`estoque_movimentos`** (entrada/saída/ajuste/perda/devolução; não se altera nem apaga; ajuste e perda exigem
+  motivo). View **`estoque_saldos`** (INVOKER). Leem: médico, enfermagem, admin, faturamento. Cadastram: enfermagem,
+  admin (faturamento só liga o código de faturamento). Movimentos em nome próprio.
+- **Saída automática:** cirurgia finalizada baixa a lente pelo lote/série; injeção registrada baixa o medicamento pelo
+  lote. Lote que não está no estoque não bloqueia nada (só não baixa).
+- **Faturamento automático:** `cirurgias.procedimento_id` e `injecoes_intravitreas.procedimento_id`/`convenio_id`
+  (novas, opcionais). Ao finalizar/registrar, `interno.conta_do_dia` abre (ou reaproveita, mesmo dia + convênio +
+  **mesma senha**) uma conta SP/SADT ou particular e lança o procedimento e a lente/medicamento (se o item do estoque
+  tiver código). Preço pela tabela de preços (gatilho da 0010). Mesmo modelo de `tg_exame_conta`.
+  **Avisar a sessão do faturamento** (contas criadas por cirurgia/injeção não têm `agendamento_id`).
+- Gatilhos ignoram `app.migracao = 'on'`: cirurgias antigas carregadas não geram conta nem baixa.
+- **Telas:** menu **📦 Estoque** (saldos por lote com alertas de vencimento e de mínimo, itens, movimentos, entrada de
+  lote com série por lente, ajuste/perda); na cirurgia, **"📦 Escolher lente do estoque"** (as mais próximas da dioptria
+  primeiro) e "Código para faturar"; na injeção, lote sugerido do estoque e código para faturar.
+- Testes no banco local: baixa de lente e medicamento; conta com preços certos; injeção e cirurgia em guias
+  separadas (senhas diferentes); movimento não se apaga; ajuste sem motivo bloqueado; recepção não vê; carga antiga
+  não gera conta.
