@@ -5,6 +5,7 @@ import { useCarregar, ok, Aviso, Carregando } from "../components/ui";
 import { CLINICA } from "../lib/marca";
 import { TIPOS_DOC } from "../components/pep/SecoesConduta";
 import ImprimirFaturamento from "./ImprimirFaturamento";
+import ImprimirColirios from "./ImprimirColirios";
 import { fmtCPF, fmtData, fmtGrau, idade } from "../lib/util";
 
 interface Pac { nome: string; nome_social: string | null; numero_prontuario: number; data_nascimento: string | null; cpf: string | null; logradouro: string | null; numero: string | null; bairro: string | null; cidade: string | null; uf: string | null }
@@ -21,6 +22,7 @@ async function viaAtendimento(atendimentoId: string) {
 export default function Imprimir() {
   const { tipo } = useParams();
   if (tipo === "guia" || tipo === "recibo" || tipo === "lote") return <ImprimirFaturamento />;
+  if (tipo === "colirios") return <ImprimirColirios />;
   return <ImprimirClinico />;
 }
 

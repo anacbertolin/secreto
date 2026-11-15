@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase, msgErro } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
@@ -6,6 +6,7 @@ import { useCarregar, ok, Aviso, Carregando, Etiqueta } from "../components/ui";
 import { HistoricoSaude } from "../components/Clinico";
 import { BarraFluxoAtendimento } from "../components/Fluxo";
 import { EvolucaoPaciente } from "../components/Evolucao";
+import { BotaoProtocolo } from "../components/Protocolos";
 import type { AtendimentoCompleto, Ctx } from "../components/pep/comum";
 import { CamposAtendimento, PreConsulta, Refracao, ExameOftalmologico } from "../components/pep/SecoesExame";
 import { Diagnosticos, ReceitaOculos, ReceitaMedicamentos, PedidosExame, Documentos, Adendos } from "../components/pep/SecoesConduta";
@@ -25,6 +26,8 @@ export default function Atendimento() {
   const nav = useNavigate();
   const [aba, setAba] = useState<string>(eu?.funcao === "enfermagem" ? "pre" : "anamnese");
   const [erro, setErro] = useState("");
+  const [versao, setVersao] = useState(0); // muda depois de aplicar um protocolo, para as abas recarregarem
+  const protocoloAplicado = useRef(false);
 
   const { dados, erro: erroCarga, carregando, recarregar } = useCarregar(async () => {
     const a = ok(await supabase.from("atendimentos").select("*").eq("id", id!).single()) as AtendimentoCompleto;
@@ -34,6 +37,11 @@ export default function Atendimento() {
     ]);
     return { atend: a, pac: ok(p) as Pac, medico: (ok(m) as { nome: string }).nome };
   }, [id]);
+
+  // depois de aplicar um protocolo, espera o atendimento atualizado chegar e então recarrega as abas
+  useEffect(() => {
+    if (dados && protocoloAplicado.current) { protocoloAplicado.current = false; setVersao((v) => v + 1); }
+  }, [dados]);
 
   useEffect(() => {
     if (dados) supabase.rpc("registrar_leitura", { p_paciente_id: dados.pac.id, p_detalhes: `Abriu o atendimento ${dados.atend.id}` }).then(() => {});
@@ -77,6 +85,7 @@ export default function Atendimento() {
         </div>
         <div className="linha">
           <Link className="botao" to={`/pacientes/${pac.id}`}>📁 Histórico do paciente</Link>
+          {ctx.editaMedico && <BotaoProtocolo atendId={atend.id} pacienteId={pac.id} aoAplicar={() => { protocoloAplicado.current = true; recarregar(); }} />}
           {ctx.editaMedico && <button className="primario" onClick={finalizar}>✅ Finalizar atendimento</button>}
           {aberto && !souResponsavel && eu?.funcao === "enfermagem" && <button onClick={() => nav("/consultorio")}>Concluir pré-consulta</button>}
         </div>
@@ -98,6 +107,7 @@ export default function Atendimento() {
             <button className={aba === "evolucao" ? "ativa" : ""} onClick={() => setAba("evolucao")}>📈 Evolução</button>
             {!aberto && <button className={aba === "adendos" ? "ativa" : ""} onClick={() => setAba("adendos")}>Adendos</button>}
           </div>
+          <div key={versao}>
           {aba === "evolucao" && <EvolucaoPaciente pacienteId={pac.id} />}
           {aba === "pre" && <PreConsulta ctx={ctx} />}
           {aba === "anamnese" && (
@@ -128,6 +138,7 @@ export default function Atendimento() {
           {aba === "pedidos" && <PedidosExame ctx={ctx} />}
           {aba === "documentos" && <Documentos ctx={ctx} />}
           {aba === "adendos" && <Adendos ctx={ctx} podeEscrever={eu?.funcao === "medico" || eu?.funcao === "enfermagem"} />}
+          </div>
         </div>
       </div>
     </div>

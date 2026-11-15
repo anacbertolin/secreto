@@ -306,3 +306,21 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .grafico .eixo { font-size: 11px; fill: #667085; }
 .grafico .rotulo-serie { font-size: 11px; font-weight: 600; fill: #344054; }
 .balao { position: absolute; top: 8px; background: white; border: 1px solid var(--borda); border-radius: 8px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12); padding: 6px 10px; font-size: 0.85rem; pointer-events: none; white-space: nowrap; }
+
+/* ---------- Folha de colírios em letra grande ---------- */
+.folha.colirios { font-size: 20px; }
+.folha.colirios h1 { font-size: 2rem; margin: 10px 0; }
+.col-pac { font-size: 20px; }
+.col-bloco { border: 3px solid #1f2124; border-radius: 12px; padding: 14px 16px; margin: 18px 0; break-inside: avoid; }
+.col-cab { display: flex; gap: 14px; align-items: center; }
+.col-num { font-size: 30px; font-weight: 800; background: #1f2124; color: white; border-radius: 50%; width: 46px; height: 46px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.col-nome { font-size: 26px; font-weight: 800; line-height: 1.15; }
+.col-olho { font-size: 22px; font-weight: 700; margin-top: 2px; }
+.col-pos { font-size: 19px; margin: 8px 0; }
+.folha table.col-tabela th { font-size: 15px; padding: 4px; }
+.folha table.col-tabela td { padding: 6px 4px; }
+.col-hora { font-size: 24px; font-weight: 800; white-space: nowrap; }
+.col-quad { display: inline-block; width: 26px; height: 26px; border: 2px solid #1f2124; border-radius: 4px; }
+.col-dicas { font-size: 19px; border-top: 2px solid #1f2124; padding-top: 10px; margin-top: 10px; }
+.col-dicas li { margin: 4px 0; }
+.lista-protocolos { max-height: 420px; overflow-y: auto; border-right: 1px solid var(--borda); padding-right: 8px; }
