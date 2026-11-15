@@ -411,3 +411,8 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
 - Testes no banco local: atrasado aparece; em dia e com consulta marcada não; paciente só com prontuário antigo
   aparece com a data antiga; recepção vê sem a doença e não lê `seguimentos`; faturamento e anônimo bloqueados;
   contato em nome de outra pessoa bloqueado. Telas conferidas com dados simulados (médico e recepção).
+
+---
+
+## 15/11/2026 — Regra de idioma
+- A dona pediu: **sempre falar em português** (respostas, resumos, PRs e textos para ela). Registrado no topo do CLAUDE.md.
