@@ -23,6 +23,7 @@ import PainelTV from "./pages/PainelTV";
 import BuscaAtiva from "./pages/BuscaAtiva";
 import Cirurgias, { CirurgiaDetalhe } from "./pages/Cirurgias";
 import Estoque from "./pages/Estoque";
+import Verificar from "./pages/Verificar";
 import { useNaoLidas } from "./lib/whatsapp";
 
 interface ItemMenu { para: string; rotulo: string; icone: string; funcoes?: Funcao[]; grupo?: string }
@@ -65,6 +66,16 @@ export default function App() {
   useEffect(() => {
     document.title = (naoLidas ? `(${naoLidas}) ` : "") + "Consumed · Sistema da Clínica";
   }, [naoLidas]);
+
+  // Conferência pública de documentos (QR): não precisa de login
+  if (loc.pathname === "/verificar" || loc.pathname.startsWith("/verificar/")) {
+    return (
+      <Routes>
+        <Route path="/verificar" element={<Verificar />} />
+        <Route path="/verificar/:codigo" element={<Verificar />} />
+      </Routes>
+    );
+  }
 
   if (carregando) return <div className="vazio">Carregando…</div>;
   if (!session) return <Login />;

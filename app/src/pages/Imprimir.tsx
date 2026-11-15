@@ -6,6 +6,7 @@ import { CLINICA } from "../lib/marca";
 import { TIPOS_DOC } from "../components/pep/SecoesConduta";
 import ImprimirFaturamento from "./ImprimirFaturamento";
 import ImprimirColirios from "./ImprimirColirios";
+import { SeloAutenticidade, seloDoDocumento } from "../components/Autenticidade";
 import { fmtCPF, fmtData, fmtGrau, idade } from "../lib/util";
 
 interface Pac { nome: string; nome_social: string | null; numero_prontuario: number; data_nascimento: string | null; cpf: string | null; logradouro: string | null; numero: string | null; bairro: string | null; cidade: string | null; uf: string | null }
@@ -56,9 +57,12 @@ function ImprimirClinico() {
     throw new Error("Documento desconhecido");
   }, [tipo, id]);
 
+  // código de autenticidade (QR); se não der para gerar, imprime sem ele
+  const selo = useCarregar(async () => (tipo && id ? seloDoDocumento(tipo, id).catch(() => null) : null), [tipo, id]);
+
   useEffect(() => {
-    if (dados) setTimeout(() => window.print(), 400);
-  }, [dados]);
+    if (dados && !selo.carregando) setTimeout(() => window.print(), 400);
+  }, [dados, selo.carregando]);
 
   if (carregando) return <Carregando />;
   if (!dados) return <Aviso>{erro}</Aviso>;
@@ -161,6 +165,7 @@ function ImprimirClinico() {
           {m.conselho ?? "CRM"} {m.numero_conselho ?? "_______"}{m.uf_conselho && `/${m.uf_conselho}`}
           {m.especialidade && <> · {m.especialidade}</>}{m.rqe && <> · RQE {m.rqe}</>}
         </div>
+        <SeloAutenticidade selo={selo.dados ?? null} />
       </div>
     </div>
   );
