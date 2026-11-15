@@ -290,3 +290,6 @@ Feito por cima da tela da sessão do WhatsApp (PR anacbertolin/secreto#6), combi
 - Botão 💬 WhatsApp da ficha aparece para todos. A tela `/whatsapp` está com a sessão "Interface de comunicação
   WhatsApp" (session_01RxZddpBY3PXj2AGWj8jLji): ela acrescenta responsável, Realtime (migração 0013_whatsapp_tela),
   contador de não lidas e ficha ao lado; combinado que o menu fica para todos e os botões de enviar só para recepção/admin.
+- **Migração 0015 `whatsapp_arquivada_sem_responsavel`** (aplicada, combinada com a sessão da tela): quando uma
+  conversa ARQUIVADA recebe mensagem nova, ela volta sem responsável (`responsavel_id = null`). Fora isso, a conversa
+  continua com quem assumiu. Testado no banco real numa transação desfeita.
