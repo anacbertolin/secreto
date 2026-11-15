@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { supabase, SUPABASE_URL, SUPABASE_CHAVE } from "./supabase";
 
 export interface Conversa {
@@ -5,6 +6,7 @@ export interface Conversa {
   telefone: string;
   nome_contato: string | null;
   paciente_id: string | null;
+  responsavel_id: string | null;
   ultima_mensagem_em: string | null;
   ultima_recebida_em: string | null;
   nao_lidas: number;
@@ -87,4 +89,89 @@ export async function baixarMidia(mensagemId: string): Promise<string> {
     throw new Error(j.erro ?? "Não foi possível abrir o arquivo.");
   }
   return URL.createObjectURL(await r.blob());
+}
+
+// ---------- Aviso de mensagem nova (som + notificação do computador) ----------
+
+let audioCtx: AudioContext | null = null;
+export function tocarAviso() {
+  try {
+    audioCtx ??= new AudioContext();
+    const ctx = audioCtx;
+    const t = ctx.currentTime;
+    for (const [i, freq] of [880, 1320].entries()) {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.frequency.value = freq;
+      o.type = "sine";
+      g.gain.setValueAtTime(0.0001, t + i * 0.15);
+      g.gain.exponentialRampToValueAtTime(0.25, t + i * 0.15 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.15 + 0.14);
+      o.connect(g).connect(ctx.destination);
+      o.start(t + i * 0.15);
+      o.stop(t + i * 0.15 + 0.15);
+    }
+  } catch {
+    /* navegador sem som: ignora */
+  }
+}
+
+export function notificarComputador(titulo: string, corpo: string) {
+  try {
+    if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.hidden) {
+      const n = new Notification(titulo, { body: corpo, icon: "/icone.png", tag: "whatsapp" });
+      n.onclick = () => {
+        window.focus();
+        n.close();
+      };
+    }
+  } catch {
+    /* ignora */
+  }
+}
+
+/**
+ * Total de mensagens não lidas (para o menu), ao vivo.
+ * Toca o aviso quando chega mensagem nova, em qualquer tela do sistema.
+ */
+export function useNaoLidas(ligado: boolean): number {
+  const [total, setTotal] = useState(0);
+  const anterior = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!ligado) return;
+    let vivo = true;
+    let timer: number | undefined;
+
+    async function contar() {
+      const { data } = await supabase.from("whatsapp_conversas").select("nao_lidas").gt("nao_lidas", 0).eq("arquivada", false);
+      if (!vivo) return;
+      const t = (data ?? []).reduce((s, c) => s + (c.nao_lidas as number), 0);
+      if (anterior.current !== null && t > anterior.current) {
+        tocarAviso();
+        notificarComputador("Nova mensagem no WhatsApp", "Abra o sistema para responder.");
+      }
+      anterior.current = t;
+      setTotal(t);
+    }
+    const agendar = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(contar, 400);
+    };
+
+    contar();
+    const canal = supabase
+      .channel("whatsapp-nao-lidas")
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_conversas" }, agendar)
+      .subscribe();
+    const reserva = window.setInterval(contar, 60_000); // se o "ao vivo" cair, confere a cada minuto
+    return () => {
+      vivo = false;
+      window.clearTimeout(timer);
+      window.clearInterval(reserva);
+      supabase.removeChannel(canal);
+    };
+  }, [ligado]);
+
+  return total;
 }

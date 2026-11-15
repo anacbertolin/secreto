@@ -258,3 +258,22 @@ cartão) é feita pela dona.
 - Envio automático diário dos lembretes (hoje é um botão, de propósito: cada lembrete custa e a recepção confere antes).
 - Guardar fotos/documentos recebidos no Storage (hoje ficam na Meta por ~30 dias) e anexar à ficha do paciente.
 - Avisar a sessão de migração: `pacientes` ganhou `whatsapp_autorizado` e `whatsapp_autorizado_em` (opcionais).
+
+---
+
+## 15/11/2026 — WhatsApp: acréscimos na tela (sessão "Interface de comunicação WhatsApp")
+Feito por cima da tela da sessão do WhatsApp (PR anacbertolin/secreto#6), combinado entre as duas sessões.
+- **Migração 0013 `whatsapp_tela`** (aplicada): `whatsapp_conversas.responsavel_id` (quem da equipe está cuidando,
+  a equipe pode alterar só essa coluna a mais) e as tabelas `whatsapp_conversas` / `whatsapp_mensagens` na publicação
+  `supabase_realtime` (o Realtime respeita o RLS). Advisors: nada novo.
+- **Quem cuida da conversa:** botão Assumir / Soltar no topo da conversa. Quem responde uma conversa sem dono a assume
+  sozinho. Filtros Todas / Minhas / Sem responsável na lista.
+- **Ao vivo:** lista e conversa atualizam pelo Realtime na hora (a checagem a cada 10 s continua como reserva).
+- **Aviso de mensagem nova:** contador de não lidas no menu e no título da aba, com som e aviso do computador
+  (botão "🔔 Avisar quando chegar mensagem"). Fica em `useNaoLidas` (`app/src/lib/whatsapp.ts`).
+- **Ficha ao lado da conversa** (telas largas): dados do paciente, se aceita WhatsApp e os próximos agendamentos.
+- **Quem usa:** decisão da dona (15/11): **todos da equipe veem as conversas; só a recepção e a administração
+  respondem.** Médico e enfermagem abrem a tela só para ler: não escrevem, não assumem, não arquivam, não ligam a
+  paciente e, ao abrir, a conversa NÃO é marcada como lida (para não sumir o aviso da recepção). O contador e o som
+  de mensagem nova aparecem só para recepção e administração. Fechar o envio também na função/banco: sessão do WhatsApp.
+- Testado com dados simulados no navegador (sem login real): lista, filtros, assumir, janela de 24 h, ficha.

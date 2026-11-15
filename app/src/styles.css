@@ -251,9 +251,22 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .wa-escrever { display: flex; gap: 8px; align-items: flex-end; margin-top: 10px; }
 .wa-escrever textarea { min-height: 44px; height: 60px; flex: 1; }
 .wa-chat .aviso { margin: 10px 0 0; }
+.wa.com-conversa { grid-template-columns: 300px minmax(0, 1fr) 270px; }
+.wa-filtros { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.wa-filtros button { padding: 3px 10px; font-size: 0.82rem; border-radius: 99px; }
+.wa-filtros button.ativo { background: var(--primaria-clara); border-color: var(--primaria); color: var(--primaria-escura); font-weight: 600; }
+.wa-ficha { overflow-y: auto; font-size: 0.92rem; }
+.wa-ficha dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 0.88rem; }
+.wa-ficha dt { color: var(--suave); }
+.wa-ficha dd { margin: 0; }
+.wa-ag { border: 1px solid var(--borda); border-radius: 8px; padding: 7px 9px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+@media (max-width: 1250px) {
+  .wa.com-conversa { grid-template-columns: 300px minmax(0, 1fr); }
+  .wa-ficha { display: none; }
+}
 
 @media (max-width: 860px) {
-  .wa { grid-template-columns: 1fr; height: auto; }
+  .wa, .wa.com-conversa { grid-template-columns: 1fr; height: auto; }
   .wa .wa-chat { display: none; height: calc(100vh - 150px); }
   .wa.com-conversa .wa-lista { display: none; }
   .wa.com-conversa .wa-chat { display: flex; }

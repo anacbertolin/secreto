@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./lib/auth";
 import { FUNCOES, type Funcao } from "./lib/util";
@@ -18,6 +18,7 @@ import Faturamento, { ContaDetalhe, LoteDetalhe } from "./pages/Faturamento";
 import Procedimentos from "./pages/Procedimentos";
 import Relatorios from "./pages/Relatorios";
 import WhatsApp from "./pages/WhatsApp";
+import { useNaoLidas } from "./lib/whatsapp";
 
 interface ItemMenu { para: string; rotulo: string; icone: string; funcoes?: Funcao[]; grupo?: string }
 
@@ -50,6 +51,11 @@ export default function App() {
   const { session, eu, carregando, sair, pode } = useAuth();
   const [menuAberto, setMenuAberto] = useState(false);
   const loc = useLocation();
+  // Mensagens do WhatsApp não lidas: menu e título da aba, com som (só para quem responde: recepção e administração)
+  const naoLidas = useNaoLidas(pode("recepcao", "admin"));
+  useEffect(() => {
+    document.title = (naoLidas ? `(${naoLidas}) ` : "") + "Consumed · Sistema da Clínica";
+  }, [naoLidas]);
 
   if (carregando) return <div className="vazio">Carregando…</div>;
   if (!session) return <Login />;
@@ -94,6 +100,7 @@ export default function App() {
               cab,
               <NavLink key={m.para} to={m.para} end={m.para === "/"}>
                 <span aria-hidden>{m.icone}</span> {m.rotulo}
+                {m.para === "/whatsapp" && naoLidas > 0 && <span className="wa-badge" style={{ marginLeft: "auto" }}>{naoLidas}</span>}
               </NavLink>,
             ];
           })}
