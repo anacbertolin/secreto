@@ -40,9 +40,9 @@
     CDN do Railway NÃO foi ligado (custo não confirmado) — perguntar à dona antes.
 - **Publicado em:** https://site-production-8c641078.up.railway.app (Railway, serviço `site`,
   região us-east4, Root Directory `/site`, healthcheck `/`).
-  - Fonte do serviço `site` (conferido em 2026-11-14 15h): branch **`claude/youthful-cori-erycnr`**,
-    de OUTRA sessão, que partiu desta cópia e trocou a marca para "Hospital de Olhos da Baixada".
-    Não trocar a fonte do serviço sem combinar com a dona (trocar desfaria a marca nova no ar).
+  - Fonte do serviço `site` (desde 2026-11-15, a pedido da dona): branch **`claude/loving-clarke-acyn66`**,
+    que já contém a marca nova (juntada do `claude/youthful-cori-erycnr`) + fotos que faltavam + imagens WebP.
+    O `main` ainda NÃO tem essas mudanças do site.
   - Há várias sessões trabalhando em paralelo em branches `claude/*`. Antes de mexer no site ou no
     Railway, rode `git ls-remote --heads origin` e veja a fonte atual do serviço (`describe-service`).
 - **Marca:** desde 2026-11-14 o site usa o nome **Hospital de Olhos da Baixada** (antes "Consumed").
@@ -63,7 +63,7 @@
 
 ## Próximos passos (pendentes)
 1. Dona comparar o site provisório com o original e aprovar.
-1b. Juntar ao `main` o branch da outra sessão do site (`claude/youthful-cori-erycnr`, marca nova) e
+1b. Juntar ao `main` o branch `claude/loving-clarke-acyn66` (site com marca nova e imagens otimizadas) e
     então apontar o serviço `site` para `main` — só com o aval da dona.
 2. Troca de DNS — antes, verificar com a dona:
    - se os e-mails `@consumedolhos.com.br` rodam na Hostinger (manter registros MX/e-mail intactos);
