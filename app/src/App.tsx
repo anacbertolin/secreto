@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./lib/auth";
 import { FUNCOES, type Funcao } from "./lib/util";
@@ -18,6 +18,7 @@ import Faturamento, { ContaDetalhe, LoteDetalhe } from "./pages/Faturamento";
 import Procedimentos from "./pages/Procedimentos";
 import Relatorios from "./pages/Relatorios";
 import WhatsApp from "./pages/WhatsApp";
+import { useNaoLidas } from "./lib/whatsapp";
 
 interface ItemMenu { para: string; rotulo: string; icone: string; funcoes?: Funcao[]; grupo?: string }
 
@@ -26,7 +27,7 @@ const MENU: ItemMenu[] = [
   { para: "/agenda", rotulo: "Agenda", icone: "📅" },
   { para: "/recepcao", rotulo: "Recepção", icone: "🛎️", funcoes: ["medico", "enfermagem", "recepcao", "admin"] },
   { para: "/pacientes", rotulo: "Pacientes", icone: "👤" },
-  { para: "/whatsapp", rotulo: "WhatsApp", icone: "💬", funcoes: ["medico", "enfermagem", "recepcao", "admin"] },
+  { para: "/whatsapp", rotulo: "WhatsApp", icone: "💬", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
   { para: "/consultorio", rotulo: "Consultório", icone: "🩺", funcoes: ["medico", "enfermagem"] },
   { para: "/exames", rotulo: "Exames e laudos", icone: "🔬", funcoes: ["medico", "enfermagem"] },
   { para: "/faturamento", rotulo: "Faturamento", icone: "🧾", funcoes: ["faturamento", "recepcao", "admin"] },
@@ -50,6 +51,11 @@ export default function App() {
   const { session, eu, carregando, sair, pode } = useAuth();
   const [menuAberto, setMenuAberto] = useState(false);
   const loc = useLocation();
+  // Mensagens do WhatsApp não lidas: menu e título da aba, com som (só para quem responde: recepção e administração)
+  const naoLidas = useNaoLidas(pode("recepcao", "admin"));
+  useEffect(() => {
+    document.title = (naoLidas ? `(${naoLidas}) ` : "") + "Consumed · Sistema da Clínica";
+  }, [naoLidas]);
 
   if (carregando) return <div className="vazio">Carregando…</div>;
   if (!session) return <Login />;
@@ -94,6 +100,7 @@ export default function App() {
               cab,
               <NavLink key={m.para} to={m.para} end={m.para === "/"}>
                 <span aria-hidden>{m.icone}</span> {m.rotulo}
+                {m.para === "/whatsapp" && naoLidas > 0 && <span className="wa-badge" style={{ marginLeft: "auto" }}>{naoLidas}</span>}
               </NavLink>,
             ];
           })}
@@ -122,7 +129,7 @@ export default function App() {
           <Route path="/faturamento/conta/:id" element={<Protegida funcoes={["faturamento", "recepcao", "admin"]}><ContaDetalhe /></Protegida>} />
           <Route path="/faturamento/lote/:id" element={<Protegida funcoes={["faturamento", "admin"]}><LoteDetalhe /></Protegida>} />
           <Route path="/relatorios" element={<Relatorios />} />
-          <Route path="/whatsapp" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin"]}><WhatsApp /></Protegida>} />
+          <Route path="/whatsapp" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><WhatsApp /></Protegida>} />
           <Route path="/cadastros/procedimentos" element={<Protegida funcoes={["faturamento", "admin"]}><Procedimentos /></Protegida>} />
           <Route path="/cadastros/equipe" element={<Protegida funcoes={["admin"]}><Equipe /></Protegida>} />
           <Route path="/cadastros/horarios" element={<Protegida funcoes={["recepcao", "admin"]}><Horarios /></Protegida>} />
