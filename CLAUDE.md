@@ -130,4 +130,6 @@
   tela `/whatsapp/assistente`. Lê as conversas com IA (Claude), marca na agenda o que foi combinado, avalia o atendimento
   e monta a base do futuro robô (`bot_conhecimento`). Modelo Sonnet 5.5; horário padrão da clínica é parâmetro na tela.
   Nasce **desligado** (liga na tela). Não usa chave de API (decisão da dona); ela já deu o aval para o envio do texto mascarado. Detalhes: `docs/sistema/HISTORICO.md` (15/11, Assistente).
+- **Transcrição de áudios (15/11/2026):** Whisper da OpenAI (decisão da dona; áudio processado nos EUA). Migração 0040,
+  função Edge `whatsapp-transcrever`, segredo `OPENAI_API_KEY`. Detalhes: `docs/sistema/HISTORICO.md`.
 - Dados de teste do v1 apagados em 14/11/2026 (com autorização). A função Edge `limpeza-teste` está desativada (responde 410).
