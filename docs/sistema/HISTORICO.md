@@ -539,8 +539,10 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
   agenda (novo paciente, horário ocupado sem deixar cadastro, sábado fora do padrão, família no mesmo número, nome da
   filha, homônimo com/sem nascimento, já marcado, bloqueio, remarcar, horário próprio fora/dentro). Banco real: funções
   criadas, agendador antigo removido, equipe sem permissão de chamar as funções, advisors sem aviso novo desta parte.
-- **Tarefa agendada:** texto em `docs/sistema/assistente-tarefa-agendada.md`. Criação **aguardando autorização da dona**
-  (o modo automático da sessão bloqueou a criação sem o "pode criar" dela).
+- **Tarefa agendada:** texto em `docs/sistema/assistente-tarefa-agendada.md`. Criada com o "pode criar" da dona
+  (id `trig_01LZifj2S2htrZMt1RXH5Hkc`, Sonnet 5.5, 7h–20h de hora em hora). A organização não deixa a sessão anexar
+  conectores: a dona ligou o Supabase na tarefa pelo claude.ai (também ficou marcado o Railway, que a tarefa não usa).
+  Teste em 15/11 12:04 UTC: entrou no banco, viu "desligado" e gravou o resumo. Falta o teste com conversa de verdade.
 
 ### Resumo do prontuário por IA — NASCE DESLIGADO (migração 0027 + função Edge `prontuario-resumo`, aplicadas)
 - **`ia_prontuario_config`** (linha única, `ligado = false`). Só admin liga, na tela **Cadastros → ✨ Inteligência artificial**
