@@ -591,3 +591,20 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
   biômetro) e como cada um exporta (rede, pasta, DICOM, XML).
 - **RNDS:** só se a clínica atender SUS; exige credenciamento no DATASUS e certificado digital da clínica.
 - Acesso de teste (tela Equipe) para conferir tudo com login real.
+
+---
+
+## 15/11/2026 — Transcrição dos áudios do WhatsApp (Whisper / OpenAI) — migração 0040
+- **Pedido da dona:** transcrever os áudios dos pacientes; escolheu o **Whisper da OpenAI** (ela já tem conta paga).
+  Ciente de que o áudio é processado nos EUA (alternativa com dados no Brasil seria Amazon Transcribe).
+- **Numeração 0040** (para não chocar com a sequência 0020+ de outra sessão).
+- **Migração 0040 `whatsapp_transcricao_audio`** (aplicada): colunas `transcricao`, `transcricao_situacao`
+  (pendente/feita/falhou), `transcricao_tentativas`, `transcricao_erro` em `whatsapp_mensagens`; liga/desliga
+  `whatsapp_extrator_config.transcrever_audios` (tela do assistente). Gatilho `transcrever_audio`: áudio recebido →
+  "pendente" + chamada (pg_net) à função Edge. Tarefa pg_cron `whatsapp-transcricao-reprocessar` (10 min) tenta de novo
+  os pendentes (até 3 vezes). O extrator lê "[áudio transcrito] …" (mascarado) e espera até 45 min por áudio pendente.
+- **Função Edge `whatsapp-transcrever`** (verify_jwt false; aceita a chave interna do banco ou login de recepção/admin):
+  baixa da Meta e manda para `whisper-1` (pt, com vocabulário da clínica). Segredo: **`OPENAI_API_KEY`**.
+- **Tela WhatsApp:** texto do áudio embaixo do balão (📝) e botão "Transcrever" para áudios antigos (recepção/admin).
+- Testes: banco local (gatilho marca pendente, extrator espera e depois lê o texto mascarado); função publicada
+  (chave errada → 401, sem chave da OpenAI → 503). **Falta o teste com áudio de verdade** (depende da Meta).

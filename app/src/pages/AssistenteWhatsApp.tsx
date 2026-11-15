@@ -466,7 +466,7 @@ function Configuracao() {
     const { error } = await supabase.from("whatsapp_extrator_config").update({
       ligado: novo.ligado, agendar_automatico: novo.agendar_automatico, criar_paciente_automatico: novo.criar_paciente_automatico,
       confianca_minima: Number(novo.confianca_minima), silencio_minutos: Number(novo.silencio_minutos),
-      modelo: novo.modelo, usar_horario_padrao: novo.usar_horario_padrao, padrao_dias: novo.padrao_dias,
+      transcrever_audios: novo.transcrever_audios, usar_horario_padrao: novo.usar_horario_padrao, padrao_dias: novo.padrao_dias,
       padrao_inicio: novo.padrao_inicio, padrao_fim: novo.padrao_fim, padrao_duracao_min: Number(novo.padrao_duracao_min),
     }).eq("id", 1);
     setMsg(error ? { tipo: "erro", texto: msgErro(error) } : { tipo: "ok", texto: "Salvo." });
@@ -496,6 +496,9 @@ function Configuracao() {
         <div className="grade g2">
           <label className="campo"><span>Agendamento automático</span>
             <span><input type="checkbox" checked={cfg.agendar_automatico} onChange={(e) => salvar({ agendar_automatico: e.target.checked })} /> Marcar sozinho na agenda o que foi combinado</span>
+          </label>
+          <label className="campo"><span>Áudios dos pacientes</span>
+            <span><input type="checkbox" checked={cfg.transcrever_audios} onChange={(e) => salvar({ transcrever_audios: e.target.checked })} /> Transcrever os áudios automaticamente (Whisper / OpenAI)</span>
           </label>
           <label className="campo"><span>Paciente novo</span>
             <span><input type="checkbox" checked={cfg.criar_paciente_automatico} onChange={(e) => salvar({ criar_paciente_automatico: e.target.checked })} /> Criar cadastro simples (nome e telefone) para marcar</span>
@@ -573,7 +576,8 @@ function Configuracao() {
           nosso banco, no Brasil. Antes de enviar, o sistema troca CPF, telefones, e-mails e números de carteirinha por marcadores e não manda
           a ficha nem o prontuário do paciente (só o primeiro nome). Os resultados ficam guardados só aqui no sistema. Importante: na conta do Claude usada pela clínica, deixe
           <b> desligada</b> a opção “Ajudar a melhorar o Claude” (claude.ai → Configurações → Privacidade), para que as conversas não sejam usadas
-          no treino da IA.
+          no treino da IA. Os áudios dos pacientes são enviados ao Whisper (OpenAI, Estados Unidos) só para virar texto;
+          a OpenAI não usa dados enviados pela API para treinar a IA.
         </p>
       </div>
     </>

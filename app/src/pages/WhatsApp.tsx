@@ -434,6 +434,40 @@ function FichaPaciente({ conversa: c }: { conversa: Conversa }) {
   );
 }
 
+/** Texto do áudio (Whisper) e botão para pedir a transcrição */
+function Transcricao({ m }: { m: Mensagem }) {
+  const { pode } = useAuth();
+  const [texto, setTexto] = useState<string | null>(m.transcricao ?? null);
+  const [pedindo, setPedindo] = useState(false);
+  const [erro, setErro] = useState("");
+  if (m.tipo !== "audio" || m.direcao !== "recebida") return null;
+  async function pedir() {
+    setPedindo(true);
+    setErro("");
+    const { data, error } = await supabase.functions.invoke("whatsapp-transcrever", { body: { acao: "transcrever", mensagem_id: m.id } });
+    if (error) {
+      let msg = error.message;
+      try {
+        const j = await (error as { context?: Response }).context?.json();
+        if (j?.erro) msg = j.erro;
+      } catch { /* sem corpo */ }
+      setErro(msg);
+    } else setTexto(data?.texto || "(áudio sem fala)");
+    setPedindo(false);
+  }
+  if (texto) return <div className="wa-texto pequeno" style={{ fontStyle: "italic" }} title="Transcrição automática do áudio">📝 {texto}</div>;
+  return (
+    <div className="pequeno muted">
+      {m.transcricao_situacao === "pendente" && !pedindo && "📝 transcrevendo… "}
+      {m.transcricao_situacao === "falhou" && !pedindo && "📝 não foi possível transcrever. "}
+      {pode("recepcao", "admin") && m.transcricao_situacao !== "pendente" && (
+        <button className="mini sutil" disabled={pedindo} onClick={pedir}>{pedindo ? "transcrevendo…" : "📝 Transcrever"}</button>
+      )}
+      {erro && <div style={{ color: "var(--perigo)" }}>{erro}</div>}
+    </div>
+  );
+}
+
 function Balao({ m, quem }: { m: Mensagem; quem?: string }) {
   const [url, setUrl] = useState<string | null>(null);
   const [erro, setErro] = useState("");
@@ -472,6 +506,7 @@ function Balao({ m, quem }: { m: Mensagem; quem?: string }) {
         </div>
       )}
       {!m.midia_id && ICONE_TIPO[m.tipo] && <div className="wa-rotulo">{ICONE_TIPO[m.tipo]}</div>}
+      <Transcricao m={m} />
       {m.texto && <div className="wa-texto">{m.texto}</div>}
       <div className="wa-rodape">
         {enviada && quem && <span>{quem} · </span>}

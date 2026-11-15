@@ -27,6 +27,9 @@ export interface Mensagem {
   situacao: string;
   erro: string | null;
   agendamento_id: string | null;
+  transcricao?: string | null;
+  transcricao_situacao?: string | null;
+  transcricao_erro?: string | null;
   enviado_por: string | null;
   quando: string;
 }
