@@ -365,3 +365,30 @@ table.tabela { width: 100%; border-collapse: collapse; }
 /* ---------- Envio dos arquivos dos aparelhos ---------- */
 .zona-envio { margin-top: 14px; border: 2px dashed var(--borda); border-radius: 12px; padding: 28px; text-align: center; cursor: pointer; background: #fafbfc; }
 .zona-envio:hover, .zona-envio.ativa { border-color: var(--primaria); background: var(--primaria-clara); }
+
+/* ---------- Telefone do sistema (migração 0050) ---------- */
+.botao.mini-l { padding: 4px 9px; font-size: 0.82rem; }
+.tel { position: fixed; right: 18px; bottom: 18px; z-index: 900; font-size: 0.92rem; }
+.tel-fechado { display: flex; align-items: center; gap: 6px; border-radius: 99px; padding: 8px 14px; box-shadow: 0 4px 14px rgba(16, 24, 40, 0.18); background: white; }
+.tel-bolinha { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
+.tel-aberto, .tel-tocando { width: 330px; max-width: calc(100vw - 32px); background: white; border: 1px solid var(--borda); border-radius: 14px; padding: 14px 16px; box-shadow: 0 10px 30px rgba(16, 24, 40, 0.22); }
+.tel-tocando { border: 2px solid var(--sucesso); animation: tel-pulsa 1.2s ease-in-out infinite; }
+@keyframes tel-pulsa { 50% { box-shadow: 0 0 0 8px rgba(18, 183, 106, 0.18), 0 10px 30px rgba(16, 24, 40, 0.22); } }
+@media (prefers-reduced-motion: reduce) { .tel-tocando { animation: none; } }
+.tel-titulo { font-weight: 700; color: var(--suave); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.tel-nome { font-size: 1.15rem; font-weight: 700; overflow-wrap: anywhere; }
+.tel-sub { color: var(--suave); font-size: 0.84rem; margin-top: 2px; }
+.tel-erro { background: var(--perigo-claro); color: var(--perigo); border-radius: 8px; padding: 6px 8px; margin-top: 8px; font-size: 0.84rem; }
+.tel-atender { background: var(--sucesso); border-color: var(--sucesso); color: white; font-weight: 700; }
+.tel-atender:hover { background: #05603a; }
+.tel-desligar { width: 100%; margin-top: 12px; background: var(--perigo); border-color: var(--perigo); color: white; font-weight: 700; }
+.tel-desligar:hover { background: #912018; }
+.tel-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px; }
+.tel-botoes button { padding: 7px 6px; font-size: 0.86rem; }
+.tel-botoes button.ativo, .tel-teclado button:active { background: var(--primaria-clara); border-color: var(--primaria); }
+.tel-caixa { margin-top: 10px; border-top: 1px solid var(--borda); padding-top: 8px; }
+.tel-teclado { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+.tel-teclado button { font-size: 1.05rem; padding: 8px; }
+.tel textarea { width: 100%; box-sizing: border-box; }
+@media (max-width: 860px) { .tel { right: 10px; bottom: 10px; } }
+@media print { .tel { display: none; } }

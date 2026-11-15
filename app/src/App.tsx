@@ -28,6 +28,10 @@ import ConfigIA from "./pages/ConfigIA";
 import Portal from "./pages/Portal";
 import ImportarExames from "./pages/ImportarExames";
 import ConfigMemed from "./pages/ConfigMemed";
+import Ligacoes from "./pages/Ligacoes";
+import ConfigTelefone from "./pages/ConfigTelefone";
+import Telefone from "./components/Telefone";
+import { TelefoneProvider } from "./lib/telefone";
 import { useNaoLidas } from "./lib/whatsapp";
 
 interface ItemMenu { para: string; rotulo: string; icone: string; funcoes?: Funcao[]; grupo?: string }
@@ -38,6 +42,7 @@ const MENU: ItemMenu[] = [
   { para: "/recepcao", rotulo: "Recepção", icone: "🛎️", funcoes: ["medico", "enfermagem", "recepcao", "admin"] },
   { para: "/pacientes", rotulo: "Pacientes", icone: "👤" },
   { para: "/whatsapp", rotulo: "WhatsApp", icone: "💬", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
+  { para: "/ligacoes", rotulo: "Ligações", icone: "☎️", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
   { para: "/whatsapp/assistente", rotulo: "Assistente do WhatsApp", icone: "🤖", funcoes: ["recepcao", "admin"] },
   { para: "/consultorio", rotulo: "Consultório", icone: "🩺", funcoes: ["medico", "enfermagem"] },
   { para: "/busca-ativa", rotulo: "Busca ativa", icone: "📞", funcoes: ["medico", "enfermagem", "recepcao", "admin"] },
@@ -53,6 +58,7 @@ const MENU: ItemMenu[] = [
   { para: "/cadastros/procedimentos", rotulo: "Procedimentos e preços", icone: "💲", funcoes: ["faturamento", "admin"] },
   { para: "/cadastros/locais", rotulo: "Salas e consultórios", icone: "🚪", funcoes: ["recepcao", "admin"] },
   { para: "/cadastros/exames", rotulo: "Tipos de exame", icone: "📋", funcoes: ["recepcao", "admin"] },
+  { para: "/cadastros/telefone", rotulo: "Telefone", icone: "☎️", funcoes: ["admin"] },
   { para: "/cadastros/memed", rotulo: "Receita digital (Memed)", icone: "💊", funcoes: ["admin"] },
   { para: "/cadastros/ia", rotulo: "Inteligência artificial", icone: "✨", funcoes: ["admin"] },
   { para: "/cadastros/modelos", rotulo: "Modelos de texto", icone: "📝", funcoes: ["medico", "enfermagem"] },
@@ -117,6 +123,7 @@ export default function App() {
 
   let grupoAtual = "";
   return (
+    <TelefoneProvider>
     <div className="app">
       <div className="topo-movel">
         <img src="/logo-branco.png" alt={CLINICA.nome} style={{ height: 22 }} />
@@ -176,6 +183,8 @@ export default function App() {
           <Route path="/cadastros/convenios" element={<Protegida funcoes={["recepcao", "admin", "faturamento"]}><Convenios /></Protegida>} />
           <Route path="/cadastros/locais" element={<Protegida funcoes={["recepcao", "admin"]}><Locais /></Protegida>} />
           <Route path="/cadastros/exames" element={<Protegida funcoes={["recepcao", "admin"]}><CatalogoExames /></Protegida>} />
+          <Route path="/ligacoes" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><Ligacoes /></Protegida>} />
+          <Route path="/cadastros/telefone" element={<Protegida funcoes={["admin"]}><ConfigTelefone /></Protegida>} />
           <Route path="/cadastros/memed" element={<Protegida funcoes={["admin"]}><ConfigMemed /></Protegida>} />
           <Route path="/cadastros/ia" element={<Protegida funcoes={["admin"]}><ConfigIA /></Protegida>} />
           <Route path="/cadastros/modelos" element={<Protegida funcoes={["medico", "enfermagem"]}><Modelos /></Protegida>} />
@@ -183,6 +192,8 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
+      <Telefone />
     </div>
+    </TelefoneProvider>
   );
 }

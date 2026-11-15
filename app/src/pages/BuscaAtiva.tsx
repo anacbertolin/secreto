@@ -5,6 +5,7 @@ import { supabase, msgErro } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Campo, Modal, Etiqueta, type PacienteResumo } from "../components/ui";
 import { NovoAgendamento } from "../components/AgendamentoModais";
+import { BotaoLigar } from "../components/Telefone";
 import { CONDICOES, EditarSeguimento, rotuloCondicoes } from "../components/Seguimento";
 import { listaConvenios, listaLocais, listaProfissionais } from "../lib/dados";
 import { fmtData, fmtDataHora, fmtTelefone, nomeExibicao } from "../lib/util";
@@ -85,7 +86,7 @@ export default function BuscaAtiva() {
                   <tr key={a.paciente_id}>
                     <td>
                       <Link to={`/pacientes/${a.paciente_id}`}><b>{nomeExibicao(a)}</b></Link>
-                      <div className="muted pequeno">Pront. {a.numero_prontuario}{a.telefone && <> · <a href={`tel:${a.telefone}`}>{fmtTelefone(a.telefone)}</a></>}</div>
+                      <div className="muted pequeno">Pront. {a.numero_prontuario}{a.telefone && <> · <a href={`tel:${a.telefone}`}>{fmtTelefone(a.telefone)}</a> <BotaoLigar numero={a.telefone} pacienteId={a.paciente_id} rotulo="📞" /></>}</div>
                     </td>
                     {clinico && <td>{rotuloCondicoes(a.condicoes)}</td>}
                     <td>{fmtData(a.ultima_consulta) || "—"}</td>
@@ -161,7 +162,7 @@ function RegistrarContato({ a, aoFechar, aoSalvar }: { a: Atrasado; aoFechar: ()
     <Modal titulo={`Contato com ${a.nome_social || a.nome}`} aoFechar={aoFechar}
       rodape={<><button onClick={aoFechar}>Cancelar</button><button className="primario" onClick={salvar}>Registrar</button></>}>
       <Aviso>{erro}</Aviso>
-      {a.telefone && <p style={{ marginTop: 0 }}>📞 <a href={`tel:${a.telefone}`}><b>{fmtTelefone(a.telefone)}</b></a></p>}
+      {a.telefone && <p style={{ marginTop: 0 }}>📞 <a href={`tel:${a.telefone}`}><b>{fmtTelefone(a.telefone)}</b></a> <BotaoLigar numero={a.telefone} pacienteId={a.paciente_id} rotulo="Ligar pelo sistema" /></p>}
       <div className="grade g2">
         <Campo rotulo="Como foi o contato">
           <select value={f.canal} onChange={(e) => setF({ ...f, canal: e.target.value })}>
