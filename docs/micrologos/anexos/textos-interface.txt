@@ -1,0 +1,2947 @@
+Campo obrigatório.
+Identif. NF
+Voltar ao Pagar
+Voltar à NF de Entrada
+Voltar à NF de Saída
+Nota salva. Para gerar o título depois, use + Incluir em Títulos a receber.
+Títulos a receber
+Conferir título a receber
+Salvar título
+Nenhum título a receber vinculado.
+Nota salva. Não foi possível iniciar a inclusão do título a receber.
+Cancelar usa as parcelas originais.
+Cancelar salva a NF com as parcelas originais.
+Já existe parcela com pagamento. As parcelas desta nota estão disponíveis somente para consulta.
+Não há condição de pagamento habilitada para compras.
+Selecione uma condição de pagamento habilitada para compras.
+C. Resp
+Forma Pgto
+Incluir título a pagar
+Alterar Parcelas Pgto
+Se houver diferenças, os títulos {ids} serão substituídos ao confirmar.
+Os títulos já correspondem às parcelas confirmadas.
+Não foi possível confirmar a gravação dos títulos.
+O título {id} está vinculado a mais de uma nota fiscal. As notas não podem ser excluídas.
+Notas fiscais de entrada vinculadas
+Selecione uma condição de pagamento habilitada para compras nesta unidade.
+Títulos a pagar
+Nenhum título a pagar vinculado.
+Não foi possível abrir o título selecionado.
+Não há condição de pagamento disponível para a unidade escolhida.
+Quantidade de parcelas
+Quantidade definida pelos títulos do pedido de compra.
+Informe de 1 a 99 parcelas.
+Confira novamente as parcelas antes de salvar a nota.
+Conferir parcelas a pagar
+Confirmar e salvar
+As parcelas dos títulos a pagar foram salvas com sucesso.
+Confira o valor e o vencimento das parcelas.
+O total das parcelas foi alterado. Deseja confirmar?
+Documentos do GED a excluir: {total}.
+Aplicar informações dessa parcela às demais
+Distribuir o saldo entre as demais parcelas?
+Crédito de IBS + CBS
+Total das NFs
+Primeiro vencimento
+Notas Fiscais de Saída
+Descrição ou código
+O local de estoque do pedido está indisponível.
+Em andamento
+Cancelado
+Informe o número da nota.
+Nova nota fiscal de entrada
+NF de entrada
+Notas Fiscais de Entrada
+Nota fiscal de entrada
+Período de emissão
+NF entrada
+Emissão
+Nenhuma nota encontrada.
+Pedido de compra
+NF relacionada
+NF discriminatória
+Valores da nota
+Produtos da nota
+Cód. produto
+Qtd.
+Vl. unitário
+IPI
+Nº série
+Cód. barras
+Nenhum produto vinculado a esta nota.
+Frete
+Frete IPI
+Base ICMS
+Alíquota ICMS
+Base ICMS ST
+Valor ICMS ST
+Valor IBS
+Valor CBS
+Natureza da operação
+Entrada
+{quantidade} registros
+Textos
+Texto
+Grade de Horários
+Horários Avulsos
+Horários Bloqueados
+Usuários
+Fichas de Atendimento
+Não Selecionado
+Valores para o saldo
+Horários marcados: {quantidade}
+Não foi possível descartar o rascunho do agendamento.
+Cancelar agendamento
+Agendar sessões selecionadas
+Salvar quantidade e validade
+Id. Agenda
+Adicionar Usuário TV
+Salvando configurações. Aguarde...
+Carregando configurações. Aguarde...
+{numero}ª OPÇÃO
+Qtd
+de
+Os totais das opções incluem os itens não opcionais.
+Total da {numero}ª opção
+Legenda
+Legenda de cores
+Não foi possível consultar as opções de portador e cartão.
+Não foi possível consultar as bandeiras dos portadores.
+Movimento
+Autorizado
+Não autorizado
+Emitente (nome)
+Código do emitente
+Plano financeiro (descrição)
+Sem plano financeiro
+Portador e cartão
+Ex.: Crédito até 3x
+Espécie
+Cheque/Cartão
+DOC/TED
+Internet
+Débito Aut.
+Borderô (Ordem Pgto)
+Crédito em Conta
+Liquidação Eletrônica
+Pgto Salario CC (Holerite)
+Conces/Tributos c/ Cd.Bar.
+Tributos s/ Cd.Barras/FGTS
+Financeira
+Cheque temporário
+Cartão de crédito
+Fundo de Investimento
+Cheque de
+Cheque até
+Bom para
+Data de compensação
+Sem NF associada
+Não foi possível consultar as empresas.
+Não foi possível confirmar a inclusão. Confira as notas vinculadas ao título.
+A nota fiscal foi incluída, mas não foi possível atualizar a lista. Reabra o título para consultar.
+Caminho completo com a unidade
+Pasta escolhida
+O campo mostra o caminho configurado. Ajuste se a unidade for outra.
+Informe aqui o caminho completo, por exemplo C:\\\\Apag.
+Emitir NF Nacional
+Visualizar NF Nacional
+Salve as alterações do título antes de incluir a nota fiscal.
+Não foi possível incluir a nota fiscal.
+Nota fiscal incluída com sucesso.
+Voltar ao Receber
+Voltar ao Fluxo de Caixa
+Salve as alterações da nota fiscal antes de continuar.
+Consulte novamente a nota fiscal para conferir o status.
+Confira o caminho completo da pasta escolhida. Para mudar o destino, use Escolher pasta.
+Informe o caminho completo que termina com a pasta escolhida.
+Consultar NFS-e
+Nenhuma nota fiscal vinculada a este título.
+Não foi possível consultar as notas fiscais do título.
+A pasta será usada nesta exportação, mas não foi possível guardá-la para a próxima.
+Ao gerar, confirme a pasta de destino no navegador.
+Não foi possível consultar a pasta de destino.
+Selecione a nota fiscal
+CNPJ do prestador
+Dados da nota
+Natureza dos serviços
+Código de verificação
+Número da nota
+Número do RPS
+Código NBS
+Destinatário da nota
+Alterar cadastro
+Incluir emitente
+Não foi possível consultar os dados do destinatário.
+Você pode incluir notas e alterar as que estão em aberto.
+Gerar NF Nacional
+Cancelar NF Nacional
+Alterar nota fiscal
+Nova nota fiscal
+A empresa não tem certificado configurado para gerar ou cancelar NF Nacional. Para contratar o serviço, entre em contato com a Micrologos
+Para gerar ou cancelar NF Nacional, configure o tipo de nota fiscal da empresa como NF Nacional.
+Selecione a conta
+Link de pagamento
+A nota pode ser salva como registro.
+Para emitir, contrate o serviço de NF Nacional com a Micrologos.
+Discriminação do serviço
+Emitir
+Cancelar NF
+Nova NF Nacional
+Alterar NF Nacional
+Todas as contas
+Valor da nota
+Itens da nota
+Informar outro tomador
+Usar CPF do próprio paciente
+Tomador
+Salvar nota
+Não foi possível consultar a NF Nacional.
+Permita abrir a janela do PDF.
+Não foi possível confirmar a operação.
+Emitir esta NF Nacional?
+Cancelar esta NF Nacional?
+Excluir esta nota fiscal?
+Sim, desejo excluir a NF
+Descartar exclusão
+Expandir todos
+Recolher todos
+Ciente
+Não foi possível carregar os avisos do paciente. Tente novamente.
+Selecione o novo status
+Nenhum status disponível para este agendamento.
+Selecione um status para continuar.
+Confirmar
+Cancelamento paciente
+Cancelamento médico
+Desistir
+Tirar Status
+Retira envio confirmação
+Whatsapp Manual enviado
+Whatsapp Manual confirmado
+Histórico de alterações e confirmações
+Evento
+Data e hora
+Envio de SMS
+Envio de WhatsApp
+Envio de e-mail
+Fim do pré-atendimento
+Carregando...
+Não foi possível carregar os dados do agendamento.
+Local de atendimento
+Classificação de atendimento
+Duração prevista
+Sessão
+Início do atendimento
+Fim do atendimento
+Visualizar o total de
+Selecionar sem pagamento
+Selecionar todos, inclusive pagos
+Pgamento
+Carregando informações relacionadas…
+Não foi possível carregar
+Não foi possível abrir o registro selecionado.
+Não foi possível consultar as notas fiscais.
+Todas as contas recorrentes ativas
+Mês inicial
+Meses adicionais
+Processando
+Não foi possível confirmar a geração.
+Títulos gerados
+Títulos confirmados nos meses anteriores
+Id. Conta Recorrente
+Transação gerada em
+Para
+Todas as origens
+Sem preenchimento
+Mostrar saldos dos portadores
+Ocultar saldos dos portadores
+Os títulos selecionados para quitação devem ser do mesmo emitente.
+Não foi possível carregar as opções da conta. Tente novamente.
+Reordenar Colunas — Notas Fiscais
+Relação Contábil
+Usuário sem permissão para consultar notas fiscais.
+Não foi possível consultar a relação contábil. Tente novamente.
+A busca de notas fiscais mudou. Atualize a busca e tente novamente.
+Não emitida
+Copiar título
+Copiar o título do emitente
+Usuário sem permissão para incluir títulos.
+Não foi possível preparar a cópia do título. Tente novamente.
+Limpar busca
+Identificação e origem
+Pessoa e contato
+Conversão e agendamento
+Data do pagamento
+CPF/CNPJ
+Imprimir recibo
+Salva os dados antes de imprimir
+Permita a abertura de pop-ups para imprimir o recibo.
+Atualize o backend para imprimir o recibo DMED.
+Não foi possível preparar a impressão do recibo.
+Recebemos de
+a importância de
+referente ao atendimento de
+Série
+Data de emissão
+Somente números
+Idade no atendimento
+Pagamento do recibo
+Valor do recibo
+Recibo em nome de
+Nome do responsável pelo recibo
+Do próprio menor de idade
+Outro documento
+Nota fiscal
+Emitente do recibo
+Médico que atendeu (PF)
+Emitente da Unidade da Agenda (PJ)
+Razão Social do Médico que atendeu (PJ)
+Observação do recibo
+Site da nota fiscal eletrônica
+Recibo DMed já foi gerado anteriormente. Confirma substituição dos dados do Recibo?
+Substituir dados
+Manter dados atuais
+Usuário sem permissão para o recibo DMed.
+Conta de paciente não teve o pagamento efetuado e não pode ter Recibo Dmed
+Não foi possível consultar os dados do recibo DMed. Tente novamente.
+Não foi possível confirmar a gravação do recibo DMed. Mantenha esta tela aberta e tente salvar novamente.
+Os dados do recibo foram alterados em outra tela. Reabra o recibo para conferir.
+Informe um CPF válido com 11 dígitos.
+Informe um valor válido para o recibo, com até duas casas decimais.
+Selecione em nome de quem será o recibo.
+Pagamento não encontrado para a data escolhida. Atualize a conta.
+Não foi possível confirmar a gravação do recibo. Confira se o pagamento ou os dados da conta foram alterados.
+Salvando pendência...
+Atualizando a pendência e os itens da conta. Aguarde...
+Colocar conta {numero} pendente
+Colocar conta pendente
+Nova classificação de guia
+Selecione a nova classificação de guia
+Nenhuma classificação de guia disponível para transferência.
+Não foi possível consultar as classificações de guia. Tente novamente.
+Não foi possível confirmar a transferência. Atualize a conta e confira a classificação de guia antes de tentar novamente.
+Classificação de guia não pode ser alterada. A conta já está em cobrança.
+Usuário sem permissão para transferir a classificação de guia da conta.
+Informe uma conta e uma classificação de guia válidas.
+Classificação de guia não encontrada. Selecione uma classificação válida.
+Alterar também a unidade de todos os itens e recalcular a conta
+Aplicar também os percentuais de desconto de exames
+Recálculo indisponível para esta conta ou usuário.
+Unidade da conta e dos itens atualizada. Valores recalculados.
+Atenção
+Concluído
+OK
+Não foi possível carregar as configurações. Reabra a tela para tentar novamente.
+Não foi possível salvar todas as alterações. Tente novamente.
+Validade obrigatória do pacote de sessões
+Quando ativado, exige a validade até marcar a segunda sessão. Padrão: Sim.
+Tipo de identificação do paciente e acompanhante
+Pulseira (ex.: Zebra HC 100)
+Etiqueta
+Pulseira — Modelo 2
+Usar etiqueta para o acompanhante
+Permite usar etiqueta para o acompanhante mesmo quando o paciente usa pulseira.
+Disponibilizar pulseira e etiqueta
+Acrescenta a opção de etiqueta no menu quando a identificação principal é por pulseira.
+Pulseira sem procedimento e médico
+Aplicado à pulseira modelo 1.
+Margem esquerda da pulseira
+Margem direita da pulseira
+Formato da etiqueta de identificação
+6,5 × 3,0 cm (padrão)
+4,0 × 10,0 cm
+5,0 × 3,0 cm
+Brother — 9,0 × 3,0 cm (deitada)
+Zebra — 9,0 × 2,5 cm
+Confira o tamanho efetivo na prévia antes de imprimir.
+Etiqueta sem plano de saúde
+Margem esquerda da etiqueta
+Margem direita da etiqueta
+Margem superior da etiqueta
+Tipo de identificação
+Pulseiras
+Margens em milímetros (mm), aplicadas às pulseiras do paciente e do acompanhante.
+Etiquetas
+As margens personalizadas se aplicam à etiqueta padrão (Pimaco). Os demais formatos usam as margens próprias do modelo.
+Margem em milímetros
+Informe uma margem inteira entre 0 e {max} mm.
+Selecione uma das opções disponíveis.
+A soma das margens da pulseira deve ser menor que 255 mm.
+Ao imprimir, escolha a impressora no diálogo de impressão.
+O conteúdo excede o tamanho configurado. Confira o modelo e as margens da identificação antes de imprimir.
+Pulseira Identificação
+Pulseira Acompanhante
+Etiqueta Identificação
+Etiqueta Acompanhante
+Carregando identificação
+Identificação do paciente e acompanhante
+Identificação do paciente
+Identificação do acompanhante
+Acompanhante
+Incluir acompanhante
+Buscar acompanhante
+Nenhum acompanhante encontrado para este paciente.
+Endereço e outros dados
+Confirme a gravação para verificar o acompanhante sem duplicar o cadastro.
+Salvar acompanhante
+Procedimentos da identificação
+Prévia da identificação
+Use o tamanho de papel indicado, escala 100% e desative cabeçalhos e rodapés na impressão.
+Visualizar impressão
+Parentesco
+Data de nascimento
+Órgão expedidor
+Data de emissão do RG
+Tipo de telefone
+Telefone 2
+Tipo de telefone 2
+Tipo de logradouro
+Aguarde
+Categorias
+Restaurar padrão inicial
+Restaurar tamanho e posição da janela
+Restaurar posição da janela
+Gerar arquivo para contabilidade
+Pasta de destino
+Pasta padrão de downloads
+Escolher pasta
+O destino segue a configuração de downloads do navegador.
+Não foi possível acessar a pasta escolhida.
+Excel — títulos e pagamentos
+TXT — relação de arquivos do acervo local
+Selecione uma empresa e faça uma busca por data de pagamento com títulos para exportar.
+Quando houver documentos do GED, eles serão incluídos em um ZIP com o relatório.
+Gerando arquivo para contabilidade
+Selecione a pasta do acervo local
+Gerar
+Não foi possível gerar o arquivo.
+Padrão inicial do filtro por categoria restaurado!
+novo padrão do filtro por categoria salvo !
+Definir categorias como padrão
+Urgente
+Realizar Agendamento
+Meu Guichê:
+Agendar Sessão
+Voltar à grade de horários
+Visualizar Cores do Procedimento
+Locais
+Horários Livres
+Desbloquear Horário
+Copiar Link Teleatendimento
+Finalizar Nova Espera
+Hora Chegada
+Realizado por IA
+Nascimento
+Paciente:
+Indicado
+Paciente e Plano de Saúde
+Unidade:
+Especialidade(s):
+Agendar Procedimentos
+Carregar +8 dias
+Cópia de horario
+Desmarcar todos os horários
+Atualizar
+Data Encaixe
+Busque pelo nome do paciente
+ID da primeira sessão
+Nome ou código
+Whats Conf.
+via IA
+Email Conf.
+Conf.
+Site Temp.
+Email Canc.
+Whats Canc.
+Buscar categoria procedimento
+Conversão dos Orçamentos
+Valores:
+Orçados
+Valor orçado
+Com agenda
+Formato
+Barras
+Pizza
+Valor exibido
+Não agendados
+Quantidade agendada menor que a quantidade do orçamento. Deseja alterar o agendamento para sessão 1/{quantidade}?
+Reabra os procedimentos para conferir a sessão do orçamento.
+Agendamento salvo. Não foi possível confirmar a alteração para sessão. Confira a agenda antes de tentar novamente.
+Já incluído no agendamento
+Orçamentos do paciente
+Selecione as parcelas
+Selecione uma quantidade de parcelas permitida na configuração.
+Usuário sem permissão para alterar agendamento.
+Este orçamento já está associado a outra agenda.
+Agenda não confirmada para o paciente.
+Voltar aos procedimentos
+Agendamento salvo. Não foi possível confirmar a liberação dos itens do orçamento. Confira o orçamento antes de reutilizá-los.
+Orçamentos em aberto do paciente
+Sem classificação para o plano selecionado
+Não foi possível consultar os orçamentos do paciente.
+O paciente foi alterado. Selecione novamente o orçamento.
+Itens do orçamento não adicionados (restrição do agendamento ou procedimento já escolhido em outro item):
+Não foi possível adicionar os procedimentos do orçamento.
+Selecione apenas um item de orçamento para cada procedimento.
+Um item do orçamento foi alterado ou já está associado a uma agenda. Selecione novamente os procedimentos do orçamento.
+Procedimento do orçamento não permitido na classificação do plano selecionado.
+Procedimento do orçamento não permitido para este agendamento.
+Agendamento salvo. Não foi possível confirmar a associação dos orçamentos. Confira os vínculos antes de usar os mesmos itens em outro agendamento.
+Não foi possível confirmar a gravação. Confira a agenda antes de tentar novamente.
+Agenda
+Usa agenda
+Salve o médico para incluir horários.
+Salve o médico para bloquear horários.
+Filtrar orçamentos
+dessa agenda
+de todas as agendas do paciente
+Não foi possível identificar a agenda de origem. Reabra os orçamentos pela agenda.
+Mais opções
+Voltar para a agenda
+Calendário
+Nome Completo
+Nome Social
+Plano de Saúde
+Dashboard
+Hora
+Prontuário - PEP Icons
+Fila de Laudos
+Repasse
+Gestão de Retorno
+Solicitação Procedimento
+Cirurgia
+Conta
+Favoritos
+Cobrança
+Totem
+Funcionário
+Chamada TV
+Paciente
+To Do
+Sistema
+Utilitários
+Cadastro
+Unidades
+Pacientes
+Staff Médico
+Convênios / Planos de Saúde
+Produtos / Serviços
+Procedimentos
+Produtos
+Serviços
+Contatos Externos
+Tabelas
+Atendimento
+Pacote
+Pcte
+até:
+Valid:
+Buscar agendamento por ID
+ID do agendamento
+Digite o ID do agendamento
+Informe um ID de agendamento válido.
+Agendamento não encontrado.
+Você não tem permissão para acessar a agenda de outro médico.
+Não foi possível buscar o agendamento. Tente novamente.
+Categorias de Locais de Atendimento
+Locais de Atendimento
+Protocolos de Tratamento
+Sessões
+Aparelhos
+Lados
+Regiões
+Turnos
+Status de Locais
+Equipes Médicas
+Especialidades
+Feriados
+IBGE Localidade
+Representantes
+Motivos
+CID - 10
+Medicamentos Ambulatoriais
+Categorias de Modelos de Texto do PEP
+Modelos de Texto do PEP
+Modelos de e-mail
+Ficha de dados
+Grupo de Limites
+Limites
+Campos
+Arquetipos
+Faturamento
+Tipo de Pendência
+Tipos de Glosas
+Classificação de Guias
+Classificação de Atendimentos
+Configuração para faturmanento Automático
+Configuração de Taxas
+Layout de Convênios
+Comissionamento
+Categorias do Staff Médico
+Donos de Equipamentos
+Tipos de Comissão
+Categorias de Produtos / Serviços
+Unidades de Produtos
+Marcas
+Tempo de Duração Atendimento
+Brasíndice
+Preços
+Prescrição
+Formas de Aplicação
+Intervalos de Aplicação
+Laudo
+Títulos de Laudo
+Frases de Laudo
+Empresas
+Profissões
+CEP
+Acompanhantes
+Tipos de Ocorrência
+Facilitadores
+Atendimentos
+Agendas
+Ambulatório
+Fila do Totem
+Ocupação
+Centro Cirúrgico
+Inform. Médicas Pendentes
+Laudo Web
+Solicitações Procedimentos
+Contas de Pacientes
+Pendências
+Lançamentos Extras para Repasse
+Cobranças
+Cobranças de Convênios
+Justificativas de Glosas Técnicas
+Acompanhamento
+Dmed (Relação p/declaração de serviços médicos)
+CIHA (Relação p/ declaração junto ao SUS)
+Solicitações
+Requisição/Devolução Internados
+Prescrição Médica Internados
+Procedimentos Realizados em Internados
+Requisição/Devolução Ambulatório
+Prescrição Médica Ambulatório
+Requisições Encerradas
+Requisição/Devolução Consumo de Setores
+Cadastros
+Filtros
+Inglês
+Português (BR)
+Espanhol
+Buscar Menus
+Período
+Agendamentos
+Atendidos
+Faltas
+Médicos
+Convênios
+Ferramentas Rápidas
+Local/Obs.Local
+Status
+Ações
+Notas
+Unidade
+Incluir
+Alterar
+Excluir
+Excluir NF
+Encaixe
+Retorno
+PEP
+Alterar Status
+Importar Multimídia
+Chamar na sua TV
+Chamar em todas as TVs
+Faturar
+Preencher arquetipos
+Ligar
+Observação do Plano de Saúde
+Vizualiza Dados Agenda
+Avisos Paciente
+Nota Fiscal
+Desbloquear
+Visualizar Nova Aba
+Atender Nova Aba
+Altera Status
+Altera Nova Espera
+Liberar para Agendamento
+Re-Faturar
+Contas da Agenda
+Visualiza Dados Agenda
+Médicos do Dia
+Lista Compactada
+Lista Detalhada
+Médico
+Local
+do Dia
+Todos
+Fila do Prontuário Eletrônico do Paciente (PEP)
+Agendados
+Fila de Exames
+Auditoria
+Data
+Busca Staff Médico por Nome ou Código
+Fila por Hora de Chegada
+Refresh Automático
+Ligado
+segundos
+Apenas com Chegada
+Busca Local por Descrição ou Código
+Busca Unidade por Descrição ou Código
+Opções
+Exibir Filtros
+Exibir Gráficos
+Pressione enter para buscar todos os registros.
+anos
+Visualizar
+Atender
+Exames
+Escolha um arquétipo
+Preencher Arquétipos
+Minha Visualização
+Desenvolvido por
+Acessos
+Usuário
+Foto
+Foto Identidade
+Foto Carteirinha
+Assinatura
+Data de Nascimento
+CPF
+Social Name
+Apelido
+Ficha
+Dados pessoais
+Dados adicionais
+Ocorrências
+Matrícula
+Validade
+Títular do Convênio
+CPF do Títular
+Tipo Acomodação
+Apartamento
+Enfermaria
+Cartão Nacional de Saúde (CNS)
+RG
+Orgão Expedidor
+Data Expedição
+E-mail
+Facebook
+Instagram
+Celular
+Telefone Residencial
+Telefone Comercial
+UF
+Cidade
+Bairro
+Logradouro Tipo
+Logradouro
+Logradouro Número
+Logradouro Complemento
+Sexo
+Raça
+Estado Civil
+Indicação
+Profissão
+Aposentado
+Naturalidade
+Nacionalidade
+Estrangeiro
+Contato Externo
+Def. Auditiva
+Def. Motora
+Def. Mental
+Paralisia Mental
+Paralisia Cerebral
+TEA
+Soropositivo
+TDAH
+Ouro
+Prata
+Bronze
+Verde
+Vermelho
+Branco
+Preto
+Azul
+Responsável
+Parentensco
+Telefone
+Pai
+Mãe
+Alertas para Agenda e Cobrança de Convênio
+Alerta do Paciente para o Atendimento
+Comentários do Paciente
+Busca Plano de Saúde por descrição ou Código
+Busca contato externo por nome ou código
+Solicitação
+Cor
+Def. Visual
+Dados para Clínica
+Dados para Convênio
+Busca Paciente por Nome, CPF, Data Nascimento, Telefone ou Código
+Feminino
+Masculino
+Outros
+Solteiro(a)
+Casado(a)
+Divorciado(a)
+Viúvo(a)
+Separado(a)
+Desquitado(a)
+União Estável
+Amigo
+Avô
+Avó
+Conhecido
+Filho
+Irmão
+Padrinho
+Primo
+Tio
+Amarelo
+Indígena
+Pardo
+1ª vez
+Revisão
+Emergência
+Prioridade
+Internado
+Teleatendimento
+Interconsulta
+Médico Preferencial
+Duração
+Especialidade
+Ficha de Atendimento
+Tipo acomodação
+Tipo consulta
+Origem
+Anestesta
+Sub-plano
+Matrícula Convênio
+Último Pagamento
+Via
+Titular Convenio
+CPF do Titular
+Busca Especialidade por Descrição ou Código
+Marcado
+Agendamentos do Paciente
+Mapa
+Observações do Plano de Saúde
+Listar
+Apagar
+Ocultar Gráficos
+Bloquear Horário
+Fichas
+Medicamentos
+Receituário
+Imagens
+CID
+Internação
+Consultas
+Cirurgias
+Prontuário Eletrônico do Paciente
+Visão Geral
+Carregando
+Linha da vida
+Você entrou no prontuário sem estar associado a algum agendamento. Não será possível iniciar um atendimento.
+Seu usuário não possuí um staff médico associado. Não será possível iniciar um atendimento.
+Sair
+Alerta Paciente
+Por favor aguarde
+Cancelar
+Salvar
+Salvar e Continuar
+Finalizar
+Nova Espera
+Solicitar Procedimentos
+Encerrar Teleatendimento
+Iniciar Teleatendimento
+Inserir Arquetipos
+Adicionar CID
+Calcular
+Adicionar Medicamentos / Textos
+Adicionar Imagens e Multimidia
+Áreas Atendimento
+Adicionar Ficha
+Email Env.em 
+Não atualizado
+Espera de Médico
+Bloqueado
+Bloquear todos
+Clique em Filtrar para consultar a data escolhida.
+Desbloquear Todos
+Motivo do bloqueio
+Selecione um motivo de bloqueio.
+Faturado
+Primeira Vez
+Existe Alguém Agendando
+Chegada
+Quantidade Atendimentos
+Último Atendimento
+Indicador
+Você está conectado
+Você está desconectado
+Exibir
+Ocultar
+Informações
+Relações
+Expandir todas as informações
+Recolher todas as informações
+Expandir relações
+Recolher relações
+Carregando PEP
+Dados compilados de atendimentos
+Hoje
+Carregando Mapa Calor
+Espera
+Busca Ficha de Atendimento por Descrição ou Código
+Anestesia
+1ª Consulta
+Seguimento
+Pré Natal
+Por encaminhamento
+UTI
+Receptivo
+Ativo de Cuidado Planejado
+Ativo de Faltosos
+Whatsapp
+Chat
+Agendamento on line
+Marketplace
+Fila de Espera
+Prontuário Eletrônico do Paciente (PEP)
+Adicionar
+Cadastro do Paciente
+Fila de Espera da Agenda
+Agendamento
+Canc. Pac.
+Canc. Med.
+Desistiu
+Esp. Pend.
+Atendido
+Atendendo
+Desmembrado
+Faltou
+Agendado
+Agenda Flexível
+segunda-feira
+terça-feira
+quarta-feira
+quinta-feira
+sexta-feira
+sábado
+domingo
+seg
+ter
+qua
+sex
+sáb
+dom
+Escolha os horários para agendamento
+Confirmar Alteração
+Carregar mais dias
+Busca Emitente por Nome, CPF ou CNPJ, Data Nascimento, Telefone ou Código
+Procedência
+Laudo Obrigatório
+Busca CID por Descrição ou Código
+Observação
+Tipo (Membros)
+Quantidade
+Senha
+Autorizado em
+Executante
+Médico que Indicou
+Equipe Médica
+Médico Vinculado
+Valor
+Escolha os procedimentos do pacote que serão realizados
+Procedimentos do Pacote
+Agendar
+Encaixar
+Encaixar Todos
+Altera Médico de todos s procedimentos para
+Procedimento
+Alterando Agendamento
+Classificação de Atendimento
+Classificação de Guia
+Filtra procedimentos com ajuste de conduta
+Buscar Procedimento
+Continuar
+Voltar
+PACS Modalidade Médica
+Autoriza
+Guias - Prestador
+Operadora
+Valor Original
+% desconto
+Novo Valor
+Valor Total
+Franquia
+Laudo CID
+Exames solicitados por
+Ninguém
+Número do CRM
+UF do CRM
+Consultar CFM
+Dados Solicitação
+Guia
+Áreas diferentes
+Elegebilidade em
+Ordem Chegada
+Copia horários vagos
+Manhã
+Tarde
+Noite
+Selecionados
+Por favor aguarde...
+Filtrar Paciente Talklogos
+Agendar marcados
+Env.em
+Proc.
+Novo Agendamento
+Conta Corrente
+Fluxo de Caixa
+Emitente
+Busca por
+Ident. Movimento
+Buscar
+Banco
+Agência
+Cheque
+Tipo
+Número
+Autorização
+Histórico
+Maquininha
+Tipo Pagamento
+Bandeira
+Crédito Emitente
+Pagamento Multiplo
+Lançamento Desconhecido
+Nominal A
+Bom Para
+Utilizado em
+Plano Financeiro
+Busca Plano Financeiro por Descrição ou Código
+Compensado em
+Autorizado por
+Busca Medicamento por Nome, Fármaco ou Código
+Nova Posologia
+Medicamentos - Posologias
+Medicamento Substituto
+Busca Medicamento Substituto por Nome, Fármaco ou Código
+Ordem
+Medicamentos ambulatoriais - Substitutos
+Medicamentos ambulatoriais - Posologias
+Subir
+Descer
+Medicamento
+Compensar
+Descompensar
+Detalhamento do Movimento de 
+Crédito
+Débito
+Títulos Quitados
+Movimentação de Conta Corrente
+Identificador
+Autorizar
+Calcular Saldo
+Com Limite
+Disponível
+Saldos
+Saldo
+Provisão
+Débitos Pendentes
+Créditos Pendentes
+Débitos Pré-datados
+Créditos Pré-datados
+Geral
+Talk
+Créditos
+meses
+dias
+Versão
+Suporte
+Laudar
+Doenças
+Doenças prévias
+Alergias
+Medicamentos em uso
+Antecedentes familiares
+Ícones grandes
+Ícones pequenos
+Ícones médios
+Visualização
+Timeline corrida
+Gráficos
+Mapa do atendimento
+Filtrar meus atendimentos
+Filtrar procedimento
+Áreas de atendimento
+Agrupar todos
+Desagrupar todos
+Sobre
+Adquirir módulos
+Excluídos
+Orçamentos
+Solicitação de Parecer
+Inteligência Artificial
+Data Contatar
+Modo Confirmação
+Data Retorno
+Motivo
+Retorno Tipo
+Data da Próxima Ação
+Data da Realização
+Etapas
+Número Guia
+Membro
+Posologia
+Laboratório
+Via de Administração
+Apresentação
+Dose
+Número Atendimento
+Dados da Solicitação
+Indicação Clínica
+Carregando Informações Paciente
+Avisos do Paciente
+Exames Solicitados
+Procedimentos Cirúrgicos Realizados
+Acompanhamento de retorno
+Contas do Paciente sem recebimento
+Antecendentes
+Sem data de nascimento
+Janeiro
+Fevereiro
+Março
+Abril
+Maio
+Junho
+Julho
+Agosto
+Setembro
+Outubro
+Novembro
+Dezembro
+Auxilio Especialista
+Remover Auditoria ONA
+Alterar Área
+Abrir
+filtrar
+Filtrar
+Editar
+Liberar para Paciente
+Abrir Formulário
+Visualizar Logs
+Iniciar Thread
+Selecionar Thread
+Ver Thread
+etnia
+Etnia
+Alíquota
+Tipo de Serviço
+Tipo de Serviço - Sub-Item
+Tipo de Serviço - Item
+Senha Emissão de NF
+Usuário Emissão de NF
+Série RPS
+Último nº RPS
+Tipo da RPS
+Servidor de Envio
+Mensagem Discriminação (com retenção)
+Mensagem Discriminação (sem retenção)
+Descrições de Serviços Permitidas
+Regime Especial
+Tipo de Natureza de Operação (Padrão)
+Tipo da Nota Fiscal
+Incentivador Cultural
+Optante Simples Nacional
+Alíq. ISS (%)
+Sigla
+Descrição
+Centros de Responsabilidade
+Centro de Responsabilidade
+Categoria de Produtos / Serviços
+Código
+Usa na Agenda do Ambulatório
+Usa na Agenda da Internação
+Configura Guias Futuras
+Especialidade do Médico Obrigatória no atendimento
+Cobra Consulta
+Busca classificação de guia por descrição ou código
+Adicionar classificação de guia
+Registros
+Endereço / Telefones / Email / WWW
+Controles e Configurações
+Local de Atendimento
+Inclusão por intervalo
+Modelo de Laudo
+Categoria de Texto
+Horário de
+até
+Intervalo de (nim)
+Tipo de Horário
+Observação do Local
+Permite Interconsulta
+Utiliza no Agendamento Web
+Só Permite Paciente 1ª Vez
+Validade Início
+Validade Fim
+Quinzena inicial
+Horários Futuros
+Ano
+Inclusão única
+Inclusão Cadastro Staff Médico
+Alteração Cadastro Staff Médico
+Medicamentos - Substitutos
+Bloqueio/Desbloqueio Avançado
+Pgto Partic
+Busca tabela de preço por descrição ou código
+Tabela de Preço
+Filtra Unidade
+Busca Empresa por Nome ou Código
+Usuários que podem visualizar esse portaodr
+Planos Financeiros
+Categorias de Emitentes
+Portadores
+Busca Portador por Nome ou Código
+Busca Plano Financeiro por Nome ou Código
+Adicionar Tab. Preço
+Salvar Alteração Tab. Preço
+Cancelar Alteração Tab. Preço
+Adicionar Pl. Saúde
+Salvar Alteração Pl. Saúde
+Cancelar Alteração Pl. Saúde
+2ª feira
+3ª feira
+4ª feira
+5ª feira
+6ª feira
+Reordenar Colunas
+Medicamentos Personalizados
+Busca Local de Atendimento por descrição ou código
+Comentar Auditoria ONA
+Local de Estoque
+Busca Local de Estoque por Descrição ou Código
+Busca Centro de Responsabilidade por Descrição ou Código
+Tipo do Portador
+Inativo
+Empresa
+Pode usar em outras empresas
+Carteira de Desconto ou Calcionada
+Usuário do Fechamento
+Data do Fechamento
+Usuários que podem visualizar esse portador
+Adicionar Usuários
+Dados Bancários do Portador
+DV
+Limite Crédito
+Tipo do Banco
+Carteira
+Cód. Cedente / Convênio
+Complemento Convênio
+Nome para boleta
+Dados Adquirente
+Desmembra Pagamentos
+Nº Contrato
+Pagamento Mínimo
+Portador de crédito
+Dados Cartão de crédito
+Dia ideal
+Tipo Adquirente
+Prazo de vencimento
+Máximo de parcelas
+Tipo de comissão do Portador
+Taxa
+Taxas
+Prazo em dias
+PayLOGOS Adquirente
+Maquininhas
+Nº de série
+Busca Representante por Nome ou Código
+Representante
+Conta Operacional
+Usuários que podem visualizar esse plano financeiro
+Id. Proposta
+Data Início
+Data Fim
+Previsão Início
+Previsão Fim
+Próximo Contato
+Projetos
+Busca Projeto por Nome ou Código
+Projeto
+Contas Recorrentes
+Conta Recorrente
+Data Término
+Próximo Reajuste
+Portador
+Tipo de Vencimento
+Tipo Documento
+Tipo de Multa
+Busca Tipo de Multa por Descrição ou Código
+Documento Fiscal de Serviço
+Aluguel
+Vencimento em dia útil
+Dia da semana: 1 (dom) a 7 (sáb)
+Dia Vencimento
+Mês Vencimento
+Tipo de Exercício
+Busca Moeda por descrição ou Código
+Moeda
+Natureza de Operação
+Busca Natureza de Operação por descrição ou Código
+Abate Imposto
+Produto / Serviço
+Busca Produto / Serviço por Descrição ou Código
+Local do Contrato
+Categoria de Emitente
+Busca Categoria de emitente por descrição ou Código
+Razão Social
+Nome Fantasia
+Nome Resumido
+Financeiro
+Emitentes
+Relatórios
+Produtos/Serviços
+Fluxo de Caixa por DRE
+Tratamento
+Razão Social ou Nome do Emitente
+Motivo inativo
+Endereço de Cobrança
+Endereço para cobranças
+Localidade
+IBGE
+CNPJ
+Endereço
+Tipo endereço
+Utiliza DDA
+Registro
+Home page
+Data Admissão
+Inscrição Municipal
+Documento
+Data Vencimento
+Vencimento Original
+Data Emissão
+Data Pagamento
+Data Crédito
+Valor Pago
+Codigo de Barras
+Linha Digitável
+Busca Emitente por Nome ou Código
+Documento Número
+Forma de pagamento
+Data de Competência
+DRE
+País
+Formatura
+RQE
+Conselho
+Nº
+Observação de Atendimento
+Telefones
+Observações
+Informações Adicionais
+Telefone Entrada
+Complemento
+DDI
+DDD
+Totais
+Valor Aprovado
+Valor Liberado
+Valor Bloqueado
+Valor Sem Status
+Valor Quitado
+Valor Pendente
+Valor total Original
+Naturezas de Operação
+Categorias de Produtos para Requisição pelo Centro de Responsabilidade
+Motivo de atraso no ponto eletrônico obrigatório
+Sub-centro de responsabilidade de
+Tipo de Ocorrência
+Tipos de Multa
+Feriado
+Notas Fiscais
+Emitir Nota Fiscal
+Emitir Notas Fiscais
+Emitida
+Cancelada
+Tipo de Natureza de Operação
+Valor PIS
+Retido
+Valor IR
+Valor CSLL
+Valor COFINS
+Valor INSS
+Valor ISS
+ISS retido
+Deduções
+Serviço
+Desconto
+Outras Retenções
+Código Serviço
+Código Tributação Município
+Código Fiscal
+Nº RPS
+Código Verificação
+Emissão RPS
+Lote
+Protocolo
+Link NFe
+Projetado Diário
+Realizado Diário
+DRE e DFC
+Projetado da Agenda Semanal
+Contatar por
+Retorno Contato
+Data Confirmação
+Motivo Retorno
+Motivos (Ausência, Canc, Desist, Emerg, Bloqueio)
+Motivo (Ausência, Canc, Desist, Emerg, Bloqueio)
+Tipos de Pendência
+Código ANS
+Justificativa para recurso
+Não recorre ao convênio (Aguardando pgto do protocolo)
+Glosa técnica
+Taxas de Turno
+Taxa de Turno
+Usa no Ambulatório
+Usa na Internação
+Percentual
+Turnos que podem usar esta taxa
+Convênio
+Busca Convênio por Descrição ou Código
+Busca Plano de Saúde por Descrição ou Código
+Processo
+Consolidação do Convênio
+Período início
+Período Fim
+Processo Principal
+Valor Enviado
+Outras deduções
+Impostos
+Glosa Total
+Valor a Receber
+Consolidação
+Derivado do Processo
+Previsão de Entrega
+Data de Entrega
+Previsão Recebimento
+Dias de Atraso
+Recebimento
+Quantidade de Contas
+Valor Recebido Protocolos
+Valor Recebido Procedimentos
+Glosa Reversível Identificada
+Glosa Reversível ñ Identificada
+Glosa Reversível Total
+Glosa Irreversível Identificada
+Glosa Irreversível ñ Identificada
+Glosa Irreversível Total
+Unidade mãe
+Protocolos
+Atenção Contínua
+Totem Funcionários
+Totem Pacientes
+Diversos
+Solicitações Procedimento
+Totem Funcionário
+Totem Paciente
+Valor P. Jurídica
+Nota
+Consolidar Cobrança
+Informações TISS
+Adicionar Textos
+Rápido
+Laudos Médicos Especiais
+Laudo Prorrogação
+Tipo de Saída
+Tipo de Atendimento
+Indicação do Acidente
+Tipo Tempo da doença
+Tempo
+Capital de giro
+Campanhas
+Campanha
+Configurações
+Canais de Atendimento
+Whatsapp Agenda
+Whatsapp Outros
+Kanbans
+Gestão de Funis
+Gestão de Funil
+Perfil
+Perfis de Usuário
+Perfil Usuário
+Consignação
+Carta de Crédito
+Descrição Serviço
+CFO Internacional
+CFO Inter-Estadual
+CFO Estadual
+Valor Multa
+Juros por Dia
+Juros por Mês
+Sub-categoria de
+Pagamento
+Excluir Conta
+Conta sem status
+Conferir Conta
+Auditar Conta
+Liberar Conta
+Conta Pendente
+Retirar Conta Pendente
+Recalcular valor Conta
+Categoria de Local
+Busca Categoria de Local por descrição ou Código
+Ativo
+Conciliação Bancária
+Data (emissão, vencimento , pagamento, crédito)
+Tipo Movimento
+Digitar histórico
+Transferência de Acerto
+Movimentações Bancárias
+Movimentações Cash
+Inclusão de Acerto
+histórico
+Nº Atendimento
+Previsão
+Incluído por
+Facilitador
+Assunto
+Pessoas envolvidas
+Valor envolvido
+Criticidade
+Título do Chamado
+Problema ou dúvida
+Nova Ocorrência
+Incluir Ocorrência
+Solucionar Atendimento
+Alterar Procedimentos
+Títulos
+Gerar Títulos
+Rateio da Conta Recorrente
+Nº Parcela
+Parcelamento
+Detalhamento de 
+Negocia título de
+Vencimento entre parcelas
+Dia do mês
+Parcelas
+Parcela
+Vencimento
+Quant. de Dias
+Confirma Negociação do título
+Notas Fiscais vinculadas
+Itens das contas de paciente vinculadas
+Regras de Envio
+Configurações Gerais
+Mensagens Personalizadas
+Quitado
+Negociando título de
+PIX
+Enviar Cobrança via E-mail
+Enviar
+Outro e-mail
+Gestor Eletrônico de Documentos (GED)
+Busca categoria de serviço por descrição ou código
+Descrição Resumida
+Moeda / Índice
+Moedas / Índices
+Liquidação Total
+Parcial
+Pendente
+Quitação Múltipla de Títulos
+Valor Total a Quitar
+Escolha os títulos a serem quitados
+Quitação múltipla
+Valor a Quitar
+Desmarcar todos
+Marcar todos
+Data de Quitação
+Da mesma empresa
+Valor Total Desmarcado
+Portador selecionado
+Inclui movimentação p/ cada quitação
+Parcelas (Máx: 
+Substitui o documento por esse
+Informações extras
+Valor a ser quitado
+Valor já quitado
+Créditos a serem liberados
+Saldo do Portador Com Limite - Pendência
+Saldo do Portador Disponível - Pendência
+Saldo do Portador Disponível Com limite
+Saldo do Portador Disponível
+Tipo de pagamento
+Já Compensado
+Usuários que podem visualizar esse projeto
+Qtde parcelas cartão
+Qtde parcelas
+Forma de quitação
+Quitação
+Tipo de quitação
+Valor do Crédito do Emitente
+Sem crédito
+Títulos em aberto para o Paciente
+Pendências nas Contas do Paciente
+Avisos
+Agendamentos Futuros para o Paciente
+Exames Solicitados até 12 Meses
+Exames Solicitados + 12 Meses
+Alerta do Paciente
+Salvar Procedimentos
+Membros
+Modalidade
+Token
+Fatura no Particular
+Cancelar Procedimento
+Salvar Procedimento
+Indicado por
+Guia de solicitação
+Data da solicitação
+Hora da solicitação
+Hipótese Diagnóstica
+Anamnese e Exame Físico
+Justificativa do Procedimento
+Via Administração
+Local Aplicação
+Estratégia
+Cancelar Procedimentos
+Nº da boleta
+Data Quitação
+Pago
+A Quitar
+Vl. Desmarcado
+Pl.Fin
+Busca procedimento por descrição ou código
+Busca categoria de procedimento por descrição ou código
+Categoria de Procedimento
+Escolher paciente e plano de saúde para agendamento
+Escolher especialidades para buscar os médicos que atendem
+Escolher procedimentos para buscar os médicos que realizam
+Escolher unidade para buscar os horários dos médicos
+Relatório de Acompanhamento de Leads
+Acompanhamento de Leads
+Leads
+Relatório de Leads
+Relatórios -> Leads -> Acompanhamento de Leads
+Agendamento Convertido
+Se Perdido
+Usuário Responsável
+Pessoa
+Funil
+Data Inclusão
+Lead
+Exportar CSV
+Imprimir
+Período inclusão
+Quantidade Leads
+Relatório de Termos enviados
+Termos
+Data Envio
+Termo
+Data Aceite
+WhatsApp
+SMS
+Quantidade Termos
+Relatórios -> Termos -> Termos enviados
+Termos enviados
+Relatório de Termos
+Aceite
+Desmembra pagamentos
+Dados Pagamento
+Pl.Fin.
+Saldos Portador
+Saldo Disponível
+Saldo Com Limite
+Saldo Disponível - Pendência
+Saldo C/ Limite - Pendência
+Status Agenda
+Adicionar Medicamentos / Textos / Laudos
+Adicionar Textos / Laudos (Rápido)
+Adicionar Imagens e Multimídia
+Nenhum certificado digital encontrado.
+Selecione o Certificado Digital:
+Alterar Ordem Menus
+Alterar Botões Inclusão
+Incluir Textos
+Incluir Texto
+Assinar Digitalmente
+Enviar todos os disparos demonstração
+Justificativa
+Imprimir Guia
+Nº Guia Prestador
+Adicionar Textos (Rápido)
+Nº Guia
+Qtde
+Nome
+Limpa Busca
+Quantidade linhas
+Nome + Plano financeiro
+Nome + Histórico
+Comentários
+Convertido
+Recebedores
+Recebedor
+Ponto de Referência
+Agência Dígito
+Conta Dígito
+Tipo da Conta
+Renda Mensal
+Transferência automática
+Intervalo da transferência
+Dia da transferência
+Antecipação automática
+Tipo da Antecipação
+Percentual da antecipação
+Dias para a antecipação
+Delay da antecipação
+Observação da Micrologos
+Clientes
+Paylogos
+Previsão de resposta
+Responsabilidade
+prazo
+dias úteis
+dia útil
+Repasse Médico
+Alterar Meu Local de Atendimento
+Marca todos
+Desmarca todos
+TV
+Chamar
+Atendimento Inicial
+Cód. IBGE
+(de acordo com CID informado no atendimento)
+Adicionar Solicitação
+Guia Solicitação
+Salvar e Finalizar
+Observação / Justificativa
+Imprimir Guia Solicitação SADT
+Dados Agenda
+Última Alteração Status
+Inclusão
+Alteração
+Confirmado
+Conf. Telefone
+Conf. SMS
+Conf. Whatsapp
+Conf. Web
+Matricula Convênio
+Matrícula Validade-Via
+Matrícula Últ. Pgto
+Titular Nome
+Titular CPF
+Tipo de Consulta
+Data de Compensação
+Escolher data para buscar os médicos que atendem
+Adicionar Médicos
+Médicos para filtrar
+Adicionar Especialidades
+Especialidades para filtrar
+Adicionar Procedimentos
+Procedimentos para filtrar
+Buscando médicos disponíveis...
+Nenhum médico disponível para a data e os turnos selecionados.
+Não foi possível atualizar os médicos. Tente novamente.
+Informe uma data válida.
+Os horários dos médicos removidos do filtro foram desmarcados.
+Tentar novamente
+Não foi possível carregar os horários. Tente novamente.
+Data e Turnos
+Fechar filtros
+Abrir filtros
+Detalhamento do orçamento
+Orçamentos de Pacientes
+Buscar por
+Data de
+Número do orçamento
+Informe o número do orçamento
+Médico solicitante
+Plano de saúde
+Incluído por (usuário)
+Informe o nome do usuário
+Categoria do procedimento
+Tipo da última ocorrência
+Busca tipo de ocorrência por descrição ou código
+Sem ocorrência (ou do tipo escolhido)
+Filtrar também pela data de
+A partir de
+Até
+{quantidade} resultado(s)
+Esconder filtros
+Mostrar filtros
+Escolha a busca e clique em Buscar para consultar os orçamentos.
+Orçamento
+Incluído em / por
+Valor total
+Valor à vista
+{parcelas} parcela(s) · taxa {taxa}%
+Kit associado
+Sim
+Não
+Agendamentos associados
+Ocorrências do paciente
+Ocorrências de orçamento
+Nenhuma ocorrência disponível para este usuário.
+Ocorrência
+Selecione ou informe o código para a busca escolhida.
+Os orçamentos mudaram durante a exportação. Tente novamente.
+Não foi possível obter todos os orçamentos.
+Permita pop-ups para imprimir a consulta.
+Não foi possível consultar os orçamentos.
+Não foi possível abrir o orçamento.
+Não foi possível consultar as ocorrências.
+Não foi possível exportar os orçamentos.
+Em Aberto
+Realizados
+Pagos
+Perdidos
+Na validade
+Fora da validade
+De orçamento
+Todas do paciente
+Área
+Valor adicional
+Total
+Categoria
+Tabela de preços
+Anestesista
+Preço cheio
+Pago em
+Valor pago
+Observação do procedimento
+Identificação
+Incluído em
+Válido até
+Status da agenda
+Agenda em
+Taxa de parcelamento
+Imprimir consulta
+Exportando CSV...
+Em aberto
+Já Agendado
+Perdido
+Fora Validade
+Esp.Pend
+Desmembr.
+Canc.Pac
+Canc.Med
+Site Temp
+Email Canc
+Whats Canc
+SMS Canc.
+Whats Conf
+Site Conf.
+Email Conf
+SMS Conf.
+Tel Conf.
+Listar Orçamento
+Preparando orçamento...
+Não foi possível carregar o relatório do orçamento.
+Usuário sem permissão para listar orçamento.
+Cód.Espec
+Qt
+Vl.Anest.
+Agente de venda
+Ou
+entrada
+parcelas
+Imprimir / Salvar em PDF
+(acrescido do valor de kit)
+(à vista)
+Anestesista à parte
+Produto
+Preço
+Impresso por
+Pág.
+Nº Orçamento
+Valor anestesista
+( à vista )
+Logo
+Impressão modelo 1
+Impressão modelo 2
+{quantidade} procedimento(s)
+Visualizar com os procedimentos
+Visualizar sem os procedimentos
+Proced.
+Alterar orçamento
+Novo orçamento
+Salvando...
+Confirmar gravação
+Salvar orçamento
+A confirmação da gravação está pendente. Clique em Confirmar gravação para verificar ou reenviar os mesmos dados, sem duplicar o orçamento.
+Orçamento perdido
+Orçamento associado à agenda: os procedimentos devem ser mantidos.
+Adicionar procedimento
+Escolha o paciente e o plano, depois adicione os procedimentos.
+Preço base
+Remover procedimento
+Detalhes e ajustes
+Tipo de desconto
+Incluir kit associado
+Observação do orçamento
+Expandir observação
+Recolher observação
+Selecione o plano de saúde para buscar categorias e procedimentos.
+Informe o paciente e o plano de saúde para salvar o orçamento.
+Aplicar desconto ao orçamento
+Aplicar
+Taxa (%)
+à parte
+O procedimento já foi adicionado. Ajuste sua quantidade.
+Descartar as alterações do orçamento?
+Descartar
+Continuar editando
+Sessão expirada. Entre novamente no sistema.
+Não foi possível abrir a edição do orçamento.
+Não foi possível calcular o orçamento.
+A gravação do orçamento não foi confirmada.
+A consulta de orçamentos retornou dados incompletos.
+Não foi possível carregar o detalhamento do orçamento.
+Usuário sem permissão para incluir ou alterar orçamento.
+Reabra a edição do orçamento.
+A edição expirou. Reabra o orçamento.
+Orçamento não encontrado.
+Este orçamento contém pacientes ou planos diferentes. Revise-o no desktop.
+Informe um valor numérico dentro dos limites do campo.
+Texto inválido ou muito longo.
+Número inválido.
+Paciente, plano, médico ou procedimento não encontrado.
+Procedimento não encontrado.
+Procedimento sem preço cadastrado para este plano.
+Tabela de preços não vinculada ao plano e procedimento.
+Paciente não encontrado.
+Inclua ao menos um procedimento (máximo de 200).
+Paciente e plano não podem ser trocados na alteração do orçamento.
+Usuário sem permissão para alterar a validade.
+Informe um número inteiro de parcelas.
+Procedimento inválido.
+Item não pertence a este orçamento ou está repetido.
+Remova o item antes de substituir o procedimento.
+Orçamento associado à agenda não permite incluir ou remover procedimentos.
+Usuário sem permissão para alterar o valor.
+Usuário sem permissão para alterar o desconto.
+O desconto não pode superar o valor dos procedimentos.
+O desconto não pode superar o valor do procedimento.
+Esta gravação já foi enviada. Reabra o orçamento antes de alterar novamente.
+O orçamento foi alterado por outro usuário. Reabra a edição.
+Não foi possível confirmar a gravação do orçamento. Mantenha esta edição aberta para tentar novamente.
+Usuário sem permissão para consultar orçamentos.
+Informe os filtros da consulta.
+Informe os dados do orçamento.
+Não foi possível concluir a operação do orçamento. Tente novamente.
+Não foi possível consultar as opções do orçamento.
+A gravação deste orçamento está em andamento. Aguarde e tente novamente.
+Buscar procedimento
+Buscar procedimento na categoria selecionada
+Selecione o paciente e o plano de saúde para buscar categorias e procedimentos.
+Escolha uma categoria para selecionar os procedimentos.
+Incluir subcategorias
+Adicionar selecionados
+Buscando procedimentos...
+Selecionar procedimentos desta página
+Selecionar
+Adicionado
+Nenhum procedimento disponível para o plano e os filtros escolhidos.
+Anterior
+Próxima
+Escolha uma categoria ou busque um procedimento para selecionar.
+Categoria não encontrada.
+Procedimento inativo. Selecione outro procedimento.
+Selecionar procedimentos
+Só Orçamento
+Todas
+Incluir ocorrência
+Alterar ocorrência
+Cancelar ocorrência
+Salvar ocorrência
+Tipo Ocorrência
+Título
+Título da ocorrência
+Descreva a ocorrência
+Ocorrência ref.
+Ocorrência ref. ID
+Não foi possível abrir a ocorrência.
+A gravação da ocorrência não foi confirmada.
+Usuário sem permissão para incluir ou alterar ocorrências.
+Orçamento não encontrado ou com pacientes diferentes.
+Ocorrência não encontrada ou não disponível para este usuário.
+Informe os dados da ocorrência.
+Informe uma hora válida.
+Tipo de ocorrência não encontrado.
+O título deve ter até 100 caracteres.
+O texto da ocorrência excede o limite permitido.
+A edição expirou. Reabra a ocorrência.
+O paciente do orçamento foi alterado. Reabra a ocorrência.
+Esta gravação já foi enviada. Confirme os mesmos dados antes de editar novamente.
+Não foi possível confirmar a gravação da ocorrência. Mantenha a edição aberta e tente novamente.
+A ocorrência foi alterada por outro usuário. Reabra a edição.
+Listagem
+Listagem de orçamentos
+Preparando listagem...
+Permita pop-ups para visualizar a listagem.
+Os orçamentos mudaram durante a listagem. Tente novamente.
+Não foi possível gerar a listagem de orçamentos.
+Fechar
+Tipo de registro
+Listagem Simples
+Listagem com Procedimento
+Reordenar colunas
+Reordenar colunas — Orçamentos
+Arraste para ordenar as colunas exibidas ou mova para Colunas Ocultas. Clique em Salvar Ordem para aplicar.
+Voltar ao padrão
+Salvar Ordem
+Colunas Exibidas
+Colunas Ocultas
+Não foi possível carregar a configuração das colunas. Tente novamente.
+Não foi possível confirmar a ordem das colunas. Tente salvar novamente.
+Mantenha ao menos uma coluna exibida.
+Gráfico
+Tabela
+Gráficos de orçamentos
+Total dos orçamentos
+Valores de todos os procedimentos dos orçamentos encontrados, independentemente da página da tabela.
+Esconder gráficos
+Atualizando gráficos…
+Agrupar por categoria ou procedimento
+Valor por plano de saúde
+Valor por médico
+Valor por
+Não informado
+Não foi possível carregar os gráficos de orçamentos.
+Valor por categoria
+Valor por procedimento
+Nenhum orçamento encontrado.
+Mostrar gráficos
+Aguarde...
+Procedimentos sem preço no novo plano: {procedimentos}. Deseja manter os valores e trocar o plano mesmo assim?
+Trocar plano
+Não foi possível alterar o plano de saúde.
+O paciente não pode ser trocado na alteração do orçamento.
+Confirme a troca do plano de saúde antes de salvar.
+Valor pago por
+Valor exibido no gráfico
+Valor pago por plano de saúde
+Valor pago por médico
+Valor pago por categoria
+Valor pago por procedimento
+Valor por usuário de inclusão
+Valor pago por usuário de inclusão
+Valor por data de inclusão
+Valor pago por data de inclusão
+Usuário de inclusão
+Data de inclusão
+ID Procedimento
+Valor do desconto
+Deseja excluir o orçamento {orcamento} de {paciente}?
+Usuário sem permissão para excluir orçamento.
+Orçamento já associado a uma agenda paga não pode ser excluído.
+Orçamento já associado a uma agenda não pode ser excluído.
+Não foi possível confirmar a exclusão do orçamento. Atualize a busca antes de tentar novamente.
+Não foi possível excluir o orçamento.
+Visualizar conversão
+Conversão
+Por usuário de inclusão
+Conversão geral
+Conversão por usuário de inclusão
+Conversão (%)
+Valor dos orçamentos
+Valor dos orçamentos com agenda
+Valor pago nos orçamentos
+Conversão dos orçamentos
+Orçamentos incluídos
+Orçamentos agendados
+dos orçamentos foram agendados
+Valor orçamentos
+Valor com agenda
+Valor unitário
+Outras info
+Outras Informações
+Unitário
+Vl.2ª unidade
+Vl. Total
+Id. Proced
+Incluído em/por
+Alterado em/por
+Identif
+Visualizar com observação
+Visualizar sem observação
+O banco local precisa de um índice para agilizar a busca de orçamentos. Solicite ao suporte a atualização do banco.
+Considera agendado o orçamento com ao menos um procedimento vinculado à agenda.
+Procedimentos do pacote
+Quantidade 1 em cada sessão
+sessões definidas pelo orçamento
+Alterar procedimentos
+Carregando procedimentos…
+Escolha o plano de saúde e o médico para selecionar os procedimentos.
+Ir para o agendamento das sessões
+Para usar o orçamento em sessões, todos os procedimentos escolhidos devem permitir sessão e ter quantidade maior que 1.
+Os procedimentos do orçamento devem ter a mesma quantidade de sessões para formar um pacote.
+Médico das sessões pendentes
+Não foram encontrados procedimentos que permitem sessão nas tabelas de preço do plano de saúde
+Buscando pacotes do paciente…
+Só é permitido agendar a partir de 2 sessões.
+Informe uma quantidade inteira entre 2 e 999 sessões.
+Salvar procedimentos e ir para as sessões
+Este pacote está sem procedimento e não permite alteração. Confira as permissões e a chegada das sessões.
+Não é possível alterar os procedimentos do pacote. Agendamento(s) com chegada ou atendimento registrado: {agendamentos}.
+O pacote já possui {quantidade} sessões agendadas. A quantidade de cada procedimento deve ser igual ou maior que esse total.
+Não é possível alterar os procedimentos do pacote. Agendamento(s) com chegada ou atendimento registrado:
+Excluindo agendamento…
+Aguarde a conclusão da operação.
+Não foi possível confirmar a exclusão. Atualize a agenda antes de tentar novamente.
+O procedimento {procedimento} não está configurado para permitir sessões.
+O procedimento {procedimento} deve ter quantidade inteira entre 2 e 999 para agendar sessões.
+Não permite sessões.
+Quantidade menor que 2.
+Voltar para sessões
+Escolher procedimentos
+Agendar pacote de sessões
+Salvar procedimentos selecionados
+Orçamento de origem
+Quantidade de sessões travada pelo orçamento: {quantidade}.
+Não há horários disponíveis para este médico na data escolhida.
+Não informada
+Selecione
+Clinic
+Pacote de Sessões
+Pacotes de Sessão
+Relatório de Pacote de Sessões
+Pacotes iniciados entre
+Pacotes
+Finalizados
+Sessões agendadas
+Nº Pacote
+Data / Hora
+Valor do pacote
+Valor da sessão
+Total do paciente
+Total geral
+Informe um período válido.
+Não foi possível consultar os pacotes de sessões. Tente novamente.
+Seu perfil não permite consultar o relatório de pacotes de sessões.
+Imprimir / Salvar PDF
+Nenhum registro encontrado.
+Ordenar por
+Data 1ª sessão
+Convertido pelo board
+Gráficos de leads
+Conversão de leads
+Leads por responsável
+Leads por campanha
+Sem responsável
+Sem campanha
+Gráficos dos registros filtrados. Cada lead é contado uma vez; o responsável corresponde à etapa mais recente entre os registros exibidos.
+Alterações
+Gastos Mat/Med
+Transfere Itens
+Transfere Unidade
+Transfere Classificação de guia
+Inclui Item
+Informa
+Cancela
+Visualiza
+Captura
+GED
+Recibo DMED
+Ainda não disponível na Web
+Opções em cinza ainda não disponíveis na Web.
+Abra o pagamento para cancelar.
+Nova Unidade
+Selecione a nova unidade
+Unidade da conta atualizada.
+Nenhuma unidade disponível para transferência.
+Usuário sem permissão para transferir a unidade da conta.
+Informe a conta do paciente.
+Informe uma conta e uma unidade válidas.
+Conta do paciente não encontrada.
+Unidade não pode ser alterada. A conta já está em cobrança.
+Unidade não encontrada. Selecione uma unidade válida.
+Não foi possível confirmar a transferência. Atualize a conta e confira a unidade.
+Não foi possível confirmar a transferência. Confira a unidade da conta antes de tentar novamente.
+Não foi possível consultar as unidades. Tente novamente.
+Não foi possível atualizar os dados da conta. A conta permanece aberta; confira os dados antes de repetir a operação.
+Sim, alterar status
+Usuário sem permissão para alterar a conta.
+Não foi possível salvar a conta. Tente novamente.
+Não foi possível alterar o status da conta.
+Status alterado com sucesso!
+Status Conta
+Motivo da pendência
+Busca motivo de pendência por descrição ou código
+Confirma colocação da conta inteira como pendente?
+A conta já teve o TISS conferido. Coloca como pendente mesmo assim?
+Os itens da conta não foram encontrados no arquivo de pendências. Retira o status pendente mesmo assim?
+Confirma retirada da pendência com novo faturamento para a data escolhida?
+Confirma colocação do status em branco?
+Confirma colocação do status Auditado?
+Confirma liberação da conta?
+Não foi possível consultar as opções de status da conta.
+Não foi possível confirmar a operação. Atualize a conta e confira o status antes de tentar novamente.
+Use as opções de status para alterar o status da conta.
+Código de conta inválido.
+Opção de status inválida.
+Usuário sem permissão para esta alteração de status.
+Status não pode ser alterado. A conta já está em cobrança.
+Status não pode ser alterado. A conta está pendente.
+Status não pode ser alterado. A conta está auditada.
+A conta já tem item em cobrança ou com pagamento de particular.
+Confirme a pendência da conta com TISS conferido.
+Escolha um motivo de pendência válido.
+Observação inválida.
+Não há itens disponíveis para colocar a conta em pendência.
+Não há registros de pendência. Confirme a retirada somente do status pendente.
+A conta foi alterada por outro usuário. Atualize os dados e tente novamente.
+Pendência retirada com sucesso!
+Pendência salva com sucesso!
+Não foi possível alterar o status do item.
+Não foi possível confirmar o status do item. Confira os dados antes de tentar novamente.
+Sem status
+Conferindo
+Confere todos os itens
+Auditar
+Liberar
+Retirar pendência
+12.2 - Dias anteriores para o relatório de conversão de lead /agenda de retorno
+12.3 - Dias posteriores para o relatório de conversão de lead /agenda de retorno
+Quantidade de dias para buscar se existe agendamentos do paciente antes da data da agenda de retorno
+Quantidade de dias para buscar se existe agendamentos do paciente depois da data da agenda de retorno
+Informe uma quantidade inteira de dias entre 0 e 9999.
+Quantidade de dias
+Não foi possível consultar os leads. Tente novamente.
+Quantidade convertidos
+Valor faturado
+Convertidos faturados
+Convertidos sem faturamento
+Conversão e faturamento de leads
+Os gráficos consideram Todos, mantendo os demais filtros. Cada lead é contado uma vez e o valor faturado não repete o mesmo agendamento.
+Deseja aplicar também os percentuais de desconto de exames?
+Recalcular com descontos
+Somente recalcular preços
+Recalculando valores da conta...
+Acerto dos preços finalizado
+Não foi possível confirmar o recálculo. Atualize a conta e confira os valores antes de tentar novamente.
+Usuário sem permissão para recalcular os itens da conta.
+O status da conta não permite recalcular seus itens.
+As informações TISS estão conferidas. Não é permitido alterar a conta.
+Não há itens disponíveis para recalcular nesta conta.
+A franquia está em pagamento ou pendente e não pode ser recalculada.
+A conta foi alterada. Atualize os dados e tente novamente.
+Transfere Itens da Conta
+Conta de destino
+Incluir nova conta
+Usar o plano de saúde do primeiro item transferido
+Transferir os itens para a unidade escolhida
+Item com vínculo de pagamento
+Nenhum item disponível para transferência.
+Todos os itens serão transferidos e a conta de origem será excluída.
+Não foi possível consultar os itens para transferência. Tente novamente.
+Não foi possível confirmar a transferência dos itens. Atualize a conta antes de tentar novamente.
+Usuário sem permissão para transferir itens da conta.
+Transferência permitida somente para contas de ambulatório.
+Selecione pelo menos um item para transferir.
+Um dos itens não pertence mais à conta ou possui vínculo de pagamento. Atualize a conta.
+Selecione uma unidade válida.
+Informe uma data válida para a transferência.
+Escolha outra conta aberta e sem status do mesmo paciente.
+A data deve ser igual à data de entrada da conta de destino.
+O agendamento de origem não foi encontrado para criar a nova conta.
+O horário do agendamento de origem é inválido.
+Não há horário disponível para criar o agendamento da nova conta.
+Selecionar todos
+Transferir
+Mat/Med
+Item
+Não foi possível calcular o preço do item. Tente novamente.
+Não foi possível calcular os honorários do item. Tente novamente.
+Usuário sem permissão para salvar o item da conta.
+Não foi possível confirmar a gravação do item. Atualize a conta antes de tentar novamente.
+Plano não informado
+A transferência foi concluída, mas não foi possível atualizar os dados da conta de origem na lista. Faça uma nova busca para conferir.
+Aplicar descontos para mais de um procedimento
+Recalcular
+Continuar agendamento de sessões
+horários escolhidos
+Não foi possível guardar a cópia local. Aguarde a confirmação do rascunho antes de fechar.
+Horários guardados para continuar depois.
+A cópia local foi mantida. Não foi possível atualizar o rascunho no servidor.
+Não há horários guardados nesta edição.
+Horários recuperados. A disponibilidade será conferida ao agendar.
+Descartar os horários guardados desta edição?
+Os orçamentos têm planos diferentes. Adicione um orçamento por vez para escolher o plano.
+Deseja usar no agendamento o plano de saúde do orçamento: {plano}? Os procedimentos disponíveis serão consultados novamente.
+Usar plano do orçamento
+Manter plano atual
+Plano não disponível para este agendamento.
+O orçamento não está mais disponível para este agendamento.
+Horário escolhido: {hora}. A disponibilidade será conferida ao agendar.
+Atualize para consultar os horários disponíveis.
+Conferindo os horários recuperados…
+Sessão {sessao}: o horário de {data} às {hora} não está mais disponível. Escolha outro horário.
+Sessão {sessao}: não foi possível conferir a disponibilidade. O horário escolhido foi mantido. Clique em Atualizar para conferir novamente.
+Os demais horários selecionados foram mantidos.
+Preparando as sessões do orçamento…
+Categoria do local
+Buscar categoria de local
+Nenhum local encontrado para a categoria e os filtros selecionados.
+Pagamento de Conta
+Pagamento particular
+Valor particular da conta
+Já recebido
+Saldo a pagar
+Etapas do pagamento
+Pagamentos da conta
+Valor recebido
+Crédito utilizado
+Integração não disponível nesta tela
+Valor a receber
+Alterar valor do pagamento
+Liquidação total
+Marque somente se este recebimento quitar o saldo da conta.
+Crédito disponível
+Usar crédito do paciente
+Acumular o excedente como crédito
+Este boleto será registrado em aberto, sem confirmar o recebimento, conforme a configuração do sistema.
+Destino do recebimento
+Não há portadores permitidos para esta conta e forma de pagamento.
+Condição de pagamento
+Total das parcelas
+Pagamento compensado
+Crédito a acumular
+Ver pagamentos
+Cancelar pagamentos da conta
+Cancele a nota fiscal associada à conta antes de cancelar o pagamento.
+Cancelamento bloqueado por NF ativa:
+Conferir pagamentos
+Novo pagamento
+A conta já está quitada. Deseja registrar outro recebimento?
+Todos os recebimentos desta conta serão cancelados. Deseja continuar?
+Cancelar pagamentos
+Confirmar pagamento
+Registrar boleto em aberto
+Boleto em aberto
+Registrado
+Número da boleta
+Cartão adquirente
+Boleto bancário
+Selecione a forma de pagamento.
+Informe uma data de pagamento válida.
+Informe um valor de pagamento maior que zero.
+Não é permitido pagamento com valor superior ao saldo da conta.
+Selecione o destino do recebimento.
+Selecione a bandeira e a condição de pagamento da adquirente.
+O valor é inferior ao pagamento mínimo permitido pelo portador.
+Confira a quantidade de parcelas permitidas.
+A soma das parcelas deve ser igual ao valor do pagamento.
+Informe data e valor válidos em todas as parcelas.
+Preencha o número da boleta e a autorização do cartão.
+Não foi possível confirmar a operação. Confira os pagamentos da conta antes de tentar novamente.
+Não foi possível consultar o pagamento. Tente novamente.
+Conta liquidada
+Usuário sem permissão para esta operação de pagamento.
+Conta não encontrada.
+A conta não possui valor particular para pagamento.
+Os pagamentos da conta foram alterados. Reabra o pagamento para conferir o saldo atualizado.
+Esta forma de pagamento exige uma integração que ainda não está disponível nesta tela da Web.
+Escolha utilizar ou acumular crédito.
+O valor do crédito utilizado deve respeitar o crédito disponível e o saldo da conta.
+Configure o portador de crédito do paciente antes de utilizar ou acumular crédito.
+Valor a ser pago não pode ser alterado.
+A configuração do usuário não permite alterar a data do pagamento.
+Selecione um portador permitido para esta conta e forma de pagamento.
+Portador não permitido para este recebimento.
+Selecione uma adquirente para o pagamento com cartão.
+Selecione um portador compatível com a forma de pagamento.
+Data de pagamento não pode ser igual nem menor que a data de fechamento da empresa.
+Data de pagamento não pode ser igual nem menor que a data de fechamento do portador.
+Configure o plano financeiro de comissão para receber com adquirente.
+Quantidade de parcelas superior à permitida pela adquirente.
+Parcelas inválidas.
+Confira a quantidade de parcelas.
+Informe somente números no cheque ou boleto.
+Há números de cheque ou boleto repetidos nas parcelas.
+Este cheque ou boleto já está registrado no portador.
+Crédito do paciente não pode ser utilizado em boleto ainda não quitado.
+Informe um valor válido.
+Informe uma quantidade válida de parcelas.
+Não existe pagamento para cancelar.
+Pagamento conta
+NF Nacional
+Mais informações da Conta
+Desconto (% Informativo listagem)
+Procedimentos Áreas diferentes
+Itens da Conta
+Conta anterior
+Próxima conta
+Há alterações não salvas nesta conta. Deseja descartá-las e abrir outra conta?
+Descartar alterações
+Não foi possível abrir outra conta. A conta atual foi mantida. Tente novamente.
+{posicao} de {total}
+Detalhamento da Conta do Paciente
+Detalhamento do Staff Médico
+Detalhamento do Item
+Página {pagina} de {total}
+Página
+Primeiro registro
+Registro anterior
+Próximo registro
+Último registro
+Primeira página
+Página anterior
+Próxima página
+Última página
+Não foi possível abrir o item da conta. Tente novamente.
+Há alterações não salvas neste item. Deseja descartá-las e abrir outro item?
+Cód. Faturamento
+Código Movimento
+Status Item
+Busca Produto por descrição ou código
+Itens Pendentes
+Pendência
+Categoria do médico
+Navegação de registros
+Há alterações não salvas. Deseja descartá-las e abrir outro registro?
+Não foi possível abrir outro registro. O registro atual foi mantido. Tente novamente.
+Não foi possível consultar os registros. Tente novamente.
+Total Staff
+Guia Prestador
+Validade Matric
+Busca por nome
+Busca por data de nascimento
+Busca por código, CPF e telefone
+Não foi possível carregar os procedimentos do agendamento. Feche a tela e tente novamente.
+Alteração das informações do procedimento agendado
+Procedimentos da agenda
+itens
+Já existe pagamento. Apenas o consumo de estoque pode ser alterado.
+Adicionar material, medicamento ou kit
+Nome, código ou código de barras
+Nenhum produto encontrado.
+Refine a busca para encontrar outros produtos.
+Procedimentos do kit já incluídos não serão repetidos.
+Qt. estoque
+Qt. financeira
+Já incluído
+Incluir também a quantidade financeira do kit
+Selecionar kit associado
+Atenção: medicamento potencialmente perigoso ou de alta vigilância.
+Local de estoque
+Número de série
+Unidade de estoque
+Unidade financeira
+Zero utiliza o preço da tabela.
+Custo
+Etapa de utilização
+Disponível no lote
+Somente locais com saldo
+Incluir lotes vencidos
+Fracionar quantidade
+Número de pacientes
+Fracionar
+Estoque e financeiro
+Estoque
+Aplicar ao gasto
+Lote / Série
+Devolver
+Desfazer
+Nenhum gasto Mat/Med lançado nesta conta.
+alterações a salvar
+Excluir ou devolver o consumo mantém a quantidade cobrada.
+Novo gasto
+Alterado
+Excluir consumo
+Devolver ao estoque
+Devolução
+Consumo
+A gravação ainda não foi confirmada. Confira os gastos ao reabrir a conta.
+Descartar as alterações não salvas?
+Aplique ou cancele o gasto em edição antes de escolher outro produto.
+Este produto não possui materiais ou medicamentos associados.
+Informe o estoque e uma quantidade maior que zero.
+Informe o lote do produto.
+Informe o número de série do produto.
+Produtos com número de série devem ter quantidade de estoque igual a 1.
+Estoque insuficiente para o lote selecionado.
+O fracionamento é menor que a precisão permitida para o produto.
+Confira o local de estoque, o lote e a série dos itens do kit antes de salvar.
+Não foi possível confirmar os gastos. Mantenha esta tela aberta e clique em Confirmar gravação.
+Não foi possível consultar os gastos da conta. Tente novamente.
+Usuário sem permissão para lançar gastos Mat/Med.
+Vacina já enviada ao rIAR.
+Remova primeiro a devolução vinculada a este gasto.
+Uma devolução não pode ser alterada. Exclua a devolução para desfazê-la.
+Produto não encontrado ou inativo.
+O kit possui um vínculo circular. Revise seu cadastro.
+Selecione um material ou medicamento.
+Configure o tipo de movimentação dos materiais e medicamentos faturados.
+Local de estoque não permitido para este usuário.
+A quantidade de estoque deve ser maior que zero.
+Unidade de medida não permitida para este produto.
+Conversão de unidade inválida.
+A quantidade é menor que a precisão permitida para o produto.
+Unidade ou plano de saúde inválido.
+O lote não existe no local de estoque escolhido.
+Lote vencido. Confirme a utilização de lotes vencidos para continuar.
+Já existe pagamento. Não é permitido alterar a cobrança dos gastos.
+O gasto possui vínculos financeiros e não pode ser excluído.
+Configure os movimentos de saída e entrada para devolução.
+Número de série indisponível no estoque escolhido.
+Reabra a tela de gastos da conta.
+Edição de gastos não encontrada para esta conta.
+Os gastos foram alterados por outra operação. Reabra esta tela antes de salvar.
+Informe os gastos que deseja salvar.
+Operação de gasto inválida.
+Gasto inválido ou repetido para esta conta.
+Identificação inválida para um novo gasto.
+Produtos do kit já incluídos não serão repetidos.
+Este gasto já está sem consumo de estoque.
+Selecione o local de estoque do produto.
+Cadastre a unidade de medida do produto antes de lançar o gasto.
+Informe uma quantidade de estoque ou financeira maior que zero.
+Este produto não pertence ao kit permitido para o paciente e plano.
+Informe a unidade, o plano de saúde e as unidades de medida do produto.
+Informe um valor e um custo válidos.
+Informe uma quantidade válida.
+Quantidade Física
+Quantidade Financeira
+Disponível no estoque
+Validade do lote
+Cobranças dos itens
+Não foi possível consultar as cobranças da conta. Tente novamente.
+Usuário sem permissão para consultar a conta.
+Nenhum item encontrado nesta conta.
+Glosa reversível
+Glosa irreversível
+ID fluxo pagamento
+ID fluxo repasse
+Sem nº de cobrança
+Sem cobrança
+O total enviado considera o último lançamento de cada item e médico.
+Entrega
+Enviado
+Recebido
+Prod
+Proc
+Serv
+Mostra Filtros
+Contas com a mesma guia
+Selecione a conta que deseja buscar.
+Nenhuma conta encontrada para a guia e os filtros informados.
+Não foi possível consultar as contas. Tente novamente.
+Número da guia
+Prestador
+Contas
+Busca Convênio por descrição ou Código
+Busca produto, serviço ou procedimento por descrição ou código
+Produto / Serviço / Procedimento
+Tipo de conta
+Sem particulares
+Início de
+Início até
+Entrega de
+Entrega até
+Conta inválida.
+Informe um código válido.
+Informe um número de guia válido.
+Selecione o tipo de guia.
+Filtro inválido.
+A data inicial deve ser anterior ou igual à data final.
+Classificação de guia
+Não conferido
+Conferido
+Em Cobrança
+Liberado
+Complementar
+Limpar filtros
+Aplicar filtros
+Sem Status
+Auditado
+Entregue
+Início
+De
+Final
+Gráficos das contas
+Total das contas
+Valores de todas as contas da busca, incluindo as outras páginas.
+Agrupar por plano de saúde ou convênio
+Valor por convênio
+Valor por unidade
+Nenhuma conta encontrada.
+Não foi possível carregar os gráficos das contas. Tente novamente.
+Nenhuma unidade permitida para consultar as contas.
+Não foi possível consultar as unidades permitidas. Tente novamente.
+Amostra configurada
+por dia
+Todas as unidades
+Expandir
+Recolher
+Todas as empresas
+Ocultar valores
+Mostrar valores
+Saldo em
+Data para calcular saldo
+Movimentação
+Compensação
+Débitos
+Compensados
+Não compensados
+Créditos × débitos
+Movimentação por dia
+Data do movimento
+Sem data
+Nenhum movimento encontrado para a busca.
+Não foi possível carregar os gráficos. Tente novamente.
+Não foi possível consultar os movimentos. Tente novamente.
+Ident. fluxo
+Fechamento em
+Conciliação em
+por
+Conta do Paciente
+Gastos de Material/Medicamento
+Gastos de Material/Medicamento c/ Saldo
+Listagem Detalhada por Plano de Saúde
+Por Categoria de Produto
+Resumido — Com todo o Staff
+Resumido — Sem Anestesista e Staff unidade #
+Discriminado — Com todo o Staff
+Discriminado — Sem Anestesista e Staff unidade #
+Por Centro de Responsabilidade
+Resumido
+Discriminado
+Só com Valor Faturado
+Por Categoria
+Por Etapa
+Outras opções
+Com Valor Faturado ou Valor da Tabela de Preço
+Modelo da listagem
+Com Nº Cobrança e Classificação de Guia
+Com Médico
+Excel
+A emissão destas listagens ainda não está disponível na Web.
+Aprovar
+Bloquear
+Quitar
+Incluir NF
+Negociar
+Gerar Link Pgto
+Enviar Link Pgto
+Gerar Link Pgto - Banco do Brasil
+Cancelar Quitação
+Excluir Boleto gerado
+Excluir título
+Selecione o plano financeiro para salvar o título.
+Manutenção
+Listar guias não está disponível para agendamentos particulares.
+Agendamento sem conta associada.
+Listar solicitação
+Consultando solicitação SADT…
+Tentar consultar solicitação SADT novamente
+Convênio da guia
+Buscar convênio
+Nº da guia
+Informações sobre o número da guia
+Reaproveitar número existente
+Faça uma busca antes de listar as contas.
+Permita a abertura de pop-ups para visualizar a listagem.
+Não foi possível gerar a listagem completa. Tente novamente.
+A listagem contém um valor inválido. Atualize a consulta.
+Usuário sem permissão para visualizar a unidade desta conta.
+Selecione um modelo de listagem válido.
+Código de barras
+DataMatrix
+Bidimensional
+Cód. Barras Micrologos
+Código Micrologos
+Incluir quantidade financeira definida no kit
+Selecione os itens à esquerda e confira as quantidades e os lotes à direita.
+Itens do kit
+Itens selecionados
+Buscar item do kit
+Selecione os itens do kit que deseja incluir.
+Informe a unidade, o estoque e o plano de saúde.
+Tipo de busca inválido.
+Retirar
+Pagar
+Receber
+Mostrar
+Mostrar emitente com
+Somente nome do emitente
+Produtos — Quantidade física
+Unidade do produto
+Qtde. física
+Valor da quantidade física
+Quantidade física × valor unitário
+Custo unitário registrado no movimento
+Valor de custo
+Valor total de gasto
+Valor total de custo
+Nenhum produto com quantidade física nesta conta.
+As devoluções são apresentadas com quantidade negativa.
+Não foi possível consultar os produtos da conta. Tente novamente.
+ID Produto
+Centro de responsabilidade
+Etapa
+Marca
+Lucro
+Vl. Unitário
+Custo Total
+Quantidade física × custo unitário
+Buscar produtos para incluir na conta do paciente
+Digite o termo desejado e clique em Buscar ou pressione Enter.
+Pagar conta
+Incluir item
+Arquivo
+Usuário sem permissão para visualizar os documentos do GED.
+Nenhum documento vinculado a esta conta.
+Documento salvo no GED.
+Envie PDF, imagem, DICOM ou XML de até 50 MB.
+Não foi possível concluir a operação no GED. Tente novamente.
+Resposta inválida do GED.
+Não foi possível confirmar a captura. Tente novamente com o mesmo arquivo e título para conferir sem duplicar.
+GED em nuvem não habilitado para este cliente.
+Usuário sem permissão para esta operação no GED da conta.
+Selecione um arquivo válido. Confira também o limite de envio do servidor.
+O conteúdo do arquivo não corresponde ao formato selecionado.
+Informe um título com até 150 caracteres.
+Já existe um envio ao GED para este paciente. Aguarde.
+Documento não encontrado nesta conta.
+Escolha o assunto.
+Selecione um assunto ativo da lista.
+Arraste o arquivo aqui ou clique para escolher.
+Selecione um arquivo por vez.
+Documento salvo no GED, mas não foi possível atualizar a lista. Tente atualizar novamente.
+Espaço contratado
+Espaço ocupado
+Espaço livre
+Armazenamento total do cliente: GED e imagens dos pacientes.
+Não foi possível consultar o espaço de armazenamento.
+Não foi possível identificar o item da conta.
+Não foi possível identificar o staff da conta.
+Não foi possível excluir o item da conta.
+Não foi possível atualizar o staff do item.
+Deseja realmente excluir o staff médico do item?
+Deseja realmente excluir o item?
+Não foi possível excluir o staff médico da conta
+Item sem status
+Conferir Item
+Item Pendente
+Retirar Item Pendente
+Recalcular valor Item
+Incluir/Alterar
+Excluir documento do GED?
+Documento excluído do GED.
+Documento excluído do GED, mas não foi possível atualizar a lista. Tente atualizar novamente.
+Usuário sem permissão para excluir documentos do GED da conta.
+Não foi possível confirmar a exclusão do documento do GED. Atualize a lista antes de tentar novamente.
+Documento inválido no GED.
+Incluir GED
+Alterar título e assunto
+Documento alterado no GED.
+Documento alterado no GED, mas não foi possível atualizar a lista. Tente atualizar novamente.
+Usuário sem permissão para alterar documentos do GED da conta.
+O documento foi alterado por outro usuário. Reabra a edição para conferir os dados.
+Reabra a edição do documento para conferir os dados.
+Não foi possível confirmar a alteração no GED. Reabra a edição para conferir os dados.
+Carregando dados da conta...
+Conta pendente
+Nenhum documento vinculado a este registro.
+Usuário sem permissão para esta operação no GED.
+Vínculo inválido para o GED.
+Registro não permitido para este usuário.
+Título não permitido nesta opção.
+Canal da conversão
+Incluir itens do Kit
+Carregando informações do produto...
+Escolher todos
+Ocultar totais das empresas
+Mostrar totais das empresas
+Títulos em aberto
+Títulos pagos
+Não foi possível consultar os títulos. Tente novamente.
+Quitação de títulos
+Não selecionado
+1. Selecionar títulos
+2. Escolher portador
+3. Conferir quitação
+Acumula crédito
+Não acumula crédito
+IBS + CBS
+IBS + CBS de saída
+IBS + CBS de entrada
+Utiliza crédito
+Não foi possível consultar os portadores. Tente novamente.
+Não foi possível carregar os dados do portador. Tente novamente.
+Personalizado
+Ontem
+Mês Atual
+Mês Anterior
+Mês seguinte
+Semana Atual
+Semana Anterior
+Próxima semana
+Alteração múltipla
+Informação a alterar
+Novo status
+Novo vencimento
+Novo valor
+Esta alteração também permite selecionar títulos com pagamento.
+Somente títulos sem pagamento podem ser selecionados para esta alteração.
+Retirar seleções
+títulos selecionados
+Selecionar título
+Título com pagamento
+Atualizar seleção
+Aplicar alteração
+Com permissões de status por representante, altere títulos a pagar individualmente. Para alteração múltipla, filtre Receber.
+Para alterar o vencimento, busque por Vencimento e marque o filtro Pendente.
+Antes de alterar, filtre a busca por um único registro de:
+Não foi possível consultar os títulos.
+Não foi possível confirmar a alteração. Atualize a seleção para conferir os títulos.
+Títulos atualizados.
+Alteração parcial. Títulos confirmados:
+Faça uma busca com títulos antes de alterar.
+Busca Centro de Responsabilidade por Nome ou Código
+Atual
+Nenhum título disponível para esta alteração.
+Aprovado
+Detalhamento de Conta Recorrente
+Incluir Conta Recorrente
+Dados financeiros
+Recorrência
+Complementos
+Ajustar vencimento para
+Não foi possível preparar a conta recorrente.
+Não foi possível carregar a conta recorrente.
+Arquivo preparado. Salve o título para enviá-lo ao GED.
+Remover o arquivo do título?
+Arquivo removido do título.
+Não foi possível exibir a imagem. Use Baixar para conferir o arquivo.
+O servidor não retornou o arquivo do GED.
+Baixar
+Incluir novo assunto…
+Digite o novo assunto
+Novo assunto
+Alterar Conta Recorrente
+Selecione os dados do título que deseja copiar para a conta recorrente.
+Atual na recorrência
+Dados do título
+Empresa e Portador
+Conta recorrente atualizada.
+Os dados do título ou da recorrência mudaram. Reabra a alteração para conferir.
+Este título não está vinculado a uma conta recorrente.
+A conta recorrente vinculada ao título não foi encontrada.
+Usuário sem permissão para alterar conta recorrente.
+Há alterações não salvas. Deseja salvar antes de voltar?
+Abandonar alterações
+Não foi possível confirmar a gravação do staff.
+Plugin não configurado
+Selecione a empresa
+Selecione uma empresa para usar esta opção
+Valor total da NF
+Certificado não configurado
+Emitente (nome ou código)
+Digite parte do nome ou o código do emitente
+Ident. NF
+Número da NF
+Quitado com Valor #
+Quitados com divergência de valores
+Sem Pgto
+sem Pgto ou Valor #
+Sem pagamento com valor diferente do fluxo
+Empresa #
+Empresa da nota diferente da empresa do título
+Em dia
+Sem pagamento, com vencimento anterior a hoje, conforme o Delphi.
+Pagamentos
+Identif.
+Núm. de
+Núm. até
+Quitado mas com valor #
+Sem pgto ou pago com valor #
+Sem pgto
+Salvar {item}
+Cancelar {item}
+Rateio
+Representante Legal
+Item do Kit
+Cancelar inclusão
+Cancelar alteração
+Cancelar produto
+Salvar produto
+As alterações de {item} só serão registradas após clicar em Salvar no cadastro de {registro}.
+Não foi possível aplicar as alterações do item. Confira os dados e tente novamente.
+Título do Fluxo de Caixa
+Confira as notas de todas as páginas da busca e selecione quais deseja emitir.
+Carregando notas fiscais...
+3.8.1 - Percentual por dia
+3.8.2 - Unidade do atendimento
+3.8.3 - Categoria de produtos agendados no atendimento
+Seleção anterior
+A categoria escolhida não possui código disponível para a auditoria ONA.
+Auditoria ONA
+Disponíveis
+Informe um percentual de auditoria entre 0 e 100%.
+Selecionadas
+Selecionar nota fiscal {id}
+Nenhuma nota fiscal disponível para emissão nesta busca.
+Emitir selecionadas
+Emitindo nota {atual} de {total}
+Emitindo
+Conferir emissão
+Emissão interrompida na nota {id}. {motivo} Feche esta janela e confira a nota antes de tentar novamente.
+Notas emitidas: {quantidade} de {total}
+Emitir Notas Fiscais — selecione uma empresa
+Selecionar todas
+Desmarcar todas
+Busca Emitente por Nome, CPF/CNPJ, Código ou Data de nascimento
+Pgto. particular
+Pgto Partic.
+Pagamento particular registrado (parcial ou total)
+Não foi possível consultar os e-mails do emitente. Tente novamente.
+Não foi possível confirmar o envio do e-mail. Confira antes de tentar novamente.
+Agendamentos futuros (a partir de hoje)
+MLPhone Conf.
+A confirmação da gravação está pendente. Clique em Salvar para verificar ou reenviar os mesmos dados, sem duplicar o orçamento.
+Somente visualização
+Salvar e incluir ocorrência
+Deseja salvar as alterações do orçamento?
+Não gravada
+Informe uma data e hora válidas para a ocorrência.
+Ocorrência adicionada à edição. Clique em Salvar no topo do orçamento para gravar todas as alterações.
+Desconto total
+Procedimento opcional
+Atualize o banco de dados para utilizar procedimentos opcionais.
+{numero}ª opção
+Pagamento em {quantidade} parcelas.
+Valor da parcela
+Opcional
+Detalhamento Tabela de Preço
+Itens a estornar no estoque: {total}.
+O pedido de compra {id} e seus itens serão cancelados.
+Títulos da nota a excluir: {ids}.
+O pedido tem títulos pagos ({ids}). Seus títulos serão mantidos.
+Excluir também os títulos do pedido: {ids}
+Excluir a NF de entrada {numero}?
+Visualizar GED
+Sim, desejo excluir
+Exclusão não confirmada.
+Conferir
+Quantidade zerada
+CBS + IBS
+Valor DAS
+Total DAS
+1º Vencimento
+Informe o lote e a validade dos produtos
+O pedido de compra está cancelado. Escolha outro pedido.
+Nenhuma condição de pagamento encontrada para esta busca.
+Ler XML NF Nacional
+Não foi possível abrir o arquivo XML.
+Selecione um XML de NFS-e Nacional de até 5 MB.
+Documentos
+calcular

@@ -145,3 +145,16 @@
   em `interno.telefonia_senhas` (nunca no código nem no chat; a admin digita na tela Cadastros → Telefone). Histórico em
   `ligacoes`. Detalhes e passos para ligar: `docs/sistema/HISTORICO.md` (15/11, Telefone).
 - Dados de teste do v1 apagados em 14/11/2026 (com autorização). A função Edge `limpeza-teste` está desativada (responde 410).
+
+## Sistema legado: Micrologos (referência obrigatória)
+O sistema atual da clínica, que vamos substituir e de onde vamos importar todos os dados, é o **Micrologos**
+(Clinic by Micrologos na web + Clinic Master SP no Windows). Tudo o que se sabe sobre ele está em **`docs/micrologos/`**.
+Consulte essa pasta antes de projetar telas, tabelas ou importações:
+- `docs/micrologos/README.md`: índice e resumo em 30 segundos
+- `docs/micrologos/modulos/`: o que o legado faz (agenda, PEP, laudos, faturamento TISS/SUS, repasse, estoque, financeiro, comunicação, cadastros)
+- `docs/micrologos/03-modelo-de-dados.md`: entidades legadas (`ID_*`)
+- `docs/micrologos/04-migracao-de-dados.md`: ordem de carga e regras de importação
+- `docs/micrologos/05-riscos-e-pendencias.md`: riscos, perguntas em aberto e decisões
+- `docs/micrologos/anexos/`: inventários brutos (menus, rotas, endpoints, campos, textos da interface), bons para `grep`
+- Marcadores nos documentos: ✅ confirmado · 🔶 inferido · ❓ a confirmar. Ao confirmar algo, atualize o documento.
+- O ambiente de nuvem **"secreto"** libera acesso aos sites `*.micrologos.com.br` (o ambiente Default não tem esse acesso).

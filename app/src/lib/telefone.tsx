@@ -79,6 +79,20 @@ export function numeroParaDiscar(n: string): string {
   return d;
 }
 
+/**
+ * Endereço discado na central. A Api4Com (plataforma Kazoo) só completa ligações para fora no formato
+ * internacional (+55 + DDD + número); números curtos são ramais e vão como estão.
+ * Teste real em 15/11/2026: "21988338388" era recusado na hora; "+5521988338388" é o formato da documentação.
+ */
+export function destinoNaCentral(n: string): string {
+  let d = numeroParaDiscar(n);
+  if (/^0[3589]00\d{6,7}$/.test(d)) return d;          // 0800, 0300, 0500, 0900: vão como estão
+  if (/^0\d{10,11}$/.test(d)) d = d.slice(1);          // 0 + DDD + número (ex.: 021988338388)
+  else if (/^0\d{12,13}$/.test(d)) d = d.slice(3);     // 0 + operadora + DDD + número (ex.: 02121988338388)
+  if (/^\d{10,11}$/.test(d)) return "+55" + d;          // DDD + número (fixo ou celular)
+  return d;                                             // ramal ou número especial (0800, 190…)
+}
+
 export function fmtNumeroTel(n: string | null | undefined): string {
   const d = numeroParaDiscar(n ?? "");
   if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
@@ -197,6 +211,8 @@ export function TelefoneProvider({ children }: { children: ReactNode }) {
       const causa = e?.cause ?? "";
       const falhou = /Connection Error|Request Timeout|SIP Failure Code|Internal Error|User Denied Media Access|Bad Media Description|Incompatible SDP|Missing SDP/i.test(causa);
       if (/User Denied Media Access/i.test(causa)) setErro("O navegador não deixou usar o microfone. Libere o microfone para o sistema (cadeado ao lado do endereço).");
+      else if (chamadaRef.current?.direcao === "saida" && causa && !/Canceled|Busy|No Answer/i.test(causa))
+        setErro("A central não completou a ligação (" + causa + "). Confira o número.");
       encerrar(falhou ? "falhou" : causa);
     });
     s.on("hold", () => mudar((c) => (c ? { ...c, espera: true } : c)));
@@ -309,7 +325,7 @@ export function TelefoneProvider({ children }: { children: ReactNode }) {
     if (numero.length < 3) return setErro("Número inválido.");
     let s: RTCSession;
     try {
-      s = agente.call(`sip:${numero}@${dominio.current}`, {
+      s = agente.call(`sip:${destinoNaCentral(numero)}@${dominio.current}`, {
         mediaConstraints: { audio: true, video: false },
         pcConfig: { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] },
       });
@@ -384,7 +400,7 @@ export function TelefoneProvider({ children }: { children: ReactNode }) {
     if (!s || !alvo) return;
     transferidaPara.current = alvo;
     try {
-      s.refer(`sip:${alvo}@${dominio.current}`, {
+      s.refer(`sip:${destinoNaCentral(alvo)}@${dominio.current}`, {
         // Transferência "cega": a central aceitou (202) → a atendente sai da ligação; a central cuida do resto
         eventHandlers: {
           requestSucceeded: () => { try { s.terminate(); } catch { /* a central já desligou */ } },
