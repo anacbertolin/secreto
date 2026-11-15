@@ -450,3 +450,27 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
   Função `whatsapp-extrator` versão 2 publicada.
 - Créditos: a assinatura do Claude (chat) não paga uso pela API; a extração usa créditos pré-pagos do Console da
   Anthropic (console.anthropic.com), com o segredo `ANTHROPIC_API_KEY` no Supabase.
+
+### Fase 5 — Protocolos de consulta e folha de colírios em letra grande (migração 0023, aplicada)
+- Botão **📋 Protocolo** no atendimento (só o médico responsável, com o atendimento aberto). Oito protocolos prontos no
+  código (`app/src/components/Protocolos.tsx`): rotina/refração, retorno de glaucoma, pré-operatório de catarata,
+  pós-operatório de 1º dia, rastreio de retinopatia diabética, DMRI/injeção, olho seco, primeira consulta infantil.
+  Preenche **só campos vazios** (anamnese, conduta, orientações, retorno, exame), cria os pedidos de exame que faltam e,
+  se marcado, o acompanhamento (busca ativa). "💾 Salvar esta consulta como protocolo" grava em **`protocolos_consulta`**
+  (nova; médico e enfermagem veem os compartilhados e os próprios; só o dono altera; aviso para não salvar dado pessoal).
+- **Folha "Meus colírios"** (`/imprimir/colirios/:atendimento`, botão "👁️ Horários (letra grande)" na receita): só os
+  itens de uso ocular, nome e olho em letra grande, horários calculados da posologia (8/8h, 12/12h, "4x ao dia",
+  "ao deitar"…; intervalos curtos só das 6h às 22h; o que não entender fica com horário em branco) e quadradinhos
+  para marcar 7 dias, mais as dicas de como pingar e o telefone da clínica.
+- Testes: regras da tabela no banco local (outro médico não vê o privado nem altera; enfermagem não cria);
+  leitor de posologia conferido com 9 exemplos; telas conferidas com dados simulados.
+
+### Resumo do dia (15/11, sessão "melhorias") e próximos passos sugeridos
+- Entraram no ar: PR anacbertolin/secreto#12 (fluxo/dilatação/TV), #14 (evolução), #15 (busca ativa), #17 (centro
+  cirúrgico/injeções) e o PR desta fase. Migrações 0020–0023, todas aditivas (sem risco para a carga do Micrologos).
+- Nenhuma tela nova foi testada com login real (regra do projeto: precisa de acesso de teste criado pela dona).
+- Ideias da lista que ficam para depois (dependem de decisão/contrato da dona ou de terceiros):
+  receita digital com certificado ICP-Brasil (Memed ou prescrição do CFM), ligação dos aparelhos (autorrefrator,
+  tonômetro, OCT, biômetro — depende das marcas/modelos), IA de ditado/resumo do prontuário (LGPD + aval), portal do
+  paciente, faturamento automático da cirurgia (falar com a sessão do faturamento), estoque de lentes/medicamentos,
+  desenho do fundo de olho, comparação lado a lado de imagens de exames, RNDS.

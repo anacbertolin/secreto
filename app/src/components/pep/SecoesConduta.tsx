@@ -233,6 +233,7 @@ export function ReceitaMedicamentos({ ctx }: { ctx: Ctx }) {
           <h3>{TIPO_RX[r.tipo_receita]}
             <span className="linha">
               {r.prescricao_itens.length > 0 && <Link className="botao mini" to={`/imprimir/receita/${r.id}`} target="_blank">🖨️ Imprimir</Link>}
+              {r.prescricao_itens.length > 0 && <Link className="botao mini" to={`/imprimir/colirios/${ctx.atend.id}`} target="_blank" title="Tabela de horários dos colírios em letra grande, para o paciente levar">👁️ Horários (letra grande)</Link>}
               {!d && r.prescricao_itens.length === 0 && <button className="sutil mini" onClick={() => remover("prescricoes", r.id, recarregar, "Remover esta receita vazia?")}>remover</button>}
             </span>
           </h3>
