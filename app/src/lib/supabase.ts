@@ -2,10 +2,10 @@ import { createClient } from "@supabase/supabase-js";
 
 // Chave "publicável": pode ficar no navegador. Quem protege os dados são as
 // regras de acesso (RLS) do banco. A chave secreta (service_role) NUNCA vem para cá.
-const URL = import.meta.env.VITE_SUPABASE_URL ?? "https://ogflxjolbwrzayjtxvhj.supabase.co";
-const CHAVE = import.meta.env.VITE_SUPABASE_ANON_KEY ?? "sb_publishable_yCe68KKjOhjZ6aFknnvIrQ_fNI6W_QP";
+export const SUPABASE_URL: string = import.meta.env.VITE_SUPABASE_URL ?? "https://ogflxjolbwrzayjtxvhj.supabase.co";
+export const SUPABASE_CHAVE: string = import.meta.env.VITE_SUPABASE_ANON_KEY ?? "sb_publishable_yCe68KKjOhjZ6aFknnvIrQ_fNI6W_QP";
 
-export const supabase = createClient(URL, CHAVE, {
+export const supabase = createClient(SUPABASE_URL, SUPABASE_CHAVE, {
   auth: { persistSession: true, autoRefreshToken: true },
 });
 
