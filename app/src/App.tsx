@@ -26,6 +26,7 @@ import Estoque from "./pages/Estoque";
 import Verificar from "./pages/Verificar";
 import ConfigIA from "./pages/ConfigIA";
 import Portal from "./pages/Portal";
+import ImportarExames from "./pages/ImportarExames";
 import { useNaoLidas } from "./lib/whatsapp";
 
 interface ItemMenu { para: string; rotulo: string; icone: string; funcoes?: Funcao[]; grupo?: string }
@@ -43,6 +44,7 @@ const MENU: ItemMenu[] = [
   { para: "/estoque", rotulo: "Estoque", icone: "📦", funcoes: ["medico", "enfermagem", "admin", "faturamento"] },
   { para: "/exames", rotulo: "Exames e laudos", icone: "🔬", funcoes: ["medico", "enfermagem"] },
   { para: "/faturamento", rotulo: "Faturamento", icone: "🧾", funcoes: ["faturamento", "recepcao", "admin"] },
+  { para: "/exames/importar", rotulo: "Arquivos dos aparelhos", icone: "📥", funcoes: ["medico", "enfermagem"] },
   { para: "/relatorios", rotulo: "Relatórios", icone: "📊" },
   { grupo: "Cadastros", para: "/cadastros/equipe", rotulo: "Equipe", icone: "👥", funcoes: ["admin"] },
   { para: "/cadastros/horarios", rotulo: "Horários e bloqueios", icone: "🕒", funcoes: ["recepcao", "admin"] },
@@ -128,7 +130,7 @@ export default function App() {
             const cab = m.grupo && m.grupo !== grupoAtual ? ((grupoAtual = m.grupo), <div className="grupo" key={"g" + m.grupo}>{m.grupo}</div>) : null;
             return [
               cab,
-              <NavLink key={m.para} to={m.para} end={m.para === "/" || m.para === "/whatsapp"}>
+              <NavLink key={m.para} to={m.para} end={m.para === "/" || m.para === "/whatsapp" || m.para === "/exames"}>
                 <span aria-hidden>{m.icone}</span> {m.rotulo}
                 {m.para === "/whatsapp" && naoLidas > 0 && <span className="wa-badge" style={{ marginLeft: "auto" }}>{naoLidas}</span>}
               </NavLink>,
@@ -158,6 +160,7 @@ export default function App() {
           <Route path="/estoque" element={<Protegida funcoes={["medico", "enfermagem", "admin", "faturamento"]}><Estoque /></Protegida>} />
           <Route path="/busca-ativa" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin"]}><BuscaAtiva /></Protegida>} />
           <Route path="/exames" element={<Protegida funcoes={["medico", "enfermagem"]}><Exames /></Protegida>} />
+          <Route path="/exames/importar" element={<Protegida funcoes={["medico", "enfermagem"]}><ImportarExames /></Protegida>} />
           <Route path="/exames/:id" element={<Protegida funcoes={["medico", "enfermagem"]}><ExameDetalhe /></Protegida>} />
           <Route path="/faturamento" element={<Protegida funcoes={["faturamento", "recepcao", "admin"]}><Faturamento /></Protegida>} />
           <Route path="/faturamento/conta/:id" element={<Protegida funcoes={["faturamento", "recepcao", "admin"]}><ContaDetalhe /></Protegida>} />

@@ -643,3 +643,14 @@ Respostas: (1) IA do prontuário **aprovada**; (2) receita digital pela **Memed*
   bloqueou `create_trigger`. Pendente da dona: criar a tarefa no claude.ai (ou autorizar a sessão) e ligar o conector Supabase.
 - Testes no banco local: desligado não devolve nada; texto sem nome/CPF/telefone/cartão SUS; formato errado recusado; gravado
   sai da fila; pedido do médico volta para a fila; recepção não vê; equipe não chama as funções da tarefa; "Ligar" audita.
+
+### Arquivos dos aparelhos — fase 1 (sem mudança no banco)
+- Tela **📥 Arquivos dos aparelhos** (`/exames/importar`, médico e enfermagem; `app/src/pages/ImportarExames.tsx`): arrastar
+  vários arquivos (PDF, imagem, DICOM, XML, até 50 MB); o sistema tenta adivinhar **paciente** pelo nº do prontuário no nome do
+  arquivo (ex.: `1001_OCT_OD.pdf`) ou "mesmo paciente para todos", **exame** por palavras (OCT, campo, retino, topo, biometria,
+  paqui, especular, angio…) e **olho** (OD/OE/RE/LE). A pessoa confere e envia.
+- Arquivos do mesmo paciente + exame + olho viram **um** exame; se já houver exame aberto (aguardando/em execução) igual,
+  completa esse. Ao final o exame vai para **aguardando laudo** (e para a conta, pela regra 0010).
+- Integração direta com os aparelhos (pasta de rede/DICOM/XML automático) fica para a **fase 2** (decisão da dona).
+- Teste no navegador (dados simulados): 4 arquivos → bloqueia o que falta paciente/exame; 3 enviados viram 2 exames de OCT
+  (OD e OE) + 1 de campo visual, todos "aguardando laudo", com os 3 anexos.
