@@ -416,3 +416,25 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
 
 ## 15/11/2026 — Regra de idioma
 - A dona pediu: **sempre falar em português** (respostas, resumos, PRs e textos para ela). Registrado no topo do CLAUDE.md.
+
+### Fase 4 — Centro cirúrgico, LIO e injeções intravítreas (migração 0022, aplicada)
+- **`cirurgias`**: indicação → aguardando autorização → autorizada → agendada → realizada (ou cancelada com motivo).
+  Data/sala/equipe/anestesia, convênio e senha, **biometria** (comprimento axial, K1/K2, ACD, fórmula, refração alvo) e
+  **LIO com fabricante/modelo/dioptria/lote/série/validade/registro ANVISA** (rastreabilidade), **checklist de cirurgia
+  segura (OMS)** em 3 momentos (guardado em `checklist` jsonb com a hora de cada item), ato cirúrgico (início/fim,
+  descrição, intercorrências). Gatilho `regras`: só médico finaliza, exige descrição, hora do servidor; **finalizada
+  não muda** (como o laudo). Ignora `app.migracao = 'on'` (permite carregar cirurgias antigas já finalizadas).
+- **`injecoes_intravitreas`**: olho, medicamento (aflibercepte, ranibizumabe, bevacizumabe, faricimabe…), lote
+  (obrigatório na tela), validade (tela bloqueia vencido), protocolo, próxima em X semanas, CID/indicação, senha.
+  View `injecoes_resumo` (nº na série por olho e próxima prevista) e função `injecoes_pendentes()` (atrasadas/próximas,
+  com consulta marcada ou não). Ambas SECURITY INVOKER.
+- Acesso: médico e enfermagem leem e registram; só médico finaliza; ninguém apaga. Recepção e faturamento não veem.
+- **Telas:** menu **🏥 Centro cirúrgico** (Mapa do dia, Fila de indicações, 💉 Injeções atrasadas/próximas, Realizadas),
+  ficha da cirurgia `/cirurgias/:id` (com impressão e, ao finalizar, sugestão de retornos de 1, 7 e 30 dias que abrem
+  o agendamento já preenchido) e aba **Cirurgias e injeções** na ficha do paciente.
+- **Para a sessão de migração:** nada obrigatório. Se o Micrologos tiver cirurgias/LIO estruturadas, dá para carregar
+  em `cirurgias` com `status = 'realizada'` e `finalizada_em` dentro de `app.migracao = 'on'`.
+- Testes no banco local: enfermagem não finaliza; finalizar sem descrição bloqueado; alterar depois de finalizada
+  bloqueado; série e próxima injeção calculadas; recepção não vê; carga antiga finalizada aceita.
+- Ainda não feito: faturamento automático da cirurgia (guia SP/SADT) e estoque de lentes/medicamentos — combinar com
+  a dona e com a sessão do faturamento.
