@@ -11,6 +11,14 @@
   (apagar projeto, tabela, banco, volume, serviço com dados) e de qualquer coisa
   que aumente a conta além dos planos já assinados.
 
+## Regra da dona sobre IA (15/11/2026)
+- **Nunca chamar o Claude pela API (chave `ANTHROPIC_API_KEY` / console.anthropic.com).** Todo uso do Claude deve sair do
+  **plano da conta** (sessões e tarefas agendadas do Claude, como o assistente do WhatsApp). Não criar funções que dependam
+  de `ANTHROPIC_API_KEY` e não pedir essa chave à dona.
+  - Pendente: o "Resumo do prontuário por IA" (função `prontuario-resumo`, migração 0027, outra sessão) foi feito para a
+    API e está desligado; precisa ser refeito no mesmo modelo do assistente (tarefa/sessão do Claude) ou removido.
+- Outros serviços de IA pagos à parte só com pedido explícito da dona (ex.: Whisper da OpenAI para transcrever áudios).
+
 ## Infraestrutura
 - **Supabase** (banco de dados — guarda prontuários e demais dados)
   - Organização: "Hospital de Olhos da Baixada" (`alqrkumhvyexvrmxaugj`) — plano Pro (assinado pela dona)

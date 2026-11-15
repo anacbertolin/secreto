@@ -608,3 +608,14 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
 - **Tela WhatsApp:** texto do áudio embaixo do balão (📝) e botão "Transcrever" para áudios antigos (recepção/admin).
 - Testes: banco local (gatilho marca pendente, extrator espera e depois lê o texto mascarado); função publicada
   (chave errada → 401, sem chave da OpenAI → 503). **Falta o teste com áudio de verdade** (depende da Meta).
+
+---
+
+## 15/11/2026 — Regra da dona: nada de Claude pela API
+- A dona decidiu: **todo uso do Claude sai do plano da conta** (sessões/tarefas agendadas), nunca pela API com chave.
+  Registrado no topo do CLAUDE.md.
+- A função Edge `whatsapp-extrator` (que usava `ANTHROPIC_API_KEY`) virou um aviso "desativada" (410); o código antigo
+  está no histórico do git. O assistente continua pela tarefa agendada.
+- Pendente para a sessão do prontuário: `prontuario-resumo` (migração 0027) também usa a API — está desligado; refazer
+  pelo plano ou remover. Nenhuma chave da Anthropic foi cadastrada, então nada foi cobrado.
+- A transcrição de áudios continua com o **Whisper da OpenAI** (pedido explícito da dona; não é Claude).
