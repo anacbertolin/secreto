@@ -390,3 +390,24 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
 - Código: `app/src/components/Grafico.tsx` (gráfico SVG reutilizável) e `app/src/components/Evolucao.tsx`.
 - O prontuário antigo do Micrologos (texto livre) não entra nos gráficos; se a carga trouxer PIO/AV em campos
   estruturados, dá para incluir depois.
+
+### Fase 3 — Acompanhamento de doenças crônicas e busca ativa (migração 0021, aplicada)
+- **`seguimentos`**: o médico marca que o paciente deve voltar a cada X dias (glaucoma 4 meses, DMRI 3, retinopatia
+  diabética 4, diabetes sem retinopatia 1 ano…) e a **PIO alvo** (aparece como linha tracejada no gráfico de PIO).
+  Médico e enfermagem leem; só médico cria/edita; ninguém apaga (encerra com motivo). Um ativo por condição.
+- **`busca_ativa_contatos`**: cada tentativa de contato (ligação/WhatsApp; resultado: agendou, não atendeu, número
+  errado, mudou de cidade, faleceu…). Equipe (menos faturamento) lê e registra em nome próprio.
+- **`busca_ativa(tolerância)`**: lista quem passou do prazo e **não tem consulta marcada**. A "última consulta" é
+  calculada na hora com atendimentos, agendamentos atendidos **e o prontuário antigo do Micrologos**. SECURITY DEFINER
+  **de propósito** (aviso do Supabase esperado): a recepção precisa saber quem ligar sem ler o prontuário; a doença
+  só vem para médico/enfermagem (para os outros vem "acompanhamento"). Resultados "recusou / acompanha em outro
+  lugar / mudou de cidade / faleceu" tiram o paciente da lista.
+- **`busca_ativa_sugestoes()`** (INVOKER): pacientes com CID crônico (H40/H42, H36.0/E1x.3, E10–E14, H35.3, H18.6,
+  H20/H30) que ainda não estão em acompanhamento.
+- **Telas:** menu **📞 Busca ativa** (atrasados com ligar/WhatsApp/registrar contato/📅 agendar — agendar já registra o
+  contato "agendou"; aba Sugestões para médico/enfermagem) e caixa **🔔 Acompanhamento** no topo da aba Evolução.
+- **Para a sessão de migração:** nada a fazer. Se a carga trouxer diagnósticos estruturados (CID), eles alimentam as
+  sugestões; se trouxer "retorno em X meses", dá para criar `seguimentos` em lote depois (combinar com a dona).
+- Testes no banco local: atrasado aparece; em dia e com consulta marcada não; paciente só com prontuário antigo
+  aparece com a data antiga; recepção vê sem a doença e não lê `seguimentos`; faturamento e anônimo bloqueados;
+  contato em nome de outra pessoa bloqueado. Telas conferidas com dados simulados (médico e recepção).
