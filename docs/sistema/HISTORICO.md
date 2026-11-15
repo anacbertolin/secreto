@@ -542,7 +542,14 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
 - **Tarefa agendada:** texto em `docs/sistema/assistente-tarefa-agendada.md`. Criada com o "pode criar" da dona
   (id `trig_01LZifj2S2htrZMt1RXH5Hkc`, Sonnet 5.5, 7h–20h de hora em hora). A organização não deixa a sessão anexar
   conectores: a dona ligou o Supabase na tarefa pelo claude.ai (também ficou marcado o Railway, que a tarefa não usa).
-  Teste em 15/11 12:04 UTC: entrou no banco, viu "desligado" e gravou o resumo. Falta o teste com conversa de verdade.
+  Teste em 15/11 12:04 UTC: entrou no banco, viu "desligado" e gravou o resumo.
+- **Teste completo no banco real (15/11, autorizado pela dona):** médico, conversa e mensagens "TESTE". A tarefa (Sonnet)
+  analisou: marcou qua 18/11 10:00–10:20 (horário padrão, 20 min), criou o cadastro com o telefone da conversa (CPF não
+  foi para a IA), nota 6 com pontos a melhorar coerentes, e registrou 2 perguntas sem resposta da equipe (Unimed e preço
+  particular). Tudo apagado depois (linha "LIMPEZA" na auditoria) e o assistente ficou **desligado**.
+- **Tarefa PAUSADA** a pedido da dona até o WhatsApp da Meta estar conectado. Para usar: reativar a tarefa
+  (`update_trigger enabled=true`) e apertar "Ligar o assistente" na tela. Pendência da dona: desmarcar o conector
+  Railway da tarefa (só dá pelo claude.ai).
 
 ### Resumo do prontuário por IA — NASCE DESLIGADO (migração 0027 + função Edge `prontuario-resumo`, aplicadas)
 - **`ia_prontuario_config`** (linha única, `ligado = false`). Só admin liga, na tela **Cadastros → ✨ Inteligência artificial**
