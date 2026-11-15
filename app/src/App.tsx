@@ -18,6 +18,7 @@ import Faturamento, { ContaDetalhe, LoteDetalhe } from "./pages/Faturamento";
 import Procedimentos from "./pages/Procedimentos";
 import Relatorios from "./pages/Relatorios";
 import WhatsApp from "./pages/WhatsApp";
+import AssistenteWhatsApp from "./pages/AssistenteWhatsApp";
 import PainelTV from "./pages/PainelTV";
 import { useNaoLidas } from "./lib/whatsapp";
 
@@ -29,6 +30,7 @@ const MENU: ItemMenu[] = [
   { para: "/recepcao", rotulo: "Recepção", icone: "🛎️", funcoes: ["medico", "enfermagem", "recepcao", "admin"] },
   { para: "/pacientes", rotulo: "Pacientes", icone: "👤" },
   { para: "/whatsapp", rotulo: "WhatsApp", icone: "💬", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
+  { para: "/whatsapp/assistente", rotulo: "Assistente do WhatsApp", icone: "🤖", funcoes: ["recepcao", "admin"] },
   { para: "/consultorio", rotulo: "Consultório", icone: "🩺", funcoes: ["medico", "enfermagem"] },
   { para: "/exames", rotulo: "Exames e laudos", icone: "🔬", funcoes: ["medico", "enfermagem"] },
   { para: "/faturamento", rotulo: "Faturamento", icone: "🧾", funcoes: ["faturamento", "recepcao", "admin"] },
@@ -102,7 +104,7 @@ export default function App() {
             const cab = m.grupo && m.grupo !== grupoAtual ? ((grupoAtual = m.grupo), <div className="grupo" key={"g" + m.grupo}>{m.grupo}</div>) : null;
             return [
               cab,
-              <NavLink key={m.para} to={m.para} end={m.para === "/"}>
+              <NavLink key={m.para} to={m.para} end={m.para === "/" || m.para === "/whatsapp"}>
                 <span aria-hidden>{m.icone}</span> {m.rotulo}
                 {m.para === "/whatsapp" && naoLidas > 0 && <span className="wa-badge" style={{ marginLeft: "auto" }}>{naoLidas}</span>}
               </NavLink>,
@@ -134,6 +136,7 @@ export default function App() {
           <Route path="/faturamento/lote/:id" element={<Protegida funcoes={["faturamento", "admin"]}><LoteDetalhe /></Protegida>} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/whatsapp" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><WhatsApp /></Protegida>} />
+          <Route path="/whatsapp/assistente" element={<Protegida funcoes={["recepcao", "admin"]}><AssistenteWhatsApp /></Protegida>} />
           <Route path="/cadastros/procedimentos" element={<Protegida funcoes={["faturamento", "admin"]}><Procedimentos /></Protegida>} />
           <Route path="/cadastros/equipe" element={<Protegida funcoes={["admin"]}><Equipe /></Protegida>} />
           <Route path="/cadastros/horarios" element={<Protegida funcoes={["recepcao", "admin"]}><Horarios /></Protegida>} />
