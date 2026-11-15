@@ -25,6 +25,7 @@ import Cirurgias, { CirurgiaDetalhe } from "./pages/Cirurgias";
 import Estoque from "./pages/Estoque";
 import Verificar from "./pages/Verificar";
 import ConfigIA from "./pages/ConfigIA";
+import Portal from "./pages/Portal";
 import { useNaoLidas } from "./lib/whatsapp";
 
 interface ItemMenu { para: string; rotulo: string; icone: string; funcoes?: Funcao[]; grupo?: string }
@@ -70,6 +71,10 @@ export default function App() {
   }, [naoLidas]);
 
   // Conferência pública de documentos (QR): não precisa de login
+  // Portal do paciente: link + data de nascimento, sem login
+  if (loc.pathname.startsWith("/portal/")) {
+    return <Routes><Route path="/portal/:token" element={<Portal />} /></Routes>;
+  }
   if (loc.pathname === "/verificar" || loc.pathname.startsWith("/verificar/")) {
     return (
       <Routes>

@@ -565,3 +565,29 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
 - Usa o mesmo segredo `ANTHROPIC_API_KEY` do assistente do WhatsApp.
 - **Não testado com a IA de verdade** (desligada; sem acesso ao Supabase/Anthropic a partir da sessão). Testado: mascaramento
   com exemplos, build das telas, sintaxe da função; a publicação no Supabase compilou (versão 1, ACTIVE).
+
+### Portal do paciente por link seguro (migração 0028, aplicada)
+- **`portal_links`** (token aleatório de 32 caracteres, vale 7 dias, revogável, conta acessos e tentativas). Botão
+  **🔗 Portal do paciente** na ficha (`app/src/components/PortalLink.tsx`; médico, enfermagem, recepção, admin): gera o link
+  (`portal_criar_link`, SECURITY DEFINER; exige data de nascimento cadastrada), copia a mensagem pronta para colar no
+  WhatsApp, lista e cancela links.
+- Página pública **`/portal/<token>`** (`app/src/pages/Portal.tsx`, letra grande, celular): o paciente digita a **data de
+  nascimento**; `portal_abrir` (SECURITY DEFINER **executável por anônimo, de propósito**; 5 erros bloqueiam o link) devolve
+  primeiro nome, próximas consultas e, dos últimos 180 dias e **só de atendimentos finalizados**: receitas de óculos, receitas
+  **simples** (controle especial/antimicrobiano só em papel), atestados/declarações (sem termo de consentimento), pedidos
+  ainda não feitos e laudos assinados — cada um com o código de autenticidade, se já foi impresso. Cada abertura vai para
+  `log_auditoria` ("Paciente abriu o portal").
+- Avisos do Supabase esperados: `portal_abrir` (anon) e `portal_criar_link` (authenticated).
+- Envio automático do link por modelo do WhatsApp: não feito (depende de modelo aprovado na Meta; sessão do WhatsApp).
+- Testes no banco local: sem data de nascimento não gera; faturamento não gera; atendimento aberto não aparece; só receita
+  simples; data errada conta tentativa; 5 erros bloqueiam; anônimo não lê a tabela; aberturas auditadas. Tela conferida no
+  celular (simulado).
+
+### Pendências desta sessão (precisam da dona)
+- **Aval para ligar o resumo por IA** (Cadastros → Inteligência artificial) e a chave `ANTHROPIC_API_KEY` no Supabase.
+- **Receita digital com assinatura ICP-Brasil:** escolher o serviço (Memed, prescrição eletrônica do CFM ou outro) e os
+  médicos terem certificado digital (e-CPF/e-CRM, A1 ou em nuvem).
+- **Integração com os aparelhos:** lista de marca/modelo (autorrefrator, tonômetro, lensômetro, OCT, retinógrafo, campo visual,
+  biômetro) e como cada um exporta (rede, pasta, DICOM, XML).
+- **RNDS:** só se a clínica atender SUS; exige credenciamento no DATASUS e certificado digital da clínica.
+- Acesso de teste (tela Equipe) para conferir tudo com login real.
