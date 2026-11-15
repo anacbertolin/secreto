@@ -34,15 +34,14 @@
     (índice `/busca/indice.json`) e envio de comentários do blog + formulário de contato para o Supabase.
   - `site/ferramentas/preparar_copia.py` = refaz `site/public/` a partir de um novo download
     (entradas em `site/ferramentas/entrada/`). Use se o site original mudar antes da troca de DNS.
-    Depois dele rode `trocar_marca.py` e `otimizar_imagens.py` (ordem em `site/LEIAME.md`).
+    Depois dele rode `trocar_marca.py`, `corrigir_defeitos.py` e `otimizar_imagens.py` (ordem em `site/LEIAME.md`).
   - Imagens otimizadas em 2026-11-14 (pedido da dona: site demorava a carregar): cada imagem tem
     um `.webp` ao lado, entregue pelo Caddy a quem aceita. Página inicial: imagens de 1,8 MB → ~0,66 MB.
     CDN do Railway NÃO foi ligado (custo não confirmado) — perguntar à dona antes.
 - **Publicado em:** https://site-production-8c641078.up.railway.app (Railway, serviço `site`,
   região us-east4, Root Directory `/site`, healthcheck `/`).
-  - Fonte do serviço `site` (desde 2026-11-15, a pedido da dona): branch **`claude/loving-clarke-acyn66`**,
-    que já contém a marca nova (juntada do `claude/youthful-cori-erycnr`) + fotos que faltavam + imagens WebP.
-    O `main` ainda NÃO tem essas mudanças do site.
+  - Fonte do serviço `site`: branch **`main`** (desde 2026-11-15, a pedido da dona). Todo push no `main`
+    que mexa em `site/` publica o site. Ele contém a marca nova, imagens WebP e os defeitos corrigidos.
   - Há várias sessões trabalhando em paralelo em branches `claude/*`. Antes de mexer no site ou no
     Railway, rode `git ls-remote --heads origin` e veja a fonte atual do serviço (`describe-service`).
 - **Marca:** desde 2026-11-14 o site usa o nome **Hospital de Olhos da Baixada** (antes "Consumed").
@@ -66,8 +65,6 @@
 
 ## Próximos passos (pendentes)
 1. Dona comparar o site provisório com o original e aprovar.
-1b. Juntar ao `main` o branch `claude/loving-clarke-acyn66` (site com marca nova e imagens otimizadas) e
-    então apontar o serviço `site` para `main` — só com o aval da dona.
 2. Troca de DNS — antes, verificar com a dona:
    - se os e-mails `@consumedolhos.com.br` rodam na Hostinger (manter registros MX/e-mail intactos);
    - login do registro do domínio (provavelmente Registro.br);
