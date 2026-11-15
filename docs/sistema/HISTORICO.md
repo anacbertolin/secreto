@@ -297,3 +297,59 @@ Feito por cima da tela da sessão do WhatsApp (PR anacbertolin/secreto#6), combi
   WhatsApp, mesmo sabendo que podem ter conteúdo de saúde. Não restringir sem falar com ela.
 - Ligar a conta da Meta (segredos, webhook, modelos) fica com a sessão do WhatsApp/Meta
   (session_01RxZddmtjCEn8oxqqbwNeAm). Passo a passo para a dona: https://claude.ai/artifact/6JGfvWQ9aQ2jtNmr1T7zew
+
+---
+
+## 15/11/2026 — Assistente (extrator) do WhatsApp
+### Pedido da dona
+"Um extrator das conversas de WhatsApp para quando elas estiverem conectadas: ler as conversas e agendar os pacientes
+automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar para automatizarmos com um robô
+(entender que conteúdo precisamos ter para um robô fazer o trabalho)."
+### Como funciona
+- A cada 10 min o banco (pg_cron + pg_net) chama a função Edge **`whatsapp-extrator`** — só se o assistente estiver
+  ligado e houver conversa com mensagem nova parada há N minutos (padrão 20). A função lê o trecho novo (+12 mensagens
+  de contexto) e manda para a IA (Claude, `claude-opus-5-5`, esforço médio, resposta em JSON validado) uma única vez,
+  que devolve: pedidos de agendamento, notas de qualidade, perguntas para a base do robô, resumo e intenções.
+- **Agendamento automático** (regras no código, não na IA): só marca quando a conversa tem dia + hora + médico
+  combinados (`acordo_fechado`), certeza ≥ 85%, horário futuro, dentro de `horarios_profissional`, sem bloqueio e livre
+  (a trava `agenda_sem_conflito` confere). Paciente: acha pelo número/nome; homônimo com outro telefone → pendência;
+  paciente novo com nome completo → cadastro simples (nome, telefone, observação "conferir na chegada").
+  Se a recepção já marcou o mesmo paciente/médico/dia → "resolvido". Remarcar e cancelar sempre ficam para a recepção.
+- **Qualidade:** tempo de resposta medido pelo sistema (mensagens automáticas não contam) + notas da IA
+  (cordialidade, clareza, resolução, informação correta), pontos positivos/a melhorar e sugestão.
+- **Robô:** `bot_conhecimento` junta perguntas iguais (a IA recebe a lista e reaproveita o id), conta vezes e
+  "lacunas" (a equipe não soube responder). A admin escreve e **aprova** a resposta que o robô dará; marca o que
+  precisa de pessoa. Exemplos guardados sem nomes/números.
+- **Privacidade:** antes de ir para a IA, CPF/telefones/e-mails/números longos viram marcadores, atendentes viram
+  "Atendente 1", do paciente vai só o primeiro nome. O texto das conversas é processado pela Anthropic (EUA); os
+  resultados ficam só no Supabase (São Paulo). A dona precisa estar de acordo antes de ligar (ver pendências).
+### O que entrou
+- **Migração 0016 `whatsapp_extrator`** (aplicada): `whatsapp_extrator_config` (1 linha; nasce **desligado**),
+  `whatsapp_extrator_estado` (até onde cada conversa foi lida; erros e tentativas), `whatsapp_analises`,
+  `whatsapp_pedidos_agendamento`, `whatsapp_avaliacoes`, `bot_conhecimento`, visão `bot_prontidao`; funções
+  `whatsapp_extrator_pegar` (fila com `skip locked`), `whatsapp_extrator_pacientes_do_numero`,
+  `bot_conhecimento_registrar`, `whatsapp_extrator_chave_ok` (só chave de serviço); `interno.extrator_chave`
+  (chave aleatória gerada no banco, usada pelo pg_cron — nunca passou pelo chat); tarefa pg_cron `whatsapp-extrator`.
+  **0017**: índice + quem mudou a configuração.
+- **RLS:** pedidos e análises → recepção e admin (recepção resolve/descarta); avaliações → **só admin**;
+  base do robô → recepção e admin leem, só admin edita/aprova; configuração → admin altera.
+- **Função Edge `whatsapp-extrator`** (verify_jwt false, autenticação própria: chave do agendador ou login de
+  recepção/admin). Ações: `estado`, `rodar` (admin), `analisar` {conversa_id}. Código em
+  `supabase/functions/whatsapp-extrator/` (`logica.ts` tem as regras puras; testes em `logica_test.ts`).
+- **Tela `/whatsapp/assistente`** (menu "🤖 Assistente do WhatsApp", recepção e admin): abas Pedidos de agendamento
+  (botão Agendar abre o formulário já preenchido), Qualidade (admin), Preparação do robô, Configuração (admin).
+### Testes
+- Banco real em transação desfeita: fila (pega uma vez, não pega de novo enquanto em processo), "tem trabalho" só
+  ligado, soma de perguntas repetidas, chave certa/errada, admin vê/aprova, pessoa de fora não vê nada.
+- Regras puras (Deno): máscara de CPF/telefone/e-mail sem estragar datas, tempos de resposta, fuso de Brasília,
+  encaixe no horário do médico (vigência, fim da faixa), nomes, telefone.
+- Função publicada: chave falsa → 401; sem login → 401; chave certa sem a chave da IA → 503 "falta a chave".
+- Tela conferida no navegador com dados simulados (computador). **Ainda sem teste com a IA de verdade** (falta a
+  chave) nem com conversas reais (falta a Meta).
+### Pendências
+- [ ] Dona: decidir se aceita que o texto das conversas seja processado pela Anthropic (EUA). Se sim, criar a chave
+      em console.anthropic.com e cadastrar no Supabase como segredo `ANTHROPIC_API_KEY` (pelo painel; nunca no chat).
+- [ ] Depois da chave: rodar "analisar" numa conversa de teste e conferir o resultado; então ligar na tela.
+- [ ] Cadastrar médicos ativos e **horários** (Cadastros → Horários): sem isso o agendamento automático vira pendência.
+- [ ] Ideia: importar conversas antigas exportadas do WhatsApp do celular (.txt) para já montar a base do robô.
+- [ ] Ideia (próxima fase): o robô em si — responder sozinho com as respostas aprovadas e marcar horários livres.
