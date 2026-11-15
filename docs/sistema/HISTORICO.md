@@ -499,3 +499,17 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
 - Testes no banco local: baixa de lente e medicamento; conta com preços certos; injeção e cirurgia em guias
   separadas (senhas diferentes); movimento não se apaga; ajuste sem motivo bloqueado; recepção não vê; carga antiga
   não gera conta.
+
+### Código de autenticidade (QR) nos documentos (migração 0025, aplicada)
+- **`documentos_verificacao`** (código de 12 caracteres aleatórios, tipo, documento, resumo). Toda impressão de receita de
+  óculos, receita, documento/atestado, laudo e pedido de exames chama **`documento_codigo(tipo, id)`** (SECURITY DEFINER,
+  só médico/enfermagem; o mesmo documento devolve sempre o mesmo código) e mostra um **QR** no rodapé
+  (`app/src/components/Autenticidade.tsx`, biblioteca `qrcode` 1.5.4). Se der erro, imprime sem o selo.
+- Página pública **`/verificar/<código>`** (sem login; `app/src/pages/Verificar.tsx`) chama
+  **`verificar_documento(código)`** (SECURITY DEFINER **executável por anônimo, de propósito**: é para ótica, farmácia e
+  empresas). Mostra só: tipo, data, médico e CRM, **nome do paciente abreviado**, graus (óculos), medicamentos (receita),
+  dias de afastamento (atestado, **sem CID nem texto**), nome do exame (laudo), lista de exames (pedidos). Médico pode
+  marcar um código como cancelado (`cancelado`, `motivo_cancelamento`). Avisos do Supabase esperados:
+  `verificar_documento` (anon) e `documento_codigo` (authenticated).
+- Isto **não substitui a assinatura digital ICP-Brasil** (que dá validade jurídica à receita eletrônica); é uma conferência
+  de autenticidade do papel. A assinatura ICP depende do certificado dos médicos e de escolher o serviço (pendente da dona).

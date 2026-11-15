@@ -324,3 +324,11 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .col-dicas { font-size: 19px; border-top: 2px solid #1f2124; padding-top: 10px; margin-top: 10px; }
 .col-dicas li { margin: 4px 0; }
 .lista-protocolos { max-height: 420px; overflow-y: auto; border-right: 1px solid var(--borda); padding-right: 8px; }
+
+/* ---------- Selo de autenticidade (QR) ---------- */
+.selo { display: flex; gap: 12px; align-items: center; margin-top: 28px; padding-top: 10px; border-top: 1px dashed #999; font-size: 11px; color: #333; }
+.selo img { width: 74px; height: 74px; }
+.selo span { font-family: monospace; }
+.verif { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 12px 0; }
+.verif dt { color: var(--suave); }
+.verif dd { margin: 0; font-weight: 600; }
