@@ -293,3 +293,7 @@ Feito por cima da tela da sessão do WhatsApp (PR anacbertolin/secreto#6), combi
 - **Migração 0015 `whatsapp_arquivada_sem_responsavel`** (aplicada, combinada com a sessão da tela): quando uma
   conversa ARQUIVADA recebe mensagem nova, ela volta sem responsável (`responsavel_id = null`). Fora isso, a conversa
   continua com quem assumiu. Testado no banco real numa transação desfeita.
+- **Decisão confirmada pela dona (15/11, pela sessão da tela):** o **faturamento continua vendo** as conversas do
+  WhatsApp, mesmo sabendo que podem ter conteúdo de saúde. Não restringir sem falar com ela.
+- Ligar a conta da Meta (segredos, webhook, modelos) fica com a sessão do WhatsApp/Meta
+  (session_01RxZddmtjCEn8oxqqbwNeAm). Passo a passo para a dona: https://claude.ai/artifact/6JGfvWQ9aQ2jtNmr1T7zew
