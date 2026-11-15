@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase, msgErro } from "../lib/supabase";
 import { EvolucaoPaciente } from "../components/Evolucao";
+import { CirurgiasPaciente } from "./Cirurgias";
+import type { PacienteResumo } from "../components/ui";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Etiqueta } from "../components/ui";
 import { HistoricoSaude } from "../components/Clinico";
@@ -83,6 +85,7 @@ export default function PacienteFicha() {
       <div className="abas">
         {clinico && <button className={aba === "prontuario" ? "ativa" : ""} onClick={() => setAba("prontuario")}>Prontuário</button>}
         {clinico && <button className={aba === "evolucao" ? "ativa" : ""} onClick={() => setAba("evolucao")}>📈 Evolução</button>}
+        {clinico && <button className={aba === "cirurgias" ? "ativa" : ""} onClick={() => setAba("cirurgias")}>Cirurgias e injeções</button>}
         {clinico && <button className={aba === "exames" ? "ativa" : ""} onClick={() => setAba("exames")}>Exames</button>}
         {clinico && <button className={aba === "documentos" ? "ativa" : ""} onClick={() => setAba("documentos")}>Documentos</button>}
         <button className={aba === "agenda" ? "ativa" : ""} onClick={() => setAba("agenda")}>Agendamentos</button>
@@ -97,6 +100,7 @@ export default function PacienteFicha() {
         </div>
       )}
       {aba === "evolucao" && clinico && <div className="painel"><EvolucaoPaciente pacienteId={id!} /></div>}
+      {aba === "cirurgias" && clinico && <CirurgiasPaciente pacienteId={id!} paciente={p as unknown as PacienteResumo} />}
       {aba === "exames" && clinico && <ExamesPaciente pacienteId={id!} />}
       {aba === "documentos" && clinico && <DocumentosPaciente pacienteId={id!} />}
       {aba === "agenda" && (

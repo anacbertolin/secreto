@@ -1,6 +1,8 @@
 // Evolução do paciente: pressão do olho (PIO), acuidade visual e grau, ao longo das consultas.
 // Só leitura. Usa os dados já registrados (pré-consulta, exame e refração); não muda nada no banco.
 import { useState } from "react";
+import { useAuth } from "../lib/auth";
+import { AcompanhamentoPaciente, seguimentosAtivos } from "./Seguimento";
 import { supabase } from "../lib/supabase";
 import { useCarregar, ok, Aviso, Carregando } from "./ui";
 import { GraficoLinhas, COR_OD, COR_OE, type Serie } from "./Grafico";
@@ -29,6 +31,12 @@ const NOME_REFRACAO: Record<string, string> = { dinamica: "dinâmica", estatica_
 
 export function EvolucaoPaciente({ pacienteId }: { pacienteId: string }) {
   const [verTabela, setVerTabela] = useState(false);
+  const { pode } = useAuth();
+  const segs = useCarregar(() => seguimentosAtivos(pacienteId), [pacienteId]);
+  // PIO alvo: a menor definida nos acompanhamentos (linha tracejada no gráfico)
+  const alvos = (segs.dados ?? []).flatMap((s) => [s.pio_alvo_od, s.pio_alvo_oe]).filter((v) => v != null).map(Number);
+  const pioAlvo = alvos.length ? Math.min(...alvos) : null;
+  const caixa = <AcompanhamentoPaciente pacienteId={pacienteId} podeEditar={pode("medico")} aoMudar={segs.recarregar} />;
   const { dados, erro, carregando } = useCarregar(async () => ok(await supabase.from("atendimentos")
     .select("id, inicio, triagens(pio_od, pio_oe, av_longe_od_sc, av_longe_oe_sc, av_longe_od_cc, av_longe_oe_cc), exames_oftalmologicos(pio_aplanacao_od, pio_aplanacao_oe), refracoes(tipo, olho, esferico, cilindrico, eixo)")
     .eq("paciente_id", pacienteId).order("inicio")) as unknown as Linha[], [pacienteId]);
@@ -56,7 +64,7 @@ export function EvolucaoPaciente({ pacienteId }: { pacienteId: string }) {
     return { id: a.id, x, data: a.inicio, pioOD, pioOE, avOD, avOE, refOD: ref("OD"), refOE: ref("OE"), metodoPio: ex?.pio_aplanacao_od != null || ex?.pio_aplanacao_oe != null ? "aplanação" : tr?.pio_od != null ? "pré-consulta" : "" };
   }).filter((l) => l.pioOD != null || l.pioOE != null || l.avOD || l.avOE || l.refOD || l.refOE);
 
-  if (linhas.length === 0) return <div className="vazio">Ainda não há medidas registradas para mostrar a evolução.<br /><span className="pequeno">Os gráficos aparecem conforme as consultas registram PIO, acuidade visual e refração.</span></div>;
+  if (linhas.length === 0) return <div>{caixa}<div className="vazio">Ainda não há medidas registradas para mostrar a evolução.<br /><span className="pequeno">Os gráficos aparecem conforme as consultas registram PIO, acuidade visual e refração.</span></div></div>;
 
   const serie = (nome: "OD" | "OE", f: (l: typeof linhas[number]) => { y: number; rotulo?: string } | null): Serie => ({
     nome, cor: nome === "OD" ? COR_OD : COR_OE, forma: nome === "OD" ? "circulo" : "quadrado",
@@ -80,6 +88,7 @@ export function EvolucaoPaciente({ pacienteId }: { pacienteId: string }) {
 
   return (
     <div>
+      {caixa}
       <div className="linha entre" style={{ marginBottom: 10 }}>
         <div className="muted pequeno">{linhas.length} consulta(s) com medidas{resumoPio && <> · <b>PIO</b> {resumoPio}</>}</div>
         <button className="mini" onClick={() => setVerTabela(!verTabela)}>{verTabela ? "📈 Ver gráficos" : "📋 Ver em tabela"}</button>
@@ -103,8 +112,8 @@ export function EvolucaoPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
       ) : (
         <div className="graficos">
-          <GraficoLinhas titulo="Pressão intraocular (PIO)" subtitulo="mmHg · aplanação quando houver, senão a da pré-consulta"
-            series={pio} fmtY={(v) => String(Math.round(v))} referencia={{ y: 21, rotulo: "21 mmHg" }} />
+          <GraficoLinhas titulo="Pressão intraocular (PIO)" subtitulo={`mmHg · aplanação quando houver, senão a da pré-consulta${pioAlvo != null ? " · tracejado = PIO alvo" : ""}`}
+            series={pio} fmtY={(v) => String(Math.round(v))} referencia={pioAlvo != null ? { y: pioAlvo, rotulo: `alvo ${pioAlvo} mmHg` } : { y: 21, rotulo: "21 mmHg" }} />
           <GraficoLinhas titulo="Acuidade visual (melhor corrigida)" subtitulo="decimal · quanto mais alto, melhor · conta dedos/vultos só na tabela"
             series={av} fmtY={(v) => String(Number(v.toFixed(2))).replace(".", ",")} yMin={0} yMax={Math.max(1.0, ...av.flatMap((s) => s.pontos.map((p) => p.y)))} />
           <GraficoLinhas titulo="Grau (equivalente esférico)" subtitulo="dioptrias · esférico + metade do cilíndrico"

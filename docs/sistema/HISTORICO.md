@@ -391,7 +391,57 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
 - O prontuário antigo do Micrologos (texto livre) não entra nos gráficos; se a carga trouxer PIO/AV em campos
   estruturados, dá para incluir depois.
 
-### 15/11/2026 (mais tarde) — parâmetros pedidos pela dona (migração 0018)
+### Fase 3 — Acompanhamento de doenças crônicas e busca ativa (migração 0021, aplicada)
+- **`seguimentos`**: o médico marca que o paciente deve voltar a cada X dias (glaucoma 4 meses, DMRI 3, retinopatia
+  diabética 4, diabetes sem retinopatia 1 ano…) e a **PIO alvo** (aparece como linha tracejada no gráfico de PIO).
+  Médico e enfermagem leem; só médico cria/edita; ninguém apaga (encerra com motivo). Um ativo por condição.
+- **`busca_ativa_contatos`**: cada tentativa de contato (ligação/WhatsApp; resultado: agendou, não atendeu, número
+  errado, mudou de cidade, faleceu…). Equipe (menos faturamento) lê e registra em nome próprio.
+- **`busca_ativa(tolerância)`**: lista quem passou do prazo e **não tem consulta marcada**. A "última consulta" é
+  calculada na hora com atendimentos, agendamentos atendidos **e o prontuário antigo do Micrologos**. SECURITY DEFINER
+  **de propósito** (aviso do Supabase esperado): a recepção precisa saber quem ligar sem ler o prontuário; a doença
+  só vem para médico/enfermagem (para os outros vem "acompanhamento"). Resultados "recusou / acompanha em outro
+  lugar / mudou de cidade / faleceu" tiram o paciente da lista.
+- **`busca_ativa_sugestoes()`** (INVOKER): pacientes com CID crônico (H40/H42, H36.0/E1x.3, E10–E14, H35.3, H18.6,
+  H20/H30) que ainda não estão em acompanhamento.
+- **Telas:** menu **📞 Busca ativa** (atrasados com ligar/WhatsApp/registrar contato/📅 agendar — agendar já registra o
+  contato "agendou"; aba Sugestões para médico/enfermagem) e caixa **🔔 Acompanhamento** no topo da aba Evolução.
+- **Para a sessão de migração:** nada a fazer. Se a carga trouxer diagnósticos estruturados (CID), eles alimentam as
+  sugestões; se trouxer "retorno em X meses", dá para criar `seguimentos` em lote depois (combinar com a dona).
+- Testes no banco local: atrasado aparece; em dia e com consulta marcada não; paciente só com prontuário antigo
+  aparece com a data antiga; recepção vê sem a doença e não lê `seguimentos`; faturamento e anônimo bloqueados;
+  contato em nome de outra pessoa bloqueado. Telas conferidas com dados simulados (médico e recepção).
+
+---
+
+## 15/11/2026 — Regra de idioma
+- A dona pediu: **sempre falar em português** (respostas, resumos, PRs e textos para ela). Registrado no topo do CLAUDE.md.
+
+### Fase 4 — Centro cirúrgico, LIO e injeções intravítreas (migração 0022, aplicada)
+- **`cirurgias`**: indicação → aguardando autorização → autorizada → agendada → realizada (ou cancelada com motivo).
+  Data/sala/equipe/anestesia, convênio e senha, **biometria** (comprimento axial, K1/K2, ACD, fórmula, refração alvo) e
+  **LIO com fabricante/modelo/dioptria/lote/série/validade/registro ANVISA** (rastreabilidade), **checklist de cirurgia
+  segura (OMS)** em 3 momentos (guardado em `checklist` jsonb com a hora de cada item), ato cirúrgico (início/fim,
+  descrição, intercorrências). Gatilho `regras`: só médico finaliza, exige descrição, hora do servidor; **finalizada
+  não muda** (como o laudo). Ignora `app.migracao = 'on'` (permite carregar cirurgias antigas já finalizadas).
+- **`injecoes_intravitreas`**: olho, medicamento (aflibercepte, ranibizumabe, bevacizumabe, faricimabe…), lote
+  (obrigatório na tela), validade (tela bloqueia vencido), protocolo, próxima em X semanas, CID/indicação, senha.
+  View `injecoes_resumo` (nº na série por olho e próxima prevista) e função `injecoes_pendentes()` (atrasadas/próximas,
+  com consulta marcada ou não). Ambas SECURITY INVOKER.
+- Acesso: médico e enfermagem leem e registram; só médico finaliza; ninguém apaga. Recepção e faturamento não veem.
+- **Telas:** menu **🏥 Centro cirúrgico** (Mapa do dia, Fila de indicações, 💉 Injeções atrasadas/próximas, Realizadas),
+  ficha da cirurgia `/cirurgias/:id` (com impressão e, ao finalizar, sugestão de retornos de 1, 7 e 30 dias que abrem
+  o agendamento já preenchido) e aba **Cirurgias e injeções** na ficha do paciente.
+- **Para a sessão de migração:** nada obrigatório. Se o Micrologos tiver cirurgias/LIO estruturadas, dá para carregar
+  em `cirurgias` com `status = 'realizada'` e `finalizada_em` dentro de `app.migracao = 'on'`.
+- Testes no banco local: enfermagem não finaliza; finalizar sem descrição bloqueado; alterar depois de finalizada
+  bloqueado; série e próxima injeção calculadas; recepção não vê; carga antiga finalizada aceita.
+- Ainda não feito: faturamento automático da cirurgia (guia SP/SADT) e estoque de lentes/medicamentos — combinar com
+  a dona e com a sessão do faturamento.
+
+---
+
+## 15/11/2026 — Assistente do WhatsApp: parâmetros pedidos pela dona (migração 0018)
 - Dona **de acordo** com o envio do texto das conversas (mascarado) à Anthropic para análise.
 - **Modelo da IA** virou opção na tela (Configuração): padrão **Claude Sonnet 5.5**; também Opus 5.5 e Haiku 5.5.
 - **Horário padrão da clínica** (Configuração): dias, abre/fecha e duração da consulta (padrão seg–sex, 8h–18h, 20 min).
