@@ -132,3 +132,9 @@ Ordem de carga e regras gerais: ver `docs/micrologos/04-migracao-de-dados.md`.
   2. Inserir os itens com `valor_unitario` preenchido.
   3. Só então atualizar a conta para o status final.
 - **Procedimentos:** o TUSS 10101012 (tabela 22, `padrao_consulta`) já existe, e o índice único é (tabela, codigo). Reaproveitar com `on conflict` / de-para em vez de duplicar.
+
+### WhatsApp: migração 0012 (PR #6, no `main` e aplicada no banco; aviso de 15/11/2026, sessão do WhatsApp `session_01RxZddmtjCEn8oxqqbwNeAm`)
+- **Pacientes:** `public.pacientes` ganhou `whatsapp_autorizado boolean` (null = não perguntado) e `whatsapp_autorizado_em timestamptz`. Um gatilho preenche a data quando o valor muda.
+- **Na carga:** deixar as duas colunas null. Só mapear para true/false se o Micrologos tiver um consentimento explícito do tipo "aceita SMS/WhatsApp" (LGPD). Nesse caso, gravar também a data original do consentimento, se existir.
+- **Telefones:** as conversas são ligadas ao paciente pelo DDD + últimos 8 dígitos de `telefone`/`telefone_secundario`. Gravar telefones só com dígitos (função `legacy_micrologos.telefone`).
+- **Tabelas novas:** `whatsapp_conversas`, `whatsapp_mensagens` e `whatsapp_modelos`, sem impacto na carga.
