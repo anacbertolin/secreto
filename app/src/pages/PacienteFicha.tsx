@@ -5,6 +5,7 @@ import { EvolucaoPaciente } from "../components/Evolucao";
 import { CirurgiasPaciente } from "./Cirurgias";
 import { CompararExames } from "../components/CompararExames";
 import { BotaoResumoIA } from "../components/ResumoIA";
+import { BotaoPortal } from "../components/PortalLink";
 import type { PacienteResumo } from "../components/ui";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Etiqueta } from "../components/ui";
@@ -76,6 +77,7 @@ export default function PacienteFicha() {
           )}
           {eu?.funcao === "medico" && <button onClick={novoAtendimentoSemAgenda}>🩺 Atender sem agendamento</button>}
           {clinico && <BotaoResumoIA pacienteId={id!} />}
+          {pode("medico", "enfermagem", "recepcao", "admin") && <BotaoPortal pacienteId={id!} />}
         </div>
       </div>
       <Aviso>{erro}</Aviso>
