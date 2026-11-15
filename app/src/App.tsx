@@ -24,6 +24,7 @@ import BuscaAtiva from "./pages/BuscaAtiva";
 import Cirurgias, { CirurgiaDetalhe } from "./pages/Cirurgias";
 import Estoque from "./pages/Estoque";
 import Verificar from "./pages/Verificar";
+import ConfigIA from "./pages/ConfigIA";
 import { useNaoLidas } from "./lib/whatsapp";
 
 interface ItemMenu { para: string; rotulo: string; icone: string; funcoes?: Funcao[]; grupo?: string }
@@ -48,6 +49,7 @@ const MENU: ItemMenu[] = [
   { para: "/cadastros/procedimentos", rotulo: "Procedimentos e preços", icone: "💲", funcoes: ["faturamento", "admin"] },
   { para: "/cadastros/locais", rotulo: "Salas e consultórios", icone: "🚪", funcoes: ["recepcao", "admin"] },
   { para: "/cadastros/exames", rotulo: "Tipos de exame", icone: "📋", funcoes: ["recepcao", "admin"] },
+  { para: "/cadastros/ia", rotulo: "Inteligência artificial", icone: "✨", funcoes: ["admin"] },
   { para: "/cadastros/modelos", rotulo: "Modelos de texto", icone: "📝", funcoes: ["medico", "enfermagem"] },
 ];
 
@@ -164,6 +166,7 @@ export default function App() {
           <Route path="/cadastros/convenios" element={<Protegida funcoes={["recepcao", "admin", "faturamento"]}><Convenios /></Protegida>} />
           <Route path="/cadastros/locais" element={<Protegida funcoes={["recepcao", "admin"]}><Locais /></Protegida>} />
           <Route path="/cadastros/exames" element={<Protegida funcoes={["recepcao", "admin"]}><CatalogoExames /></Protegida>} />
+          <Route path="/cadastros/ia" element={<Protegida funcoes={["admin"]}><ConfigIA /></Protegida>} />
           <Route path="/cadastros/modelos" element={<Protegida funcoes={["medico", "enfermagem"]}><Modelos /></Protegida>} />
           <Route path="/minha-conta" element={<TrocarSenha />} />
           <Route path="*" element={<Navigate to="/" />} />

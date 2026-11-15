@@ -342,3 +342,6 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .comparar-img { width: 100%; border-radius: 8px; border: 1px solid var(--borda); margin-bottom: 8px; display: block; }
 .comparar-pdf { width: 100%; height: 60vh; border: 1px solid var(--borda); border-radius: 8px; }
 @media (max-width: 760px) { .comparar { grid-template-columns: 1fr; } }
+.resumo-ia h3 { margin: 14px 0 4px; font-size: 0.95rem; }
+.resumo-ia ul { margin: 0; padding-left: 20px; }
+.resumo-ia li { margin: 2px 0; }

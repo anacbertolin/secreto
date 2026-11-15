@@ -541,3 +541,18 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
   criadas, agendador antigo removido, equipe sem permissão de chamar as funções, advisors sem aviso novo desta parte.
 - **Tarefa agendada:** texto em `docs/sistema/assistente-tarefa-agendada.md`. Criação **aguardando autorização da dona**
   (o modo automático da sessão bloqueou a criação sem o "pode criar" dela).
+
+### Resumo do prontuário por IA — NASCE DESLIGADO (migração 0027 + função Edge `prontuario-resumo`, aplicadas)
+- **`ia_prontuario_config`** (linha única, `ligado = false`). Só admin liga, na tela **Cadastros → ✨ Inteligência artificial**
+  (`app/src/pages/ConfigIA.tsx`, com confirmação explicando o envio à Anthropic/EUA). **Pendente: aval da dona.**
+- Função **`prontuario-resumo`** (verify_jwt true; código em `supabase/functions/prontuario-resumo/`): só médico/enfermagem;
+  lê o histórico **com o token de quem pediu** (chave publicável → o RLS vale; não usa a chave de serviço); manda à IA
+  idade, sexo e dados clínicos das 30 consultas mais recentes + 15 registros do Micrologos + alergias, medicamentos,
+  antecedentes, acompanhamentos, cirurgias, injeções e exames. **Não manda** nome, CPF, telefone, endereço, nome da mãe;
+  e-mails, números ≥ 7 dígitos (cartão SUS antes do CPF), CPF, telefone e nomes do paciente/mãe nos textos viram
+  marcadores. Modelo `claude-opus-5-5`, effort medium, saída estruturada (JSON schema), fallback de recusa
+  (`server-side-fallback-2026-07-01`, `fallbacks: "default"`). Nada é guardado; `registrar_leitura` grava o pedido.
+- Botão **✨ Resumo (IA)** na ficha e no atendimento (`app/src/components/ResumoIA.tsx`) só aparece com a IA ligada.
+- Usa o mesmo segredo `ANTHROPIC_API_KEY` do assistente do WhatsApp.
+- **Não testado com a IA de verdade** (desligada; sem acesso ao Supabase/Anthropic a partir da sessão). Testado: mascaramento
+  com exemplos, build das telas, sintaxe da função; a publicação no Supabase compilou (versão 1, ACTIVE).
