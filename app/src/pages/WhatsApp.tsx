@@ -3,9 +3,9 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase, msgErro } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Modal, Campo, Etiqueta, BuscaPaciente } from "../components/ui";
-import { fmtData, fmtHora, isoDia, nomeExibicao, somaDias } from "../lib/util";
+import { STATUS_AGENDA, TIPOS_AGENDA, fmtData, fmtDataHora, fmtHora, idade, isoDia, nomeExibicao, somaDias } from "../lib/util";
 import {
-  SELECT_CONVERSA, baixarMidia, fmtNumeroWA, janelaAberta, whatsapp, type Conversa, type Mensagem, type ModeloWA,
+  SELECT_CONVERSA, baixarMidia, fmtNumeroWA, janelaAberta, whatsapp, tocarAviso, type Conversa, type Mensagem, type ModeloWA,
 } from "../lib/whatsapp";
 
 const ICONE_SITUACAO: Record<string, string> = { enviada: "✓", entregue: "✓✓", lida: "✓✓", falhou: "⚠️" };
@@ -20,8 +20,9 @@ function nomeConversa(c: Conversa): string {
 }
 
 export default function WhatsApp() {
-  const { pode } = useAuth();
+  const { pode, eu } = useAuth();
   const [params, setParams] = useSearchParams();
+  const [quem, setQuem] = useState<"todas" | "minhas" | "livres">("todas");
   const [abertaId, setAbertaId] = useState<string | null>(params.get("conversa"));
   const [filtro, setFiltro] = useState("");
   const [arquivadas, setArquivadas] = useState(false);
@@ -29,16 +30,30 @@ export default function WhatsApp() {
   const [modelos, setModelos] = useState(false);
   const [erro, setErro] = useState("");
 
+  const equipe = useCarregar(async () => ok(await supabase.from("profissionais").select("id, nome")) as { id: string; nome: string }[], []);
   const estado = useCarregar(() => whatsapp<{ configurado: boolean; recebimento: boolean }>("estado"), []);
   const lista = useCarregar(async () => {
     return ok(await supabase.from("whatsapp_conversas").select(SELECT_CONVERSA).eq("arquivada", arquivadas)
       .order("ultima_mensagem_em", { ascending: false, nullsFirst: false }).limit(300)) as Conversa[];
   }, [arquivadas]);
 
-  // Atualiza sozinho a cada 10 segundos
+  // Atualiza ao vivo (Realtime) e, por garantia, a cada 10 segundos
   useEffect(() => {
+    let espera: number | undefined;
+    const agendar = () => {
+      window.clearTimeout(espera);
+      espera = window.setTimeout(() => lista.recarregar(), 300);
+    };
+    const canal = supabase
+      .channel("wa-lista")
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_conversas" }, agendar)
+      .subscribe();
     const t = setInterval(() => lista.recarregar(), 10000);
-    return () => clearInterval(t);
+    return () => {
+      clearInterval(t);
+      window.clearTimeout(espera);
+      supabase.removeChannel(canal);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [arquivadas]);
 
@@ -57,9 +72,15 @@ export default function WhatsApp() {
 
   const todas = lista.dados ?? [];
   const f = filtro.trim().toLowerCase();
-  const visiveis = f
-    ? todas.filter((c) => nomeConversa(c).toLowerCase().includes(f) || c.telefone.includes(f.replace(/\D/g, "") || "§"))
-    : todas;
+  const visiveis = todas
+    .filter((c) => quem === "todas" || (quem === "minhas" ? c.responsavel_id === eu?.id : !c.responsavel_id))
+    .filter((c) => !f || nomeConversa(c).toLowerCase().includes(f) || c.telefone.includes(f.replace(/\D/g, "") || "§"));
+  const naoLidasDe = (lista: Conversa[]) => lista.filter((c) => c.nao_lidas > 0).length;
+  const contagem = {
+    todas: naoLidasDe(todas),
+    minhas: naoLidasDe(todas.filter((c) => c.responsavel_id === eu?.id)),
+    livres: todas.filter((c) => !c.responsavel_id).length,
+  };
   const aberta = todas.find((c) => c.id === abertaId) ?? null;
 
   function abrir(id: string) {
@@ -88,6 +109,7 @@ export default function WhatsApp() {
           <p className="sub" style={{ margin: 0 }}>Mensagens do número oficial da clínica</p>
         </div>
         <div className="linha">
+          <AvisosComputador />
           {pode("recepcao", "admin") && <button className="primario" onClick={() => setLembretes(true)}>📨 Lembretes de consulta</button>}
           <button onClick={() => setModelos(true)}>📝 Modelos</button>
         </div>
@@ -113,11 +135,18 @@ export default function WhatsApp() {
       <div className={"wa" + (aberta ? " com-conversa" : "")}>
         <div className="wa-lista painel">
           <input placeholder="Buscar por nome ou número" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
+          <div className="wa-filtros">
+            {([["todas", "Todas"], ["minhas", "Minhas"], ["livres", "Sem responsável"]] as const).map(([k, rot]) => (
+              <button key={k} className={quem === k ? "ativo" : ""} onClick={() => setQuem(k)}>
+                {rot}{contagem[k] > 0 && <span className="wa-badge" style={{ marginLeft: 5 }}>{contagem[k]}</span>}
+              </button>
+            ))}
+          </div>
           <label className="check pequeno" style={{ margin: "8px 0" }}>
             <input type="checkbox" checked={arquivadas} onChange={(e) => setArquivadas(e.target.checked)} /> Ver arquivadas
           </label>
           {lista.carregando && !lista.dados ? <Carregando /> : visiveis.length === 0 ? (
-            <div className="vazio pequeno">{arquivadas ? "Nenhuma conversa arquivada." : "Nenhuma conversa ainda."}</div>
+            <div className="vazio pequeno">{todas.length > 0 ? "Nenhuma conversa neste filtro." : arquivadas ? "Nenhuma conversa arquivada." : "Nenhuma conversa ainda."}</div>
           ) : visiveis.map((c) => (
             <button key={c.id} className={"wa-item" + (c.id === abertaId ? " ativo" : "")} onClick={() => abrir(c.id)}>
               <div className="linha entre" style={{ flexWrap: "nowrap" }}>
@@ -127,6 +156,9 @@ export default function WhatsApp() {
               <div className="linha entre" style={{ flexWrap: "nowrap" }}>
                 <span className="muted pequeno">{c.pacientes ? `Pront. ${c.pacientes.numero_prontuario}` : fmtNumeroWA(c.telefone)}</span>
                 {c.nao_lidas > 0 && <span className="wa-badge">{c.nao_lidas}</span>}
+              </div>
+              <div className="muted pequeno wa-nome">
+                {c.responsavel_id ? `👤 ${c.responsavel_id === eu?.id ? "Você" : nomeCurto(equipe.dados, c.responsavel_id)}` : "Ninguém assumiu"}
               </div>
             </button>
           ))}
@@ -138,11 +170,28 @@ export default function WhatsApp() {
             <div className="vazio">Escolha uma conversa ao lado.</div>
           )}
         </div>
+        {aberta && <FichaPaciente key={aberta.id} conversa={aberta} />}
       </div>
 
       {lembretes && <Lembretes aoFechar={() => setLembretes(false)} aoEnviar={lista.recarregar} />}
       {modelos && <Modelos aoFechar={() => setModelos(false)} />}
     </div>
+  );
+}
+
+function nomeCurto(lista: { id: string; nome: string }[] | null, id: string | null): string {
+  return lista?.find((x) => x.id === id)?.nome.split(" ")[0] ?? "outra pessoa";
+}
+
+/** Botão para ligar o aviso na tela do computador quando chega mensagem */
+function AvisosComputador() {
+  const suportado = typeof Notification !== "undefined";
+  const [perm, setPerm] = useState(suportado ? Notification.permission : "denied");
+  if (!suportado || perm !== "default") return null;
+  return (
+    <button onClick={async () => { setPerm(await Notification.requestPermission()); tocarAviso(); }}>
+      🔔 Avisar quando chegar mensagem
+    </button>
   );
 }
 
@@ -154,6 +203,7 @@ function quandoCurto(d: string): string {
 // ---------------------------------------------------------------------------
 function Chat(props: { conversa: Conversa; aoMudar: () => void; aoVoltar: () => void }) {
   const c = props.conversa;
+  const { eu } = useAuth();
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
@@ -166,8 +216,16 @@ function Chat(props: { conversa: Conversa; aoMudar: () => void; aoVoltar: () => 
   const equipe = useCarregar(async () => ok(await supabase.from("profissionais").select("id, nome")) as { id: string; nome: string }[], []);
 
   useEffect(() => {
+    const canal = supabase
+      .channel("wa-conversa-" + c.id)
+      .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_mensagens", filter: `conversa_id=eq.${c.id}` },
+        () => msgs.recarregar())
+      .subscribe();
     const t = setInterval(() => msgs.recarregar(), 10000);
-    return () => clearInterval(t);
+    return () => {
+      clearInterval(t);
+      supabase.removeChannel(canal);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [c.id]);
 
@@ -194,6 +252,7 @@ function Chat(props: { conversa: Conversa; aoMudar: () => void; aoVoltar: () => 
     try {
       await whatsapp("texto", { conversa_id: c.id, texto: t });
       setTexto("");
+      if (!c.responsavel_id && eu) mudar({ responsavel_id: eu.id }); // quem responde assume a conversa
     } catch (e) {
       setErro(msgErro(e));
     }
@@ -208,6 +267,7 @@ function Chat(props: { conversa: Conversa; aoMudar: () => void; aoVoltar: () => 
     setErro("");
     try {
       await whatsapp("retomar", { conversa_id: c.id });
+      if (!c.responsavel_id && eu) mudar({ responsavel_id: eu.id });
     } catch (e) {
       setErro(msgErro(e));
     }
@@ -239,6 +299,13 @@ function Chat(props: { conversa: Conversa; aoMudar: () => void; aoVoltar: () => 
           </div>
         </div>
         <div className="linha">
+          {c.responsavel_id === eu?.id ? (
+            <button className="mini" title="Deixar a conversa livre para outra pessoa" onClick={() => mudar({ responsavel_id: null })}>👤 Com você · soltar</button>
+          ) : (
+            <button className="mini" onClick={() => eu && mudar({ responsavel_id: eu.id })}>
+              {c.responsavel_id ? `👤 Com ${nomeEquipe(c.responsavel_id) ?? "outra pessoa"} · assumir` : "✋ Assumir"}
+            </button>
+          )}
           <button className="mini" onClick={() => setLigar(true)}>{c.paciente_id ? "Trocar paciente" : "🔗 Ligar a um paciente"}</button>
           <button className="mini" onClick={() => mudar({ arquivada: !c.arquivada })}>{c.arquivada ? "Desarquivar" : "Arquivar"}</button>
         </div>
@@ -298,6 +365,68 @@ function Chat(props: { conversa: Conversa; aoMudar: () => void; aoVoltar: () => 
         </Modal>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+interface PacienteFichaWA {
+  id: string; nome: string; nome_social: string | null; numero_prontuario: number; data_nascimento: string | null;
+  telefone: string | null; whatsapp_autorizado: boolean | null; convenios: { nome: string } | null;
+}
+interface ProximoAg { id: string; inicio: string; tipo: string; status: string; profissionais: { nome: string } | null }
+
+/** Ficha resumida do paciente ao lado da conversa, com os próximos agendamentos */
+function FichaPaciente({ conversa: c }: { conversa: Conversa }) {
+  const dados = useCarregar(async () => {
+    if (!c.paciente_id) return null;
+    const p = ok(await supabase.from("pacientes")
+      .select("id, nome, nome_social, numero_prontuario, data_nascimento, telefone, whatsapp_autorizado, convenios(nome)")
+      .eq("id", c.paciente_id).maybeSingle()) as unknown as PacienteFichaWA | null;
+    const ags = ok(await supabase.from("agendamentos")
+      .select("id, inicio, tipo, status, profissionais(nome)")
+      .eq("paciente_id", c.paciente_id)
+      .gte("inicio", new Date(Date.now() - 12 * 3600 * 1000).toISOString())
+      .not("status", "in", "(cancelado,faltou)")
+      .order("inicio").limit(4)) as unknown as ProximoAg[];
+    return { p, ags };
+  }, [c.paciente_id]);
+
+  const p = dados.dados?.p;
+  return (
+    <aside className="wa-ficha painel">
+      <div className="muted pequeno">Paciente</div>
+      {!c.paciente_id ? (
+        <p className="pequeno">Conversa ainda não ligada a um paciente. Use “Ligar a um paciente” acima ou <Link to="/pacientes/novo">cadastre um novo</Link>.</p>
+      ) : dados.carregando && !p ? <Carregando /> : p ? (
+        <>
+          <h3 style={{ margin: "2px 0 8px" }}>{nomeExibicao(p)}</h3>
+          <dl>
+            <dt>Prontuário</dt><dd>{p.numero_prontuario}</dd>
+            {p.data_nascimento && (<><dt>Nascimento</dt><dd>{fmtData(p.data_nascimento)} ({idade(p.data_nascimento)})</dd></>)}
+            <dt>Convênio</dt><dd>{p.convenios?.nome ?? "Particular"}</dd>
+            <dt>WhatsApp</dt>
+            <dd>
+              {p.whatsapp_autorizado === true && <Etiqueta cor="verde">Aceita mensagens</Etiqueta>}
+              {p.whatsapp_autorizado === false && <Etiqueta cor="vermelho">Não quer</Etiqueta>}
+              {p.whatsapp_autorizado == null && <Etiqueta cor="cinza">Não perguntado</Etiqueta>}
+            </dd>
+          </dl>
+          <h4 style={{ margin: "16px 0 6px" }}>Próximos agendamentos</h4>
+          {dados.dados?.ags.length === 0 && <div className="muted pequeno">Nenhum agendamento futuro.</div>}
+          {dados.dados?.ags.map((a) => (
+            <div key={a.id} className="wa-ag">
+              <b>{fmtDataHora(a.inicio)}</b>
+              <span className="pequeno">{TIPOS_AGENDA[a.tipo] ?? a.tipo}{a.profissionais && ` · ${a.profissionais.nome}`}</span>
+              <Etiqueta cor={STATUS_AGENDA[a.status]?.cor ?? "cinza"}>{STATUS_AGENDA[a.status]?.rotulo ?? a.status}</Etiqueta>
+            </div>
+          ))}
+          <div className="linha" style={{ gap: 6, marginTop: 14 }}>
+            <Link className="botao mini" to={`/pacientes/${p.id}`}>Abrir ficha</Link>
+            <Link className="botao mini" to="/agenda">📅 Agenda</Link>
+          </div>
+        </>
+      ) : <Aviso>{dados.erro}</Aviso>}
+    </aside>
   );
 }
 
