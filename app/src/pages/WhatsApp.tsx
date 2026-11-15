@@ -7,6 +7,7 @@ import { STATUS_AGENDA, TIPOS_AGENDA, fmtData, fmtDataHora, fmtHora, idade, isoD
 import {
   SELECT_CONVERSA, baixarMidia, fmtNumeroWA, janelaAberta, whatsapp, tocarAviso, type Conversa, type Mensagem, type ModeloWA,
 } from "../lib/whatsapp";
+import { BotaoLigar } from "../components/Telefone";
 
 const ICONE_SITUACAO: Record<string, string> = { enviada: "✓", entregue: "✓✓", lida: "✓✓", falhou: "⚠️" };
 const ICONE_TIPO: Record<string, string> = {
@@ -301,6 +302,7 @@ function Chat(props: { conversa: Conversa; aoMudar: () => void; aoVoltar: () => 
           </div>
         </div>
         <div className="linha">
+          <BotaoLigar numero={c.telefone} pacienteId={c.pacientes?.id ?? c.paciente_id} />
           {!podeResponder ? null : c.responsavel_id === eu?.id ? (
             <button className="mini" title="Deixar a conversa livre para outra pessoa" onClick={() => mudar({ responsavel_id: null })}>👤 Com você · soltar</button>
           ) : (

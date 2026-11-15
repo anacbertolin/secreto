@@ -6,6 +6,7 @@ import { CirurgiasPaciente } from "./Cirurgias";
 import { CompararExames } from "../components/CompararExames";
 import { BotaoResumoIA } from "../components/ResumoIA";
 import { BotaoPortal } from "../components/PortalLink";
+import { BotaoLigar } from "../components/Telefone";
 import type { PacienteResumo } from "../components/ui";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Etiqueta } from "../components/ui";
@@ -75,6 +76,7 @@ export default function PacienteFicha() {
           {p.whatsapp_autorizado !== false && (
             <Link className="botao" to={`/whatsapp?paciente=${id}`}>💬 WhatsApp</Link>
           )}
+          <BotaoLigar numero={p.telefone as string | null} pacienteId={id} className="" />
           {eu?.funcao === "medico" && <button onClick={novoAtendimentoSemAgenda}>🩺 Atender sem agendamento</button>}
           {clinico && <BotaoResumoIA pacienteId={id!} />}
           {pode("medico", "enfermagem", "recepcao", "admin") && <BotaoPortal pacienteId={id!} />}

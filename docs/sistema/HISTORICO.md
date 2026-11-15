@@ -688,3 +688,55 @@ Respostas: (1) IA do prontuário **aprovada**; (2) receita digital pela **Memed*
 - **Limpeza pendente:** a limpeza (apagar os 3 pacientes "TESTE Paciente Silva (apagar)" e o que eles geraram, apagar os logins
   de teste e desativar os perfis TESTE) ficou esperando uma confirmação do Supabase que não foi respondida — **não foi feita**.
   Enquanto isso, os 3 logins de teste (`teste.*@example.com`) continuam ativos. Fazer a limpeza assim que a dona confirmar.
+
+---
+
+## 15/11/2026 — Telefone dentro do sistema (ramais pelo navegador) — migrações 0050 e 0051
+### Pedido da dona
+Hoje as atendentes usam o Talk Logos (Micrologos) com linhas da Telecall: na mesma tela falam pelo WhatsApp e atendem o
+telefone, e transferem para outro ramal. São **5 atendentes**. Ela quer isso no sistema novo. Depois de comparar
+Api4Com, Nvoip e Twilio, escolheu **testar com a Api4Com** (PABX em nuvem brasileiro, com ramal pelo navegador — WebRTC).
+**Sem portabilidade por enquanto**: teste com número novo; a Telecall continua funcionando.
+### Como funciona
+- O navegador da atendente vira um **ramal SIP** (biblioteca **JsSIP 3.10.1**, conexão WSS com a central). Serve para
+  qualquer central que aceite ramal pelo navegador (Api4Com, Nvoip, Telecall se oferecer) — nada é preso à Api4Com.
+- **Migração 0050 `telefonia`** (aplicada): `telefonia_config` (liga/desliga, empresa, endereço WSS, domínio SIP; só admin
+  altera; auditado), `telefonia_ramais` (ramal, nome, quem usa — 1 ramal por pessoa; equipe lê para transferir; só admin
+  cria/altera; auditado), **`interno.telefonia_senhas`** (senha SIP fora da API; a admin grava por
+  `telefonia_definir_senha` e nunca vê de volta; **só a própria pessoa recebe a sua** por `telefonia_minhas_credenciais`),
+  `ligacoes` (histórico; toda a equipe lê — mesma decisão do WhatsApp; ninguém grava direto, só pelas funções).
+  Funções: `telefonia_inicio` (a mesma chamada tocando em vários ramais vira UMA linha), `telefonia_atendida` (só a
+  primeira que atende fica com a ligação), `telefonia_fim` (entrada que ninguém atendeu → **perdida**), `telefonia_anotar`,
+  `telefonia_marcar_retornada`, `telefonia_quem_ligou` (pacientes do número + próxima consulta; inclui telefone do
+  responsável). Ligar para um número que tinha perdida nos últimos 30 dias marca a perdida como **retornada**.
+  pg_cron `telefonia-limpar-presas` (10 min) fecha ligações que ficaram "tocando" porque o navegador fechou.
+- **Migração 0051 `telefonia_mesmo_numero`** (aplicada): compara pela chave do telefone (com/sem 55) para não duplicar.
+- Advisors: só os avisos esperados de SECURITY DEFINER nas funções `telefonia_*` (cada uma confere ramal/admin).
+### Telas
+- **Telefone flutuante** no canto de todas as telas (só para quem tem ramal): Disponível / Pausa (não recebe ligações) /
+  discador. Chamada chegando: cartão com **nome do paciente, prontuário, idade e próxima consulta**, botões Atender /
+  Recusar, Abrir ficha, 💬 WhatsApp; toque e aviso do computador. Em ligação: cronômetro, Mudo, Espera, **Transferir**
+  (lista de ramais dos colegas ou número digitado; transferência "cega" — sai da ligação quando a central aceita),
+  Teclado (para URA). Depois: anotação rápida. Se já está em ligação, nova chamada recebe "ocupado" (a fila passa adiante).
+- **☎️ Ligações** (menu): hoje / perdidas sem retorno / 7 / 30 dias, ao vivo; "Ligar de volta" e "Resolvida".
+- **Cadastros → ☎️ Telefone** (admin): liga/desliga, endereço WSS, domínio SIP, ramais e senhas, passo a passo.
+- Botão **📞 Ligar** na conversa do WhatsApp, na ficha do paciente e na Busca ativa (só aparece com o telefone conectado).
+- Código: `app/src/lib/telefone.tsx` (conexão e chamadas), `app/src/components/Telefone.tsx`, `app/src/pages/Ligacoes.tsx`,
+  `app/src/pages/ConfigTelefone.tsx`.
+### Testes
+- Banco real, dentro de transação desfeita: admin configura e grava senha; recepção recebe a própria senha mas não lê a
+  tabela de senhas nem grava senha de outro; ninguém insere em `ligacoes` direto; mesma chamada em 2 ramais = 1 linha;
+  segunda atendente não "rouba" a ligação; transferência e anotação gravadas; perdida → retornada; médico sem ramal não
+  liga e não altera a configuração; anônimo bloqueado.
+- Navegador (Playwright) com **central SIP simulada** + Supabase simulado: registro, chamada chegando com o nome da
+  paciente, atender com **áudio conectado de verdade (WebRTC)**, espera, mudo, transferir (REFER para 1002), anotação,
+  paciente desiste (perdida), ligação feita pelo discador, desligar, pausa; telas de configuração e histórico; celular.
+  16/16 ok, sem erros de página.
+- **Ainda sem teste com a Api4Com de verdade** (falta a conta). Pontos a conferir no teste real: endereço WSS/domínio,
+  formato do número para discar (hoje: só dígitos, sem 55 — ex.: 21999998888), transferência pela central da Api4Com,
+  fila tocando para as 5 atendentes.
+### Para ligar (falta a dona)
+1. Criar a conta de teste na Api4Com e os ramais (um por atendente).
+2. Pedir à Api4Com o endereço **WSS** e o **domínio SIP** para ramal pelo navegador.
+3. Admin: Cadastros → Telefone → preencher, cadastrar ramais (quem usa + senha) → **Ligar**.
+4. Cada atendente usa fone com microfone; na primeira ligação o navegador pede o microfone → Permitir.

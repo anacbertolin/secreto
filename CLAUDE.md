@@ -140,4 +140,8 @@
   Nasce **desligado** (liga na tela). Não usa chave de API (decisão da dona); ela já deu o aval para o envio do texto mascarado. Detalhes: `docs/sistema/HISTORICO.md` (15/11, Assistente).
 - **Transcrição de áudios (15/11/2026):** Whisper da OpenAI (decisão da dona; áudio processado nos EUA). Migração 0040,
   função Edge `whatsapp-transcrever`, segredo `OPENAI_API_KEY`. Detalhes: `docs/sistema/HISTORICO.md`.
+- **Telefone no sistema (15/11/2026):** migrações 0050–0051, ramal SIP no navegador (JsSIP/WebRTC) para qualquer central que
+  aceite ramal pelo navegador; teste escolhido pela dona: **Api4Com**, sem portabilidade (Telecall continua). Senha do ramal
+  em `interno.telefonia_senhas` (nunca no código nem no chat; a admin digita na tela Cadastros → Telefone). Histórico em
+  `ligacoes`. Detalhes e passos para ligar: `docs/sistema/HISTORICO.md` (15/11, Telefone).
 - Dados de teste do v1 apagados em 14/11/2026 (com autorização). A função Edge `limpeza-teste` está desativada (responde 410).
