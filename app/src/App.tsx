@@ -21,6 +21,7 @@ import WhatsApp from "./pages/WhatsApp";
 import AssistenteWhatsApp from "./pages/AssistenteWhatsApp";
 import PainelTV from "./pages/PainelTV";
 import BuscaAtiva from "./pages/BuscaAtiva";
+import Cirurgias, { CirurgiaDetalhe } from "./pages/Cirurgias";
 import { useNaoLidas } from "./lib/whatsapp";
 
 interface ItemMenu { para: string; rotulo: string; icone: string; funcoes?: Funcao[]; grupo?: string }
@@ -34,6 +35,7 @@ const MENU: ItemMenu[] = [
   { para: "/whatsapp/assistente", rotulo: "Assistente do WhatsApp", icone: "🤖", funcoes: ["recepcao", "admin"] },
   { para: "/consultorio", rotulo: "Consultório", icone: "🩺", funcoes: ["medico", "enfermagem"] },
   { para: "/busca-ativa", rotulo: "Busca ativa", icone: "📞", funcoes: ["medico", "enfermagem", "recepcao", "admin"] },
+  { para: "/cirurgias", rotulo: "Centro cirúrgico", icone: "🏥", funcoes: ["medico", "enfermagem"] },
   { para: "/exames", rotulo: "Exames e laudos", icone: "🔬", funcoes: ["medico", "enfermagem"] },
   { para: "/faturamento", rotulo: "Faturamento", icone: "🧾", funcoes: ["faturamento", "recepcao", "admin"] },
   { para: "/relatorios", rotulo: "Relatórios", icone: "📊" },
@@ -131,6 +133,8 @@ export default function App() {
           <Route path="/pacientes/:id/editar" element={<PacienteEditar />} />
           <Route path="/consultorio" element={<Protegida funcoes={["medico", "enfermagem"]}><FilaMedico /></Protegida>} />
           <Route path="/atendimento/:id" element={<Protegida funcoes={["medico", "enfermagem"]}><Atendimento /></Protegida>} />
+          <Route path="/cirurgias" element={<Protegida funcoes={["medico", "enfermagem"]}><Cirurgias /></Protegida>} />
+          <Route path="/cirurgias/:id" element={<Protegida funcoes={["medico", "enfermagem"]}><CirurgiaDetalhe /></Protegida>} />
           <Route path="/busca-ativa" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin"]}><BuscaAtiva /></Protegida>} />
           <Route path="/exames" element={<Protegida funcoes={["medico", "enfermagem"]}><Exames /></Protegida>} />
           <Route path="/exames/:id" element={<Protegida funcoes={["medico", "enfermagem"]}><ExameDetalhe /></Protegida>} />
