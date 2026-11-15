@@ -45,6 +45,12 @@ def process_file(path):
 
 
 # 1) copia, tirando "?ver=..." dos nomes de arquivo
+# a pasta marca/ (logo novo) não vem do site original: é guardada e devolvida
+marca_tmp = None
+if os.path.isdir(os.path.join(out, 'marca')):
+    marca_tmp = os.path.join(os.path.dirname(os.path.abspath(out)), '.marca_tmp')
+    shutil.rmtree(marca_tmp, ignore_errors=True)
+    shutil.copytree(os.path.join(out, 'marca'), marca_tmp)
 if os.path.exists(out):
     shutil.rmtree(out)
 for d, _, files in os.walk(src):
@@ -98,4 +104,7 @@ for d, _, files in os.walk(out):
 here = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'extra')
 for name in os.listdir(here):
     shutil.copy(os.path.join(here, name), os.path.join(out, name))
+if marca_tmp:
+    shutil.copytree(marca_tmp, os.path.join(out, 'marca'))
+    shutil.rmtree(marca_tmp)
 print('ok:', sum(len(f) for _, _, f in os.walk(out)), 'arquivos')

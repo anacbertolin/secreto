@@ -38,13 +38,19 @@
     (índice `/busca/indice.json`) e envio de comentários do blog + formulário de contato para o Supabase.
   - `site/ferramentas/preparar_copia.py` = refaz `site/public/` a partir de um novo download
     (entradas em `site/ferramentas/entrada/`). Use se o site original mudar antes da troca de DNS.
+    Depois dele rode `trocar_marca.py`, `corrigir_defeitos.py` e `otimizar_imagens.py` (ordem em `site/LEIAME.md`).
+  - Imagens otimizadas em 2026-11-14 (pedido da dona: site demorava a carregar): cada imagem tem
+    um `.webp` ao lado, entregue pelo Caddy a quem aceita. Página inicial: imagens de 1,8 MB → ~0,66 MB.
+    CDN do Railway NÃO foi ligado (custo não confirmado) — perguntar à dona antes.
 - **Publicado em:** https://site-production-8c641078.up.railway.app (Railway, serviço `site`,
   região us-east4, Root Directory `/site`, healthcheck `/`).
-  - Fonte do serviço `site` (conferido em 2026-11-14 15h): branch **`claude/youthful-cori-erycnr`**,
-    de OUTRA sessão, que partiu desta cópia e trocou a marca para "Hospital de Olhos da Baixada".
-    Não trocar a fonte do serviço sem combinar com a dona (trocar desfaria a marca nova no ar).
+  - Fonte do serviço `site`: branch **`main`** (desde 2026-11-15, a pedido da dona). Todo push no `main`
+    que mexa em `site/` publica o site. Ele contém a marca nova, imagens WebP e os defeitos corrigidos.
   - Há várias sessões trabalhando em paralelo em branches `claude/*`. Antes de mexer no site ou no
     Railway, rode `git ls-remote --heads origin` e veja a fonte atual do serviço (`describe-service`).
+- **Marca:** desde 2026-11-14 o site usa o nome **Hospital de Olhos da Baixada** (antes "Consumed").
+  Logo e ícones em `site/public/marca/`. A troca é feita por `site/ferramentas/trocar_marca.py`
+  (rodar de novo depois de refazer a cópia). Domínio, Facebook e busca do Google Maps ainda usam o nome antigo.
 - **Supabase:** tabela `public.site_mensagens` (migração `site_mensagens`) guarda o que visitantes
   enviam. RLS ligado; `anon`/`authenticated` só podem INSERIR (sem leitura). Chave publicável
   (pública) está no `site-copia.js`. A dona vê as mensagens no painel: Table Editor → site_mensagens.
@@ -52,16 +58,17 @@
   - Manter a cópia exata; não "melhorar" nada sem ela pedir.
   - Nome do médico: manter **"Dr. Max Oliveira Guimarães"**. Testamos trocar para o apelido
     "Dr. Golozão" e a equipe NÃO aprovou — revertido. Não usar apelidos de médicos no site.
-- **Defeitos que já existem no site original (copiados de propósito, ainda não corrigidos):**
-  páginas rascunho públicas (Homez, Página de exemplo, Procedimentos2, Exames2, Video Background, Link);
-  texto de código quebrado "[vc_column…]" visível na página Equipe; botões nas páginas Equipe e
-  Convênios apontando para `homologacao.consumedolhos.com.br`; imagem `assist.png` inexistente.
-  Oferecer correção quando a dona quiser.
+- **Defeitos do site original — CORRIGIDOS em 2026-11-15** (pedido da dona; `site/ferramentas/corrigir_defeitos.py`):
+  rascunhos removidos (Homez, Página de exemplo, Procedimentos2, Exames2, Video Background, Link — o Caddyfile
+  redireciona); código "[vc_…]" removido (Equipe, A clínica, Contato, Convênios — Contato deixou de ficar
+  largo demais no celular); botões da A clínica viraram links reais para /equipe/ e /convenios/; títulos
+  Missão/Visão/Valores arrumados; quadro vazio (assist.png) tirado do carrossel de convênios;
+  "A Hospital…" → "O Hospital…"; criados `sitemap.xml` e `robots.txt`.
+- **Perguntas em aberto para a dona:** qual convênio era o logo "assist" (para recolocar no carrossel);
+  o carrossel da página inicial tem Select e GEAP, que não aparecem na página Convênios — qual lista vale?
 
 ## Próximos passos (pendentes)
 1. Dona comparar o site provisório com o original e aprovar.
-1b. Juntar ao `main` o branch da outra sessão do site (`claude/youthful-cori-erycnr`, marca nova) e
-    então apontar o serviço `site` para `main` — só com o aval da dona.
 2. Troca de DNS — antes, verificar com a dona:
    - se os e-mails `@consumedolhos.com.br` rodam na Hostinger (manter registros MX/e-mail intactos);
    - login do registro do domínio (provavelmente Registro.br);
