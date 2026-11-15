@@ -4,6 +4,8 @@ import { supabase, msgErro } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Etiqueta } from "../components/ui";
 import { listaProfissionais, nomePor, SELECT_AGENDA, type Agendamento } from "../lib/dados";
+import { EtapaPaciente, AcoesFluxo } from "../components/Fluxo";
+import { prioridadeFila } from "../lib/fluxo";
 import { STATUS_AGENDA, TIPOS_AGENDA, fmtDataLonga, fmtEspera, fmtHora, idade, inicioDoDia, minutosDesde, nomeExibicao, somaDias } from "../lib/util";
 
 export default function FilaMedico() {
@@ -37,7 +39,9 @@ export default function FilaMedico() {
   }
 
   const lista = fila.dados ?? [];
-  const espera = lista.filter((a) => a.status === "chegou").sort((x, y) => (x.chegada_em ?? "").localeCompare(y.chegada_em ?? ""));
+  // prontos para o médico (e dilatação concluída) primeiro; depois por ordem de chegada
+  const espera = lista.filter((a) => a.status === "chegou")
+    .sort((x, y) => prioridadeFila(x) - prioridadeFila(y) || (x.chegada_em ?? "").localeCompare(y.chegada_em ?? ""));
   const atendendo = lista.filter((a) => a.status === "em_atendimento");
   const resto = lista.filter((a) => !["chegou", "em_atendimento"].includes(a.status));
 
@@ -56,6 +60,10 @@ export default function FilaMedico() {
         <td>
           <Etiqueta cor={st.cor}>{st.rotulo}</Etiqueta>
           {a.status === "chegou" && <div className={"pequeno " + (minutosDesde(a.chegada_em) >= 40 ? "espera-alta" : "muted")}>há {fmtEspera(minutosDesde(a.chegada_em))}</div>}
+        </td>
+        <td>
+          <EtapaPaciente a={a} />
+          {destaque && <div className="linha" style={{ gap: 6, marginTop: 4 }}><AcoesFluxo a={a} compacto podeChamar aoMudar={fila.recarregar} /></div>}
         </td>
         <td style={{ textAlign: "right" }}>
           {podeAbrir && (

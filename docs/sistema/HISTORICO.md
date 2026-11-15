@@ -297,3 +297,30 @@ Feito por cima da tela da sessão do WhatsApp (PR anacbertolin/secreto#6), combi
   WhatsApp, mesmo sabendo que podem ter conteúdo de saúde. Não restringir sem falar com ela.
 - Ligar a conta da Meta (segredos, webhook, modelos) fica com a sessão do WhatsApp/Meta
   (session_01RxZddmtjCEn8oxqqbwNeAm). Passo a passo para a dona: https://claude.ai/artifact/6JGfvWQ9aQ2jtNmr1T7zew
+
+---
+
+## 15/11/2026 — Melhorias para o médico e o fluxo da clínica (sessão "melhorias", ramo `claude/eloquent-newton-c7128m`)
+### Pedido da dona
+Implantar, por ordem de prioridade e sem pedir licença a cada passo, as melhorias levantadas no brainstorm (fluxo do dia,
+evolução do paciente, busca ativa, cirurgias/injeções, protocolos). **Cuidado pedido por ela: nada pode impedir a
+migração do Micrologos.** Regra seguida em todas as fases: só tabelas novas e colunas opcionais; nenhuma coluna
+existente muda; todo gatilho novo em tabela existente ignora `app.migracao = 'on'`.
+Numeração: as migrações desta sessão começam em **0020** (a 0016 em diante fica livre para a sessão do WhatsApp, que
+aplicou `whatsapp_extrator` no banco e ainda não mandou o arquivo para o `main`).
+
+### Fase 1 — Etapas do paciente, cronômetro de dilatação e TV de chamada (migração 0020, aplicada)
+- `agendamentos` ganhou colunas opcionais: `etapa` (pre_consulta / dilatando / pronto_medico / exames), `etapa_em`,
+  `dilatacao_inicio_em`, `dilatacao_minutos` (padrão 30), `dilatacao_colirio`, `dilatacao_olho`, `chamada_em`,
+  `chamada_local`. Gatilho `etapa_fluxo` grava as horas com o relógio do servidor. Sem regra nova de acesso (a equipe
+  já podia alterar agendamentos).
+- **Telas:** Recepção (sala de espera mostra a etapa, o cronômetro e botões 💧 Dilatar / ✅ Pronto / 📢 Chamar; botão
+  "📺 TV de chamada"), Consultório (fila põe primeiro quem está pronto ou já dilatou), barra de etapas dentro do
+  atendimento, e **`/painel-tv`** (tela cheia para a TV: nome grande, sala, últimas chamadas, aviso sonoro e voz em
+  português; mostra só primeiro + último nome). Código: `app/src/lib/fluxo.ts`, `app/src/components/Fluxo.tsx`,
+  `app/src/pages/PainelTV.tsx`.
+- **Para a sessão de migração:** nada a fazer. As colunas novas ficam vazias nos agendamentos antigos.
+- Testes: banco de teste local (Postgres 16) com as 16 migrações; gatilho conferido (hora do servidor, padrão 30 min,
+  modo migração intacto). Telas conferidas no navegador com dados simulados (recepção, consultório, TV).
+- Para usar a TV: num computador ligado à TV, entrar com um login da recepção e abrir `/painel-tv`; tocar uma vez na
+  tela para liberar o som.

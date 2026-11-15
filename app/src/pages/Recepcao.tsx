@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase, msgErro } from "../lib/supabase";
 import { useCarregar, ok, Aviso, Carregando, Modal, Campo, Etiqueta } from "../components/ui";
 import { NovoAgendamento, DetalheAgendamento } from "../components/AgendamentoModais";
+import { EtapaPaciente, AcoesFluxo } from "../components/Fluxo";
 import { listaProfissionais, listaConvenios, listaLocais, listaPlanos, nomePor, SELECT_AGENDA, type Agendamento, type Convenio } from "../lib/dados";
 import {
   STATUS_AGENDA, TIPOS_AGENDA, fmtDataLonga, fmtHora, fmtEspera, inicioDoDia, minutosDesde, somaDias, nomeExibicao, idade, soNumeros, fmtTelefone,
@@ -88,6 +89,7 @@ export default function Recepcao() {
             <option value="todos">Todos os médicos</option>
             {medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
           </select>
+          <a className="botao" href="/painel-tv" target="_blank" rel="noreferrer" title="Abrir a tela de chamada para a TV da sala de espera">📺 TV de chamada</a>
           <button className="primario" onClick={() => setEncaixe(true)}>➕ Encaixe / paciente sem hora</button>
         </div>
       </div>
@@ -112,6 +114,10 @@ export default function Recepcao() {
               return (
                 <Cartao key={a.id} a={a}>
                   <span className={m >= 40 ? "espera-alta" : ""}>⏱️ esperando há {fmtEspera(m)}</span>
+                  <EtapaPaciente a={a} />
+                  <div className="linha" style={{ width: "100%", gap: 6 }}>
+                    <AcoesFluxo a={a} compacto podeChamar aoMudar={dia.recarregar} />
+                  </div>
                 </Cartao>
               );
             })}
