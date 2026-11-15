@@ -438,3 +438,15 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
   bloqueado; série e próxima injeção calculadas; recepção não vê; carga antiga finalizada aceita.
 - Ainda não feito: faturamento automático da cirurgia (guia SP/SADT) e estoque de lentes/medicamentos — combinar com
   a dona e com a sessão do faturamento.
+
+---
+
+## 15/11/2026 — Assistente do WhatsApp: parâmetros pedidos pela dona (migração 0018)
+- Dona **de acordo** com o envio do texto das conversas (mascarado) à Anthropic para análise.
+- **Modelo da IA** virou opção na tela (Configuração): padrão **Claude Sonnet 5.5**; também Opus 5.5 e Haiku 5.5.
+- **Horário padrão da clínica** (Configuração): dias, abre/fecha e duração da consulta (padrão seg–sex, 8h–18h, 20 min).
+  Vale para o médico sem horário próprio em `horarios_profissional`; quem tem horário próprio segue o dele.
+- Migração **0018 `whatsapp_extrator_parametros`** (aplicada): colunas novas na configuração + trava dos modelos aceitos.
+  Função `whatsapp-extrator` versão 2 publicada.
+- Créditos: a assinatura do Claude (chat) não paga uso pela API; a extração usa créditos pré-pagos do Console da
+  Anthropic (console.anthropic.com), com o segredo `ANTHROPIC_API_KEY` no Supabase.
