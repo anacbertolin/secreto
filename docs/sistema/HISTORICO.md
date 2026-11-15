@@ -513,3 +513,12 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
   `verificar_documento` (anon) e `documento_codigo` (authenticated).
 - Isto **não substitui a assinatura digital ICP-Brasil** (que dá validade jurídica à receita eletrônica); é uma conferência
   de autenticidade do papel. A assinatura ICP depende do certificado dos médicos e de escolher o serviço (pendente da dona).
+
+### Desenho do olho e comparação de exames (migração 0026, aplicada)
+- **`desenhos_oculares`** (atendimento, olho, tipo fundo/segmento anterior, traços em JSON 0–100, legenda). Usa a mesma trava
+  `tg_bloquear_se_finalizado` (finalizado não muda). Médico desenha/edita/remove rascunho; enfermagem vê.
+- Aba **Desenho** no atendimento (`app/src/components/pep/Desenho.tsx`): diagrama do fundo de olho com o disco óptico do lado
+  certo (OD à direita, OE à esquerda), equador e ora serrata pontilhados, horas do relógio; cores padrão (vermelho, azul,
+  verde, preto, amarelo, roxo), espessuras, desfazer, limpar; mouse, dedo e caneta.
+- **Comparar exames** (sem mudança no banco): na ficha do paciente → aba Exames, marcar 2 e "🔀 Comparar" mostra imagens/PDF e
+  laudo lado a lado (`app/src/components/CompararExames.tsx`).

@@ -7,13 +7,14 @@ import { HistoricoSaude } from "../components/Clinico";
 import { BarraFluxoAtendimento } from "../components/Fluxo";
 import { EvolucaoPaciente } from "../components/Evolucao";
 import { BotaoProtocolo } from "../components/Protocolos";
+import { DesenhoOlhos } from "../components/pep/Desenho";
 import type { AtendimentoCompleto, Ctx } from "../components/pep/comum";
 import { CamposAtendimento, PreConsulta, Refracao, ExameOftalmologico } from "../components/pep/SecoesExame";
 import { Diagnosticos, ReceitaOculos, ReceitaMedicamentos, PedidosExame, Documentos, Adendos } from "../components/pep/SecoesConduta";
 import { TIPOS_AGENDA, fmtCPF, fmtData, fmtDataHora, idade, nomeExibicao } from "../lib/util";
 
 const ABAS = [
-  ["pre", "Pré-consulta"], ["anamnese", "Anamnese"], ["refracao", "Refração"], ["exame", "Exame"],
+  ["pre", "Pré-consulta"], ["anamnese", "Anamnese"], ["refracao", "Refração"], ["exame", "Exame"], ["desenho", "Desenho"],
   ["diagnostico", "Diagnóstico"], ["conduta", "Conduta"], ["receitas", "Receitas"], ["pedidos", "Pedidos de exame"],
   ["documentos", "Atestados e documentos"],
 ] as const;
@@ -119,6 +120,7 @@ export default function Atendimento() {
           )}
           {aba === "refracao" && <Refracao ctx={ctx} />}
           {aba === "exame" && <ExameOftalmologico ctx={ctx} />}
+          {aba === "desenho" && <DesenhoOlhos ctx={ctx} />}
           {aba === "diagnostico" && <Diagnosticos ctx={ctx} />}
           {aba === "conduta" && (
             <CamposAtendimento ctx={ctx} campos={[
