@@ -361,3 +361,7 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .portal-tabela th, .portal-tabela td { border: 1px solid #999; padding: 6px; text-align: center; }
 .portal-lista li { margin: 6px 0; }
 @media print { .portal-doc:not(.aberto) { display: none; } .portal-doc { border: none; } .portal { font-size: 14px; } }
+
+/* ---------- Envio dos arquivos dos aparelhos ---------- */
+.zona-envio { margin-top: 14px; border: 2px dashed var(--borda); border-radius: 12px; padding: 28px; text-align: center; cursor: pointer; background: #fafbfc; }
+.zona-envio:hover, .zona-envio.ativa { border-color: var(--primaria); background: var(--primaria-clara); }
