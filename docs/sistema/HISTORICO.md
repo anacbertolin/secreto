@@ -380,3 +380,13 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
 - [ ] Cadastrar médicos ativos e **horários** (Cadastros → Horários): sem isso o agendamento automático vira pendência.
 - [ ] Ideia: importar conversas antigas exportadas do WhatsApp do celular (.txt) para já montar a base do robô.
 - [ ] Ideia (próxima fase): o robô em si — responder sozinho com as respostas aprovadas e marcar horários livres.
+
+### Fase 2 — Evolução do paciente em gráficos (sem mudança no banco)
+- Aba **📈 Evolução** na ficha do paciente e dentro do atendimento: gráficos de **PIO** (aplanação quando houver, senão a
+  da pré-consulta; linha de referência 21 mmHg), **acuidade visual** melhor corrigida (Snellen "20/40" e decimal
+  "0,5" viram decimal; conta dedos/vultos aparecem só na tabela) e **grau** (equivalente esférico; prioridade
+  dinâmica → estática → autorrefração → lensometria). Resumo da PIO (última, primeira, maior) e botão "Ver em tabela".
+- Cores OD azul `#2a78d6` / OE laranja `#eb6834` (validadas para daltonismo) + formas diferentes (círculo/quadrado).
+- Código: `app/src/components/Grafico.tsx` (gráfico SVG reutilizável) e `app/src/components/Evolucao.tsx`.
+- O prontuário antigo do Micrologos (texto livre) não entra nos gráficos; se a carga trouxer PIO/AV em campos
+  estruturados, dá para incluir depois.

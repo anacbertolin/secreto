@@ -5,6 +5,7 @@ import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Etiqueta } from "../components/ui";
 import { HistoricoSaude } from "../components/Clinico";
 import { BarraFluxoAtendimento } from "../components/Fluxo";
+import { EvolucaoPaciente } from "../components/Evolucao";
 import type { AtendimentoCompleto, Ctx } from "../components/pep/comum";
 import { CamposAtendimento, PreConsulta, Refracao, ExameOftalmologico } from "../components/pep/SecoesExame";
 import { Diagnosticos, ReceitaOculos, ReceitaMedicamentos, PedidosExame, Documentos, Adendos } from "../components/pep/SecoesConduta";
@@ -94,8 +95,10 @@ export default function Atendimento() {
         <div className="painel">
           <div className="abas">
             {ABAS.map(([k, r]) => <button key={k} className={aba === k ? "ativa" : ""} onClick={() => setAba(k)}>{r}</button>)}
+            <button className={aba === "evolucao" ? "ativa" : ""} onClick={() => setAba("evolucao")}>📈 Evolução</button>
             {!aberto && <button className={aba === "adendos" ? "ativa" : ""} onClick={() => setAba("adendos")}>Adendos</button>}
           </div>
+          {aba === "evolucao" && <EvolucaoPaciente pacienteId={pac.id} />}
           {aba === "pre" && <PreConsulta ctx={ctx} />}
           {aba === "anamnese" && (
             <CamposAtendimento ctx={ctx} campos={[
