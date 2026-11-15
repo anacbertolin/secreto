@@ -296,3 +296,13 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .tv-anteriores { background: #2b3036; border-radius: 18px; padding: 2vh 2vw; }
 .tv-rot { font-size: 2.4vh; opacity: 0.6; margin-bottom: 1vh; text-transform: uppercase; letter-spacing: 0.08em; }
 .tv-linha { display: flex; justify-content: space-between; font-size: 4vh; padding: 0.6vh 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+
+/* ---------- Gráficos de evolução ---------- */
+.graficos { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+.grafico { border: 1px solid var(--borda); border-radius: 10px; padding: 12px 14px; background: white; min-width: 0; }
+.grafico-area { position: relative; width: 100%; min-width: 0; overflow: hidden; }
+.grafico-tit { font-weight: 600; }
+.grafico-legenda { display: flex; gap: 14px; font-size: 0.85rem; color: var(--suave); }
+.grafico .eixo { font-size: 11px; fill: #667085; }
+.grafico .rotulo-serie { font-size: 11px; font-weight: 600; fill: #344054; }
+.balao { position: absolute; top: 8px; background: white; border: 1px solid var(--borda); border-radius: 8px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12); padding: 6px 10px; font-size: 0.85rem; pointer-events: none; white-space: nowrap; }
