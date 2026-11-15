@@ -66,7 +66,7 @@ export default function PacienteFicha() {
         <div className="linha">
           <Link className="botao" to={`/pacientes/${id}/editar`}>✏️ Editar cadastro</Link>
           <button className="primario" onClick={() => setAgendar(true)}>📅 Agendar</button>
-          {pode("medico", "enfermagem", "recepcao", "admin") && p.whatsapp_autorizado !== false && (
+          {p.whatsapp_autorizado !== false && (
             <Link className="botao" to={`/whatsapp?paciente=${id}`}>💬 WhatsApp</Link>
           )}
           {eu?.funcao === "medico" && <button onClick={novoAtendimentoSemAgenda}>🩺 Atender sem agendamento</button>}

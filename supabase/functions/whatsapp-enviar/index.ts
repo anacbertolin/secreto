@@ -1,5 +1,5 @@
 // Envia mensagens de WhatsApp em nome da equipe (pela API oficial da Meta).
-// Só quem está logado e ativo na equipe (médico, enfermagem, recepção, admin).
+// Toda a equipe ativa pode ver (estado, mídia); só recepção e admin ENVIAM (decisão da dona, 15/11/2026).
 //
 // Ações (POST, corpo JSON com "acao"):
 //   estado     → o WhatsApp já está configurado? (sem segredos na resposta)
@@ -134,9 +134,8 @@ Deno.serve(async (req) => {
   if (eu || !u?.user?.email) return resposta({ erro: "Sessão inválida. Entre novamente." }, 401);
   const { data: eu_prof } = await db.from("profissionais").select("id, funcao, ativo")
     .eq("email", u.user.email.toLowerCase()).maybeSingle();
-  if (!eu_prof?.ativo || !["medico", "enfermagem", "recepcao", "admin"].includes(eu_prof.funcao)) {
-    return resposta({ erro: "Você não tem acesso ao WhatsApp da clínica." }, 403);
-  }
+  if (!eu_prof?.ativo) return resposta({ erro: "Você não tem acesso ao WhatsApp da clínica." }, 403);
+  const atende = ["recepcao", "admin"].includes(eu_prof.funcao);
 
   let corpo: Json;
   try {
@@ -151,6 +150,9 @@ Deno.serve(async (req) => {
       configurado,
       recebimento: !!(Deno.env.get("WHATSAPP_APP_SECRET") && Deno.env.get("WHATSAPP_VERIFY_TOKEN")),
     });
+  }
+  if (["texto", "retomar", "lembretes"].includes(corpo.acao) && !atende) {
+    return resposta({ erro: "Quem responde o WhatsApp é a recepção. Você pode acompanhar as conversas, mas não enviar." }, 403);
   }
   if (!configurado) {
     return resposta({ erro: "O WhatsApp ainda não foi ligado: faltam os dados da conta da Meta (token e número)." }, 503);
@@ -201,7 +203,6 @@ Deno.serve(async (req) => {
 
   // ---------- Lembretes do dia ----------
   if (corpo.acao === "lembretes") {
-    if (!["recepcao", "admin"].includes(eu_prof.funcao)) return resposta({ erro: "Só a recepção e a administração enviam lembretes." }, 403);
     const dia = String(corpo.data ?? "");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return resposta({ erro: "Data inválida." }, 400);
     const modelo = await lerModelo(db, "lembrete_consulta");

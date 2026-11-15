@@ -258,3 +258,16 @@ cartão) é feita pela dona.
 - Envio automático diário dos lembretes (hoje é um botão, de propósito: cada lembrete custa e a recepção confere antes).
 - Guardar fotos/documentos recebidos no Storage (hoje ficam na Meta por ~30 dias) e anexar à ficha do paciente.
 - Avisar a sessão de migração: `pacientes` ganhou `whatsapp_autorizado` e `whatsapp_autorizado_em` (opcionais).
+
+### 15/11/2026 (mais tarde) — quem vê e quem atende (migração 0014)
+- **Decisão da dona:** "Quem usa para atender o cliente é a recepção, mas todos devem poder ver as conversas, até
+  para ajudar a gerir o negócio."
+- **Migração 0014 `whatsapp_todos_veem`** (aplicada): conversas, mensagens e modelos são lidos por médico,
+  enfermagem, recepção, admin **e faturamento**. Mexer na conversa (marcar lida, ligar paciente, arquivar,
+  responsável) só recepção e admin, para quem só olha não zerar as não lidas da recepção. Testado no banco real dentro
+  de uma transação desfeita: faturamento e médico veem e não alteram; recepção altera.
+- **whatsapp-enviar (versão 2):** `estado` e `midia` para toda a equipe ativa; `texto`, `retomar` e `lembretes` só
+  recepção e admin.
+- Botão 💬 WhatsApp da ficha aparece para todos. A tela `/whatsapp` está com a sessão "Interface de comunicação
+  WhatsApp" (session_01RxZddpBY3PXj2AGWj8jLji): ela acrescenta responsável, Realtime (migração 0013_whatsapp_tela),
+  contador de não lidas e ficha ao lado; combinado que o menu fica para todos e os botões de enviar só para recepção/admin.
