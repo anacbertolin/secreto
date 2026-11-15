@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase, msgErro } from "../lib/supabase";
 import { EvolucaoPaciente } from "../components/Evolucao";
 import { CirurgiasPaciente } from "./Cirurgias";
+import { CompararExames } from "../components/CompararExames";
 import type { PacienteResumo } from "../components/ui";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Etiqueta } from "../components/ui";
@@ -212,14 +213,22 @@ function ExamesPaciente({ pacienteId }: { pacienteId: string }) {
     await supabase.from("exames_realizados").select("id, exame, olho, status, criado_em, laudado_em, conclusao").eq("paciente_id", pacienteId).order("criado_em", { ascending: false }),
   ) as { id: string; exame: string; olho: string | null; status: string; criado_em: string; laudado_em: string | null; conclusao: string | null }[], [pacienteId]);
   const nav = useNavigate();
+  const [marcados, setMarcados] = useState<string[]>([]);
+  const [comparar, setComparar] = useState(false);
+  const alternar = (id: string) => setMarcados((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m.slice(-1), id]));
   return (
     <div className="painel rolagem">
       <Aviso>{erro}</Aviso>
+      <div className="linha entre" style={{ marginBottom: 8 }}>
+        <span className="muted pequeno">Marque dois exames para ver lado a lado (ex.: OCT de hoje × OCT anterior).</span>
+        <button className="mini primario" disabled={marcados.length !== 2} onClick={() => setComparar(true)}>🔀 Comparar ({marcados.length}/2)</button>
+      </div>
       <table className="tabela">
-        <thead><tr><th>Data</th><th>Exame</th><th>Olho</th><th>Situação</th><th>Conclusão</th></tr></thead>
+        <thead><tr><th></th><th>Data</th><th>Exame</th><th>Olho</th><th>Situação</th><th>Conclusão</th></tr></thead>
         <tbody>
           {(dados ?? []).map((e) => (
             <tr key={e.id} className="clicavel" onClick={() => nav(`/exames/${e.id}`)}>
+              <td onClick={(ev) => ev.stopPropagation()}><input type="checkbox" aria-label="Marcar para comparar" checked={marcados.includes(e.id)} onChange={() => alternar(e.id)} /></td>
               <td>{fmtData(e.criado_em)}</td><td>{e.exame}</td><td>{e.olho ?? "—"}</td>
               <td><Etiqueta cor={STATUS_EXAME[e.status].cor}>{STATUS_EXAME[e.status].rotulo}</Etiqueta></td>
               <td className="pequeno">{e.conclusao ?? ""}</td>
@@ -228,6 +237,7 @@ function ExamesPaciente({ pacienteId }: { pacienteId: string }) {
         </tbody>
       </table>
       {dados?.length === 0 && <div className="vazio">Nenhum exame.</div>}
+      {comparar && <CompararExames exames={(dados ?? []).filter((e) => marcados.includes(e.id))} aoFechar={() => setComparar(false)} />}
     </div>
   );
 }
