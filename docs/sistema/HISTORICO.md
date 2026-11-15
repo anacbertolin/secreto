@@ -522,3 +522,22 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
   verde, preto, amarelo, roxo), espessuras, desfazer, limpar; mouse, dedo e caneta.
 - **Comparar exames** (sem mudança no banco): na ficha do paciente → aba Exames, marcar 2 e "🔀 Comparar" mostra imagens/PDF e
   laudo lado a lado (`app/src/components/CompararExames.tsx`).
+
+## 15/11/2026 — Assistente do WhatsApp pelo plano do Claude (migração 0019)
+- **Decisão da dona:** não usar chave de API; usar o **plano do Claude** da conta, por **tarefa agendada** (como ela já
+  faz em outro sistema). Modelo: **Sonnet 5.5**. A dona está de acordo com o envio do texto mascarado.
+- **Migração 0019 `whatsapp_extrator_plano_claude`** (aplicada): a lógica saiu da função Edge e foi para o banco.
+  `whatsapp_extrator_preparar(n)` separa até n conversas paradas e devolve instruções + referências + texto já mascarado
+  (`interno.mascarar`); `whatsapp_extrator_gravar(conversa, ate, json, modelo)` confere o formato e aplica as mesmas
+  regras (`interno.extrator_decidir`: paciente, horário próprio ou padrão, bloqueio, já marcado, cria cadastro e marca
+  juntos — se a marcação falhar, o cadastro é desfeito); `whatsapp_extrator_falhou`, `whatsapp_extrator_concluir_rodada`
+  (resumo na tela). Só a chave de serviço / dono do banco executa. O agendador pg_cron antigo foi **desligado**.
+  A função Edge `whatsapp-extrator` ficou parada (serve se um dia usarem chave de API).
+- **Tela:** Configuração mostra "última passagem" e o resumo da rodada; não pede mais chave.
+  Privacidade: orientar a deixar desligado "Ajudar a melhorar o Claude" na conta usada.
+- **Testes** (banco local com todas as migrações + Supabase simulado): preparar/gravar ponta a ponta e 12 casos de
+  agenda (novo paciente, horário ocupado sem deixar cadastro, sábado fora do padrão, família no mesmo número, nome da
+  filha, homônimo com/sem nascimento, já marcado, bloqueio, remarcar, horário próprio fora/dentro). Banco real: funções
+  criadas, agendador antigo removido, equipe sem permissão de chamar as funções, advisors sem aviso novo desta parte.
+- **Tarefa agendada:** texto em `docs/sistema/assistente-tarefa-agendada.md`. Criação **aguardando autorização da dona**
+  (o modo automático da sessão bloqueou a criação sem o "pode criar" dela).

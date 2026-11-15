@@ -125,9 +125,9 @@
 - **WhatsApp (API oficial da Meta, 15/11/2026):** migração 0012, funções Edge `whatsapp-webhook` (sem login, protegida
   pela assinatura da Meta) e `whatsapp-enviar`, tela `/whatsapp`. Segredos `WHATSAPP_*` ficam só no Supabase (nunca no
   código nem no chat). Toda a equipe (inclusive faturamento) VÊ as conversas; só recepção e admin respondem (decisão da dona, 15/11). Estado e passos para ligar: `docs/sistema/HISTORICO.md` (15/11).
-- **Assistente do WhatsApp (15/11/2026):** migrações 0016–0018, função Edge `whatsapp-extrator` (pg_cron a cada 10 min),
+- **Assistente do WhatsApp (15/11/2026):** migrações 0016–0019. Roda pelo **plano do Claude** (tarefa agendada de hora em hora,
+  texto em `docs/sistema/assistente-tarefa-agendada.md`) chamando funções do banco; a função Edge `whatsapp-extrator` ficou parada;
   tela `/whatsapp/assistente`. Lê as conversas com IA (Claude), marca na agenda o que foi combinado, avalia o atendimento
-  e monta a base do futuro robô (`bot_conhecimento`). Modelo (padrão Sonnet 5.5) e horário padrão da clínica são
-  parâmetros na tela. Nasce **desligado**; precisa do segredo `ANTHROPIC_API_KEY`
-  (a dona já deu o aval para o envio do texto mascarado à Anthropic). Detalhes: `docs/sistema/HISTORICO.md` (15/11, Assistente).
+  e monta a base do futuro robô (`bot_conhecimento`). Modelo Sonnet 5.5; horário padrão da clínica é parâmetro na tela.
+  Nasce **desligado** (liga na tela). Não usa chave de API (decisão da dona); ela já deu o aval para o envio do texto mascarado. Detalhes: `docs/sistema/HISTORICO.md` (15/11, Assistente).
 - Dados de teste do v1 apagados em 14/11/2026 (com autorização). A função Edge `limpeza-teste` está desativada (responde 410).

@@ -15,20 +15,6 @@ import { TIPOS_AGENDA, fmtData, fmtDataHora, isoDia } from "../lib/util";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Linha = Record<string, any>;
 
-/** Chama a função "whatsapp-extrator" (mensagem de erro em português) */
-async function extrator<T = Linha>(acao: string, dados: Record<string, unknown> = {}): Promise<T> {
-  const { data, error } = await supabase.functions.invoke("whatsapp-extrator", { body: { acao, ...dados } });
-  if (error) {
-    let msg = error.message;
-    try {
-      const j = await (error as { context?: Response }).context?.json();
-      if (j?.erro) msg = j.erro;
-    } catch { /* sem corpo */ }
-    throw new Error(msg);
-  }
-  return data as T;
-}
-
 export const CATEGORIAS_BOT: Record<string, string> = {
   agendamento: "Agendamento", convenios: "Convênios", precos_pagamento: "Preços e pagamento",
   endereco_horarios: "Endereço e horários", exames_preparo: "Exames e preparo", resultados_laudos: "Resultados e laudos",
@@ -462,17 +448,15 @@ function EditarResposta({ item, aoFechar, aoSalvar }: { item: Linha; aoFechar: (
 function Configuracao() {
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro" | "info"; texto: string } | null>(null);
   const d = useCarregar(async () => {
-    const [cfg, estado, erros] = await Promise.all([
+    const [cfg, erros] = await Promise.all([
       supabase.from("whatsapp_extrator_config").select("*").eq("id", 1).single().then(ok),
-      extrator("estado").catch((e) => ({ erro: (e as Error).message })),
       supabase.from("whatsapp_extrator_estado").select("conversa_id, tentativas, ultimo_erro, whatsapp_conversas(nome_contato)").gt("tentativas", 0).limit(20).then(ok),
     ]);
-    return { cfg: cfg as Linha, estado: estado as Linha, erros: erros as Linha[] };
+    return { cfg: cfg as Linha, erros: erros as Linha[] };
   }, []);
   const [f, setF] = useState<Linha | null>(null);
   if (d.carregando && !d.dados) return <Carregando />;
   const cfg = f ?? d.dados?.cfg;
-  const estado = d.dados?.estado ?? {};
   if (!cfg) return <Aviso>{d.erro}</Aviso>;
 
   async function salvar(mudanca: Linha) {
@@ -487,40 +471,24 @@ function Configuracao() {
     }).eq("id", 1);
     setMsg(error ? { tipo: "erro", texto: msgErro(error) } : { tipo: "ok", texto: "Salvo." });
   }
-  async function rodarAgora() {
-    setMsg(null);
-    try {
-      const r = await extrator("rodar");
-      setMsg({ tipo: "info", texto: r.mensagem ?? "Pronto." });
-    } catch (e) {
-      setMsg({ tipo: "erro", texto: (e as Error).message });
-    }
-  }
-
   return (
     <>
       <div className="painel">
         <h2>Situação</h2>
         {msg && <Aviso tipo={msg.tipo}>{msg.texto}</Aviso>}
-        {estado.erro && <Aviso>{estado.erro}</Aviso>}
         <ul>
-          <li>Chave da IA: {estado.ia_configurada ? <Etiqueta cor="verde">configurada</Etiqueta> : <Etiqueta cor="vermelho">falta configurar</Etiqueta>}</li>
           <li>Assistente: {cfg.ligado ? <Etiqueta cor="verde">ligado</Etiqueta> : <Etiqueta cor="cinza">desligado</Etiqueta>}</li>
-          {estado.com_erro > 0 && <li>Conversas com erro na análise: <b>{estado.com_erro}</b></li>}
+          <li>Quem analisa: tarefa agendada do Claude, no plano da clínica (Claude Sonnet 5.5), de hora em hora das 7h às 20h</li>
+          <li>Última passagem: {cfg.ultima_execucao ? fmtDataHora(cfg.ultima_execucao) : "ainda não rodou"}
+            {cfg.ultimo_resumo && <div className="muted pequeno">{cfg.ultimo_resumo}</div>}</li>
+          {(d.dados?.erros ?? []).length > 0 && <li>Conversas com erro na análise: <b>{d.dados!.erros.length}</b></li>}
         </ul>
-        {!estado.ia_configurada && (
-          <Aviso tipo="alerta">
-            Para funcionar, o assistente precisa de uma chave da IA (Anthropic/Claude), cadastrada no Supabase como <b>ANTHROPIC_API_KEY</b>.
-            Peça ajuda ao Claude para cadastrar: a chave é digitada no painel do Supabase, nunca no chat.
-          </Aviso>
-        )}
         <div className="linha">
-          <button className={cfg.ligado ? "" : "primario"} disabled={!estado.ia_configurada && !cfg.ligado} onClick={() => salvar({ ligado: !cfg.ligado })}>
+          <button className={cfg.ligado ? "" : "primario"} onClick={() => salvar({ ligado: !cfg.ligado })}>
             {cfg.ligado ? "Desligar o assistente" : "Ligar o assistente"}
           </button>
-          <button disabled={!cfg.ligado || !estado.ia_configurada} onClick={rodarAgora}>Analisar as conversas paradas agora</button>
         </div>
-        <p className="muted pequeno">Ligado, ele confere a cada 10 minutos as conversas que estão paradas há {cfg.silencio_minutos} minutos ou mais.</p>
+        <p className="muted pequeno">Ligado, a cada passagem ele analisa as conversas que estão paradas há {cfg.silencio_minutos} minutos ou mais.</p>
       </div>
 
       <div className="painel">
@@ -540,13 +508,6 @@ function Configuracao() {
           <Campo rotulo="Esperar a conversa parar por">
             <select value={String(cfg.silencio_minutos)} onChange={(e) => salvar({ silencio_minutos: e.target.value })}>
               {[10, 20, 30, 60].map((v) => <option key={v} value={v}>{v} minutos</option>)}
-            </select>
-          </Campo>
-          <Campo rotulo="Inteligência artificial usada">
-            <select value={cfg.modelo} onChange={(e) => salvar({ modelo: e.target.value })}>
-              <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (recomendado: bom e econômico)</option>
-              <option value="claude-opus-5-5">Claude Opus 5.5 (mais caprichado, custa o dobro)</option>
-              <option value="claude-haiku-5-5">Claude Haiku 5.5 (mais barato, menos preciso)</option>
             </select>
           </Campo>
         </div>
@@ -608,9 +569,11 @@ function Configuracao() {
       <div className="painel">
         <h2>Privacidade</h2>
         <p className="pequeno">
-          Para entender as conversas, o texto das mensagens é enviado à IA (Anthropic, empresa nos Estados Unidos) e a resposta volta para o
+          Para entender as conversas, o texto das mensagens é lido pelo Claude (Anthropic, empresa nos Estados Unidos), dentro do plano da clínica, e a resposta volta para o
           nosso banco, no Brasil. Antes de enviar, o sistema troca CPF, telefones, e-mails e números de carteirinha por marcadores e não manda
-          a ficha nem o prontuário do paciente (só o primeiro nome). A Anthropic não usa esses dados para treinar a IA. Os resultados ficam guardados só aqui no sistema.
+          a ficha nem o prontuário do paciente (só o primeiro nome). Os resultados ficam guardados só aqui no sistema. Importante: na conta do Claude usada pela clínica, deixe
+          <b> desligada</b> a opção “Ajudar a melhorar o Claude” (claude.ai → Configurações → Privacidade), para que as conversas não sejam usadas
+          no treino da IA.
         </p>
       </div>
     </>
