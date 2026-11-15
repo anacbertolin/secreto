@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /busca/
+
+Sitemap: https://consumedolhos.com.br/sitemap.xml

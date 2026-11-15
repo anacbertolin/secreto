@@ -55,11 +55,14 @@
   - Manter a cópia exata; não "melhorar" nada sem ela pedir.
   - Nome do médico: manter **"Dr. Max Oliveira Guimarães"**. Testamos trocar para o apelido
     "Dr. Golozão" e a equipe NÃO aprovou — revertido. Não usar apelidos de médicos no site.
-- **Defeitos que já existem no site original (copiados de propósito, ainda não corrigidos):**
-  páginas rascunho públicas (Homez, Página de exemplo, Procedimentos2, Exames2, Video Background, Link);
-  texto de código quebrado "[vc_column…]" visível na página Equipe; botões nas páginas Equipe e
-  Convênios apontando para `homologacao.consumedolhos.com.br`; imagem `assist.png` inexistente.
-  Oferecer correção quando a dona quiser.
+- **Defeitos do site original — CORRIGIDOS em 2026-11-15** (pedido da dona; `site/ferramentas/corrigir_defeitos.py`):
+  rascunhos removidos (Homez, Página de exemplo, Procedimentos2, Exames2, Video Background, Link — o Caddyfile
+  redireciona); código "[vc_…]" removido (Equipe, A clínica, Contato, Convênios — Contato deixou de ficar
+  largo demais no celular); botões da A clínica viraram links reais para /equipe/ e /convenios/; títulos
+  Missão/Visão/Valores arrumados; quadro vazio (assist.png) tirado do carrossel de convênios;
+  "A Hospital…" → "O Hospital…"; criados `sitemap.xml` e `robots.txt`.
+- **Perguntas em aberto para a dona:** qual convênio era o logo "assist" (para recolocar no carrossel);
+  o carrossel da página inicial tem Select e GEAP, que não aparecem na página Convênios — qual lista vale?
 
 ## Próximos passos (pendentes)
 1. Dona comparar o site provisório com o original e aprovar.

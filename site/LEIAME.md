@@ -30,4 +30,5 @@ Ela roda no Railway, no serviço **site**.
 ## Ordem para refazer o site do zero
 1. `python3 ferramentas/preparar_copia.py <download>/consumedolhos.com.br ferramentas/entrada public`
 2. `python3 ferramentas/trocar_marca.py public`
-3. `python3 ferramentas/otimizar_imagens.py public`
+3. `python3 ferramentas/corrigir_defeitos.py public`  (rascunhos, código quebrado, carrossel, sitemap)
+4. `python3 ferramentas/otimizar_imagens.py public`

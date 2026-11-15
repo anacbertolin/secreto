@@ -37,6 +37,7 @@ TROCAS = [
     ("Consumed Clínica de Olhos", N),
     # frases com artigo
     ("A\\u00a0Consumed\\u00a0", f"O\\u00a0{N}\\u00a0"),
+    ("A\xa0Consumed\xa0", f"O\xa0{N}\xa0"),  # espaço "duro" do editor (ex.: página Equipe)
     ("A Consumed ", f"O {N} "),
     ("a Consumed ", f"o {N} "),
     ("à Consumed", f"ao {N}"),

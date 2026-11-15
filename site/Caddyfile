@@ -19,6 +19,17 @@
 	header @lsVary Content-Type application/json
 	respond @lsVary "{}" 200
 
+	# Páginas de rascunho do site antigo (removidas em 2026-11-15): manda para a página certa
+	redir /procedimentos2 /procedimentos/ 301
+	redir /procedimentos2/ /procedimentos/ 301
+	redir /exames2 /exames/ 301
+	redir /exames2/ /exames/ 301
+	@rascunhos path /link /link/ /homez /homez/ /pagina-exemplo /pagina-exemplo/ /video-background /video-background/
+	redir @rascunhos / 301
+	# Mapa do site antigo do WordPress -> mapa novo
+	@mapaAntigo path /wp-sitemap.xml /wp-sitemap*.xml /sitemap_index.xml
+	redir @mapaAntigo /sitemap.xml 301
+
 	# Endereços que só existiam no WordPress
 	@wp path /wp-admin* /wp-login.php /xmlrpc.php /wp-json* /wp-comments-post.php /feed* */feed/
 	respond @wp 404
