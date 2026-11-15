@@ -71,6 +71,7 @@ const VAZIO: Record<string, string> = {
   profissao: "", telefone: "", telefone_secundario: "", email: "", cep: "", logradouro: "", numero: "",
   complemento: "", bairro: "", cidade: "", uf: "", responsavel_nome: "", responsavel_telefone: "",
   responsavel_parentesco: "", convenio_id: "", plano_id: "", convenio_carteirinha: "", prontuario_anterior: "", convenio_validade: "", observacoes: "",
+  whatsapp_autorizado: "",
 };
 
 export function PacienteEditar() {
@@ -89,6 +90,7 @@ export function PacienteEditar() {
       const d = pac.dados as Record<string, unknown>;
       const x: Record<string, string> = {};
       for (const k of Object.keys(VAZIO)) x[k] = (d[k] as string) ?? "";
+      x.whatsapp_autorizado = d.whatsapp_autorizado === true ? "sim" : d.whatsapp_autorizado === false ? "nao" : "";
       setF(x);
     }
   }, [pac.dados]);
@@ -111,12 +113,13 @@ export function PacienteEditar() {
     if (f.nome.trim().length < 3) return setErro("Informe o nome completo.");
     if (f.cpf && !cpfValido(f.cpf)) return setErro("CPF inválido. Confira os números.");
     if (f.cns && soNumeros(f.cns).length !== 15) return setErro("O Cartão SUS (CNS) tem 15 números.");
-    const dados: Record<string, string | null> = {};
+    const dados: Record<string, string | boolean | null> = {};
     for (const k of Object.keys(VAZIO)) dados[k] = f[k]?.trim() ? f[k].trim() : null;
     dados.nome = f.nome.trim().toUpperCase();
     dados.sexo = f.sexo || "nao_informado";
-    for (const k of ["cpf", "cns", "telefone", "telefone_secundario", "responsavel_telefone", "cep"]) dados[k] = dados[k] ? soNumeros(dados[k]!) : null;
-    if (dados.uf) dados.uf = dados.uf.toUpperCase().slice(0, 2);
+    for (const k of ["cpf", "cns", "telefone", "telefone_secundario", "responsavel_telefone", "cep"]) dados[k] = dados[k] ? soNumeros(dados[k] as string) : null;
+    if (dados.uf) dados.uf = (dados.uf as string).toUpperCase().slice(0, 2);
+    dados.whatsapp_autorizado = f.whatsapp_autorizado === "sim" ? true : f.whatsapp_autorizado === "nao" ? false : null;
     setSalvando(true);
     const r = id
       ? await supabase.from("pacientes").update(dados).eq("id", id).select("id").single()
@@ -165,6 +168,13 @@ export function PacienteEditar() {
         <div className="grade g4">
           <Campo rotulo="Telefone / WhatsApp"><input value={fmtTelefone(f.telefone)} onChange={set("telefone")} inputMode="tel" /></Campo>
           <Campo rotulo="Outro telefone"><input value={fmtTelefone(f.telefone_secundario)} onChange={set("telefone_secundario")} inputMode="tel" /></Campo>
+          <Campo rotulo="Aceita receber mensagens pelo WhatsApp?" className="span2">
+            <select value={f.whatsapp_autorizado} onChange={set("whatsapp_autorizado")}>
+              <option value="">Ainda não perguntado</option>
+              <option value="sim">Sim, aceita (lembretes e avisos da clínica)</option>
+              <option value="nao">Não aceita</option>
+            </select>
+          </Campo>
           <Campo rotulo="E-mail" className="span2"><input type="email" value={f.email} onChange={set("email")} /></Campo>
           <Campo rotulo="CEP (preenche o endereço)"><input value={f.cep} onChange={set("cep")} onBlur={buscarCEP} inputMode="numeric" /></Campo>
           <Campo rotulo="Rua / avenida" className="span2"><input value={f.logradouro} onChange={set("logradouro")} /></Campo>

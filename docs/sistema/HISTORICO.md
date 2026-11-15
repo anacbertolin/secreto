@@ -201,3 +201,60 @@ CEP 26255-140, tel. (21) 2667-0532. **O CNPJ ainda falta**: a dona precisa infor
   convênio/cidade, exames (realizados, laudados, horas até o laudo), produção por médico e diagnósticos mais
   frequentes. Anônimos não executam. Cada tabela exporta planilha e a página imprime.
 - Testado na cópia local (cálculos de espera/atraso conferidos; recepção não vê diagnósticos; anônimo bloqueado).
+
+---
+
+## 15/11/2026 — WhatsApp oficial (API da Meta) v1
+### Pedido da dona
+Enviar e receber WhatsApp pelo sistema. Recomendação aceita: **API oficial da Meta (WhatsApp Cloud API), direto,
+sem intermediário**, com um número brasileiro da clínica (chip novo ou fixo). Nada de Z-API/Evolution (não oficiais,
+risco de banimento e de LGPD). A parte da conta na Meta (Business Manager com o CNPJ, verificação da empresa, número,
+cartão) é feita pela dona.
+### O que entrou
+- **Migração 0012 `whatsapp`** (aplicada): `pacientes.whatsapp_autorizado` (null = não perguntado / true / false) +
+  `whatsapp_autorizado_em` (gatilho); `whatsapp_conversas` (uma por número; liga sozinha ao paciente quando o número
+  bate com UM paciente só — família com o mesmo celular fica para a recepção ligar); `whatsapp_mensagens`
+  (`wa_id` único: a Meta reenvia avisos e não duplica); `whatsapp_modelos` (lembrete_consulta, retomar_conversa;
+  nascem **desligados**); funções `whatsapp_receber`, `whatsapp_situacao`, `whatsapp_conversa`,
+  `whatsapp_paciente_do_numero` (só a chave de serviço executa) e `telefone_whatsapp` (celular → 55DDD9XXXXXXXX).
+- **RLS:** médico, enfermagem, recepção e admin LEEM conversas e mensagens; a equipe só pode mudar `nao_lidas`,
+  `paciente_id` e `arquivada` (permissão por coluna). Ninguém da equipe cria/apaga mensagens: só as funções Edge.
+  **Faturamento não vê** (pode haver conteúdo de saúde). Modelos: só admin altera (auditado).
+- **Funções Edge:** `whatsapp-webhook` (verify_jwt **false**, quem chama é a Meta; confere a assinatura
+  `X-Hub-Signature-256` com `WHATSAPP_APP_SECRET` e recusa tudo se o segredo não existir) e `whatsapp-enviar`
+  (verify_jwt true; ações `estado`, `texto` (só dentro das 24 h), `retomar` (modelo), `lembretes` (só recepção/admin;
+  `simular` conta antes), `midia` (baixa foto/áudio da Meta, ~30 dias)). Código em `supabase/functions/whatsapp-*`.
+- **Lembrete com botões:** payload `CONFIRMAR:<agendamento>` / `REMARCAR:<agendamento>`. "Confirmar" muda o
+  agendamento de `agendado` para `confirmado` (canal whatsapp) — só se o lembrete daquele agendamento foi mandado
+  para aquele mesmo número. Lembrete só vai para quem tem `whatsapp_autorizado = true` e celular válido; não repete.
+  Paciente que escreve SAIR/PARAR/STOP fica com `whatsapp_autorizado = false`.
+- **Telas:** menu **WhatsApp** (lista de conversas, conversa estilo WhatsApp, atualiza a cada 10 s, ver fotos/áudios,
+  ligar a paciente, arquivar, aviso da janela de 24 h + "Chamar o paciente de novo", botão **Lembretes de consulta**
+  com prévia dos números, **Modelos** com os textos para cadastrar na Meta). Cadastro do paciente ganhou
+  "Aceita receber mensagens pelo WhatsApp?". Ficha do paciente ganhou o botão 💬 WhatsApp.
+### Testes
+- Banco testado na cópia local (Postgres 16 + Supabase simulado): ligação do número com e sem o 9, família com o
+  mesmo número sem ligação automática, botão Confirmar, reenvio duplicado da Meta, botão de agendamento que não foi
+  mandado àquele número (ignorado), SAIR, situação não regride (lida → entregue), recepção não grava mensagem nem
+  muda telefone nem chama as funções internas, faturamento não vê, anônimo bloqueado, só admin liga modelos.
+- Webhook testado com avisos simulados da Meta (Deno): validação do endereço, assinatura falsa/ausente recusada,
+  texto, botão, foto com legenda, situações lida/falhou, recusa tudo sem a chave secreta.
+- Tela conferida no navegador com dados simulados (computador e celular). **Ainda sem teste com a Meta de verdade**
+  (falta a conta da dona).
+### Para ligar (falta a dona terminar a conta na Meta)
+1. Segredos no Supabase (Edge Functions → Secrets): `WHATSAPP_TOKEN` (token permanente de usuário do sistema),
+   `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` (frase combinada, 16+ letras).
+   Use a ferramenta `create_edge_function_secret` (a dona digita o valor no painel; o valor nunca passa pelo chat).
+2. Na Meta (app → WhatsApp → Configuração): URL de retorno
+   `https://ogflxjolbwrzayjtxvhj.supabase.co/functions/v1/whatsapp-webhook`, token de verificação = o mesmo
+   `WHATSAPP_VERIFY_TOKEN`; assinar o campo **messages**.
+3. Cadastrar os 2 modelos (texto em WhatsApp → Modelos, categoria Utilidade, pt_BR, nomes `lembrete_consulta` e
+   `retomar_conversa`; o lembrete tem 2 botões de resposta rápida: "Confirmar presença" e "Preciso remarcar").
+   Depois da aprovação, a admin liga cada modelo na tela.
+4. Testar: mandar "oi" do celular para o número da clínica → aparece na tela; responder; lembrete para um
+   agendamento de teste e tocar "Confirmar".
+### Pendências / ideias
+- Os textos dos modelos citam "Consumed Clínica de Olhos": ajustar se a marca mudar para "Hospital de Olhos da Baixada".
+- Envio automático diário dos lembretes (hoje é um botão, de propósito: cada lembrete custa e a recepção confere antes).
+- Guardar fotos/documentos recebidos no Storage (hoje ficam na Meta por ~30 dias) e anexar à ficha do paciente.
+- Avisar a sessão de migração: `pacientes` ganhou `whatsapp_autorizado` e `whatsapp_autorizado_em` (opcionais).

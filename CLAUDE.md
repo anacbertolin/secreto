@@ -111,4 +111,7 @@
   e-mail opcional para profissional inativo, auditoria pulada com `set app.migracao = 'on'`.
   Decisão da dona: o paciente mantém o MESMO nº de prontuário do Micrologos (carga com OVERRIDING SYSTEM VALUE + setval).
   A coluna `prontuario_anterior` fica disponível para outros números antigos, se necessário.
+- **WhatsApp (API oficial da Meta, 15/11/2026):** migração 0012, funções Edge `whatsapp-webhook` (sem login, protegida
+  pela assinatura da Meta) e `whatsapp-enviar`, tela `/whatsapp`. Segredos `WHATSAPP_*` ficam só no Supabase (nunca no
+  código nem no chat). Faturamento não vê conversas. Estado e passos para ligar: `docs/sistema/HISTORICO.md` (15/11).
 - Dados de teste do v1 apagados em 14/11/2026 (com autorização). A função Edge `limpeza-teste` está desativada (responde 410).
