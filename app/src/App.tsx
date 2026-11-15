@@ -19,6 +19,7 @@ import Procedimentos from "./pages/Procedimentos";
 import Relatorios from "./pages/Relatorios";
 import WhatsApp from "./pages/WhatsApp";
 import AssistenteWhatsApp from "./pages/AssistenteWhatsApp";
+import PainelTV from "./pages/PainelTV";
 import { useNaoLidas } from "./lib/whatsapp";
 
 interface ItemMenu { para: string; rotulo: string; icone: string; funcoes?: Funcao[]; grupo?: string }
@@ -73,6 +74,9 @@ export default function App() {
         </div>
       </div>
     );
+
+  // TV da sala de espera: tela cheia, sem menu
+  if (loc.pathname === "/painel-tv") return <PainelTV />;
 
   // Páginas de impressão ficam sem menu
   if (loc.pathname.startsWith("/imprimir/")) {

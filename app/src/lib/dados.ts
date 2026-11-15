@@ -17,6 +17,9 @@ export interface Agendamento {
   convenio_id: string | null; local_id: string | null; sala: string | null; observacoes: string | null;
   motivo_cancelamento: string | null; primeira_vez: boolean; encaixe: boolean; canal_confirmacao: string | null;
   confirmado_em: string | null; chegada_em: string | null; chamado_em: string | null; concluido_em: string | null;
+  // fluxo dentro da clínica (migração 0020)
+  etapa?: string | null; etapa_em?: string | null; dilatacao_inicio_em?: string | null; dilatacao_minutos?: number | null;
+  dilatacao_colirio?: string | null; dilatacao_olho?: string | null; chamada_em?: string | null; chamada_local?: string | null;
   pacientes?: { id: string; nome: string; nome_social: string | null; numero_prontuario: number; data_nascimento: string | null; telefone: string | null; convenio_id: string | null };
 }
 

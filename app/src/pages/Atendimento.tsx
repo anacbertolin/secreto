@@ -4,6 +4,7 @@ import { supabase, msgErro } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Etiqueta } from "../components/ui";
 import { HistoricoSaude } from "../components/Clinico";
+import { BarraFluxoAtendimento } from "../components/Fluxo";
 import type { AtendimentoCompleto, Ctx } from "../components/pep/comum";
 import { CamposAtendimento, PreConsulta, Refracao, ExameOftalmologico } from "../components/pep/SecoesExame";
 import { Diagnosticos, ReceitaOculos, ReceitaMedicamentos, PedidosExame, Documentos, Adendos } from "../components/pep/SecoesConduta";
@@ -82,6 +83,8 @@ export default function Atendimento() {
       <Aviso>{erro}</Aviso>
       {aberto && !ctx.editaMedico && eu?.funcao === "medico" && <Aviso tipo="info">Este atendimento é de outro médico: você pode consultar e preencher pré-consulta e refração.</Aviso>}
       {aberto && eu?.funcao === "enfermagem" && <Aviso tipo="info">Preencha a <b>pré-consulta</b> e a <b>refração</b>. As demais abas são preenchidas pelo médico.</Aviso>}
+
+      {aberto && atend.agendamento_id && <BarraFluxoAtendimento agendamentoId={atend.agendamento_id} />}
 
       <div className="pep">
         <div className="painel resumo-pac">
