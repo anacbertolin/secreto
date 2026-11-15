@@ -654,3 +654,23 @@ Respostas: (1) IA do prontuário **aprovada**; (2) receita digital pela **Memed*
 - Integração direta com os aparelhos (pasta de rede/DICOM/XML automático) fica para a **fase 2** (decisão da dona).
 - Teste no navegador (dados simulados): 4 arquivos → bloqueia o que falta paciente/exame; 3 enviados viram 2 exames de OCT
   (OD e OE) + 1 de campo visual, todos "aguardando laudo", com os 3 anexos.
+
+### Receita digital Memed (migração 0030 + função Edge `memed-token`, aplicadas) — DESLIGADA até o teste real
+- Seguindo a documentação pública da Memed (doc.memed.com.br; `docs.memed.com.br` é bloqueado pela rede da sessão):
+  - **`profissionais_dados_pessoais`** (CPF, nascimento, sexo — exigidos pela Memed/RDC 1000/25). Fora de `profissionais` porque a
+    equipe toda lê aquela tabela; aqui só admin e o próprio. Auditoria sem o CPF no texto. Campos na tela Equipe (só médicos).
+  - **`memed_config`** (ligado, ambiente homologação/produção, CNES, nome do local) — tela **Cadastros → 💊 Receita digital
+    (Memed)** (`app/src/pages/ConfigMemed.tsx`), com a lista de médicos e o que falta no cadastro de cada um.
+  - **`memed_prescricoes`**: cópia de cada receita emitida (evento `prescricaoImpressa`) e marcação de excluída
+    (`prescricaoExcluida`) — exigência da Memed para liberar a produção. Médico registra em nome próprio; só muda `excluida`.
+  - Função **`memed-token`** (verify_jwt; código em `supabase/functions/memed-token/`): com o login do médico, consulta/cadastra o
+    prescritor na Memed (`external_id = consumed-<id do profissional>`) e devolve o token + endereço do script. Chaves: segredos
+    `MEMED_API_KEY`/`MEMED_SECRET_KEY`; em homologação usa o par **público** de testes que a Memed publica.
+  - Tela: aba **Receitas** do atendimento → **"Prescrever na Memed"** (`app/src/components/pep/Memed.tsx`): script carregado uma vez
+    (id fixo), eventos registrados uma vez em `core:moduleInit`, `setWorkplace` (nome/CNES/endereço), `setPaciente` (dados do
+    paciente; `idExterno` = id do paciente) e `module.show`. A receita interna do sistema continua (médicos sem certificado).
+- **Não testado com a Memed de verdade:** o ambiente de homologação da Memed fica fora do ar à noite e nos fins de semana (15/11 foi
+  domingo — respondeu 503). Testado com uma Memed simulada no navegador (comandos enviados e receita guardada).
+- **Para usar:** (1) admin preenche CPF/nascimento dos médicos na Equipe; (2) liga em Receita digital (ambiente de teste) e testa
+  num dia útil; (3) dona pede as chaves de produção à Memed (formulário "Autorização para Credenciais de Produção"), cadastra
+  `MEMED_API_KEY`/`MEMED_SECRET_KEY` no Supabase, informa o CNES e troca para Produção.

@@ -9,6 +9,7 @@ import { EvolucaoPaciente } from "../components/Evolucao";
 import { BotaoProtocolo } from "../components/Protocolos";
 import { BotaoResumoIA } from "../components/ResumoIA";
 import { DesenhoOlhos } from "../components/pep/Desenho";
+import { PrescricaoMemed } from "../components/pep/Memed";
 import type { AtendimentoCompleto, Ctx } from "../components/pep/comum";
 import { CamposAtendimento, PreConsulta, Refracao, ExameOftalmologico } from "../components/pep/SecoesExame";
 import { Diagnosticos, ReceitaOculos, ReceitaMedicamentos, PedidosExame, Documentos, Adendos } from "../components/pep/SecoesConduta";
@@ -136,6 +137,7 @@ export default function Atendimento() {
               <h2>Óculos</h2>
               <ReceitaOculos ctx={ctx} />
               <h2 style={{ marginTop: 24 }}>Medicamentos</h2>
+              <PrescricaoMemed ctx={ctx} />
               <ReceitaMedicamentos ctx={ctx} />
             </>
           )}
