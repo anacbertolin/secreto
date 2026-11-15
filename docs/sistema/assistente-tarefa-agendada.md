@@ -8,7 +8,8 @@ não uma chave de API. A tarefa abre uma sessão nova a cada hora e conversa com
 - **Nome:** Assistente do WhatsApp — análise das conversas
 - **Quando:** `CRON_TZ=America/Sao_Paulo 0 7-20 * * *` (de hora em hora, 7h às 20h), sessão nova a cada vez
 - **Modelo:** `claude-sonnet-5-5`
-- **Conectores:** só Supabase
+- **Id:** `trig_01LZifj2S2htrZMt1RXH5Hkc`
+- **Conectores:** Supabase (ligado pela dona no claude.ai; o Railway não é necessário)
 - **Avisos:** nenhum (o resumo de cada rodada aparece na tela Configuração do assistente)
 
 ## Texto da tarefa
