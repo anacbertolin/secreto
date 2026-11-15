@@ -124,7 +124,7 @@ export default function WhatsApp() {
       {estado.dados && configurado && !estado.dados.recebimento && (
         <Aviso tipo="alerta">O envio está ligado, mas o recebimento ainda não: falta a chave secreta do aplicativo da Meta.</Aviso>
       )}
-      {semConversa && (
+      {semConversa && pode("recepcao", "admin") && (
         <Aviso tipo="info">
           Este paciente ainda não tem conversa pelo WhatsApp.{" "}
           <button className="mini primario" onClick={() => comecarComPaciente(semConversa)}>Enviar a primeira mensagem</button>{" "}
@@ -203,7 +203,9 @@ function quandoCurto(d: string): string {
 // ---------------------------------------------------------------------------
 function Chat(props: { conversa: Conversa; aoMudar: () => void; aoVoltar: () => void }) {
   const c = props.conversa;
-  const { eu } = useAuth();
+  const { eu, pode } = useAuth();
+  // Decisão da dona (15/11): todos da equipe veem as conversas; só a recepção e a administração respondem.
+  const podeResponder = pode("recepcao", "admin");
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
@@ -229,9 +231,9 @@ function Chat(props: { conversa: Conversa; aoMudar: () => void; aoVoltar: () => 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [c.id]);
 
-  // Marca como lida ao abrir / quando chegam novas
+  // Marca como lida ao abrir / quando chegam novas (só quem responde; médico/enfermagem olhando não "some" com o aviso)
   useEffect(() => {
-    if (c.nao_lidas > 0) {
+    if (c.nao_lidas > 0 && podeResponder) {
       supabase.from("whatsapp_conversas").update({ nao_lidas: 0 }).eq("id", c.id).then(() => props.aoMudar());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -299,15 +301,15 @@ function Chat(props: { conversa: Conversa; aoMudar: () => void; aoVoltar: () => 
           </div>
         </div>
         <div className="linha">
-          {c.responsavel_id === eu?.id ? (
+          {!podeResponder ? null : c.responsavel_id === eu?.id ? (
             <button className="mini" title="Deixar a conversa livre para outra pessoa" onClick={() => mudar({ responsavel_id: null })}>👤 Com você · soltar</button>
           ) : (
             <button className="mini" onClick={() => eu && mudar({ responsavel_id: eu.id })}>
               {c.responsavel_id ? `👤 Com ${nomeEquipe(c.responsavel_id) ?? "outra pessoa"} · assumir` : "✋ Assumir"}
             </button>
           )}
-          <button className="mini" onClick={() => setLigar(true)}>{c.paciente_id ? "Trocar paciente" : "🔗 Ligar a um paciente"}</button>
-          <button className="mini" onClick={() => mudar({ arquivada: !c.arquivada })}>{c.arquivada ? "Desarquivar" : "Arquivar"}</button>
+          {podeResponder && <button className="mini" onClick={() => setLigar(true)}>{c.paciente_id ? "Trocar paciente" : "🔗 Ligar a um paciente"}</button>}
+          {podeResponder && <button className="mini" onClick={() => mudar({ arquivada: !c.arquivada })}>{c.arquivada ? "Desarquivar" : "Arquivar"}</button>}
         </div>
       </div>
 
@@ -326,7 +328,9 @@ function Chat(props: { conversa: Conversa; aoMudar: () => void; aoVoltar: () => 
       </div>
 
       <Aviso>{erro}</Aviso>
-      {aberta ? (
+      {!podeResponder ? (
+        <div className="aviso info">Só a recepção responde pelo WhatsApp. Se precisar falar com este paciente, peça à recepção.</div>
+      ) : aberta ? (
         <div className="wa-escrever">
           <textarea
             value={texto}

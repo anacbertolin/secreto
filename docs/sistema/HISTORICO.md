@@ -272,7 +272,8 @@ Feito por cima da tela da sessão do WhatsApp (PR anacbertolin/secreto#6), combi
 - **Aviso de mensagem nova:** contador de não lidas no menu e no título da aba, com som e aviso do computador
   (botão "🔔 Avisar quando chegar mensagem"). Fica em `useNaoLidas` (`app/src/lib/whatsapp.ts`).
 - **Ficha ao lado da conversa** (telas largas): dados do paciente, se aceita WhatsApp e os próximos agendamentos.
-- **Quem usa:** decisão da dona (15/11): quem atende o WhatsApp é a **recepção**. O menu, a rota e o botão 💬 da ficha
-  ficam só para recepção e administração. O banco continua deixando médico e enfermagem lerem; restringir lá também
-  se a dona quiser.
+- **Quem usa:** decisão da dona (15/11): **todos da equipe veem as conversas; só a recepção e a administração
+  respondem.** Médico e enfermagem abrem a tela só para ler: não escrevem, não assumem, não arquivam, não ligam a
+  paciente e, ao abrir, a conversa NÃO é marcada como lida (para não sumir o aviso da recepção). O contador e o som
+  de mensagem nova aparecem só para recepção e administração. Fechar o envio também na função/banco: sessão do WhatsApp.
 - Testado com dados simulados no navegador (sem login real): lista, filtros, assumir, janela de 24 h, ficha.
