@@ -619,3 +619,27 @@ automaticamente, depois analisar a qualidade do atendimento e, por fim, preparar
 - Pendente para a sessão do prontuário: `prontuario-resumo` (migração 0027) também usa a API — está desligado; refazer
   pelo plano ou remover. Nenhuma chave da Anthropic foi cadastrada, então nada foi cobrado.
 - A transcrição de áudios continua com o **Whisper da OpenAI** (pedido explícito da dona; não é Claude).
+
+---
+
+## 15/11/2026 (tarde) — Respostas da dona e rodada 3 (sessão "melhorias")
+Respostas: (1) IA do prontuário **aprovada**; (2) receita digital pela **Memed** (alguns médicos têm certificado, outros não);
+(3) integração com aparelhos fica para a **fase 2** — por ora, **tela de envio dos arquivos dos aparelhos**; (4) clínica
+**não atende SUS** (RNDS fora); (5) autorizou a sessão a fazer o teste com login.
+
+### IA do prontuário pelo plano do Claude (migração 0029, aplicada) — LIGADA em 15/11
+- Por decisão anterior da dona (sem chave de API), o resumo deixou de ser "na hora" (função Edge) e passou a ser preparado
+  por **tarefa agendada** (mesmo modelo do assistente do WhatsApp): `ia_resumo_preparar(n)` devolve instruções + histórico
+  **mascarado no banco** (`interno.ia_historico`, `interno.ia_mascarar` = `interno.mascarar` da 0019 + nome do paciente/mãe)
+  dos pacientes com consulta nas próximas ~36 h ou pedido do médico, cujo resumo falta/envelheceu (`interno.ia_ultima_mudanca`)
+  ou tem mais de 30 dias; `ia_resumo_gravar` confere o formato e grava em **`ia_resumos`** (só médico/enfermagem leem) e audita;
+  `ia_resumo_falhou`; `ia_resumo_concluir_rodada`. Só o dono do banco/chave de serviço executa (a tarefa usa o conector).
+- **`ia_resumos_pedidos`**: médico/enfermagem pedem pelo botão (pedido próprio). A tela mostra o resumo guardado, a data e o
+  botão "Pedir resumo atualizado". **Mudança em relação à 0027: o resumo agora fica guardado** (para estar pronto na consulta).
+- **Correção da 0027:** a auditoria genérica quebrava o UPDATE de `ia_prontuario_config` (id = 1, não uuid) — o botão "Ligar"
+  dava erro. Trocada por `auditoria_ligado` (registra liga/desliga). Ligada pela sessão com o aval da dona; auditoria conferida.
+- A função Edge `prontuario-resumo` ficou publicada mas **não é usada** (serve se um dia houver chave de API).
+- **Tarefa agendada:** texto em `docs/sistema/ia-resumo-tarefa-agendada.md`. **NÃO criada**: o sistema de segurança da sessão
+  bloqueou `create_trigger`. Pendente da dona: criar a tarefa no claude.ai (ou autorizar a sessão) e ligar o conector Supabase.
+- Testes no banco local: desligado não devolve nada; texto sem nome/CPF/telefone/cartão SUS; formato errado recusado; gravado
+  sai da fila; pedido do médico volta para a fila; recepção não vê; equipe não chama as funções da tarefa; "Ligar" audita.
