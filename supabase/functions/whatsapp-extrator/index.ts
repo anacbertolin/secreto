@@ -49,6 +49,23 @@ interface Config {
   confianca_minima: number;
   silencio_minutos: number;
   modelo: string;
+  usar_horario_padrao: boolean;
+  padrao_dias: number[];
+  padrao_inicio: string;
+  padrao_fim: string;
+  padrao_duracao_min: number;
+}
+
+const MODELOS = ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"];
+const modeloDe = (cfg: Config) => (MODELOS.includes(cfg.modelo) ? cfg.modelo : "claude-sonnet-5-5");
+
+/** Horário padrão da clínica (para o médico sem horário próprio cadastrado) */
+function horarioPadrao(cfg: Config): HorarioMedico[] {
+  if (!cfg.usar_horario_padrao) return [];
+  return (cfg.padrao_dias ?? []).map((d) => ({
+    dia_semana: d, hora_inicio: cfg.padrao_inicio, hora_fim: cfg.padrao_fim,
+    duracao_min: cfg.padrao_duracao_min || 15, local_id: null, vigente_de: null, vigente_ate: null,
+  }));
 }
 
 interface Referencias {
@@ -138,7 +155,7 @@ Deno.serve(async (req) => {
     const { data: pegas, error } = await db.rpc("whatsapp_extrator_pegar", { p_limite: 1, p_silencio: 0, p_conversa: conversa });
     if (error) return resposta({ erro: error.message }, 500);
     if (!pegas?.length) return resposta({ erro: "Esta conversa já está sendo analisada. Tente daqui a pouco." }, 409);
-    const refs = await carregarReferencias(db);
+    const refs = await carregarReferencias(db, cfg as Config);
     const r = await processarConversa(db, cliente(), cfg as Config, refs, pegas[0].conversa_id, pegas[0].analisado_ate);
     return resposta(r);
   }
@@ -160,7 +177,7 @@ async function processarLote(db: SupabaseClient, cfg: Config) {
   });
   if (error) throw error;
   if (!pegas?.length) return;
-  const refs = await carregarReferencias(db);
+  const refs = await carregarReferencias(db, cfg);
   const ia = cliente();
   const fila = [...pegas] as { conversa_id: string; analisado_ate: string | null }[];
   let parar = false;
@@ -187,7 +204,7 @@ async function liberar(db: SupabaseClient, conversa: string) {
 // =====================================================================
 // Dados da clínica usados em todas as análises
 // =====================================================================
-async function carregarReferencias(db: SupabaseClient): Promise<Referencias> {
+async function carregarReferencias(db: SupabaseClient, cfg: Config): Promise<Referencias> {
   const [med, conv, hor, conh] = await Promise.all([
     db.from("profissionais").select("id, nome, especialidade").eq("ativo", true).eq("funcao", "medico").order("nome"),
     db.from("convenios").select("id, nome").eq("ativo", true).order("nome"),
@@ -209,10 +226,13 @@ async function carregarReferencias(db: SupabaseClient): Promise<Referencias> {
   const convenios = conv.data ?? [];
   const conhecidas = conh.data ?? [];
 
+  const faixas = (l: HorarioMedico[]) =>
+    l.map((h) => `${DIAS[h.dia_semana]} ${h.hora_inicio.slice(0, 5)}–${h.hora_fim.slice(0, 5)}`).join(", ");
+  const padrao = faixas(horarioPadrao(cfg));
   const linhasMedicos = medicos.map((m) => {
-    const hs = (horarios.get(m.id) ?? [])
-      .map((h) => `${DIAS[h.dia_semana]} ${h.hora_inicio.slice(0, 5)}–${h.hora_fim.slice(0, 5)}`).join(", ");
-    return `- id ${m.id} | ${m.nome}${m.especialidade ? ` (${m.especialidade})` : ""} | atende: ${hs || "horários não cadastrados"}`;
+    const proprio = faixas(horarios.get(m.id) ?? []);
+    const hs = proprio || (padrao ? `${padrao} (horário padrão da clínica)` : "horários não cadastrados");
+    return `- id ${m.id} | ${m.nome}${m.especialidade ? ` (${m.especialidade})` : ""} | atende: ${hs}`;
   });
   const textoFixo = [
     "# Dados de referência da clínica",
@@ -313,7 +333,7 @@ async function processarConversa(
     let resp;
     try {
       resp = await ia.beta.messages.create({
-        model: cfg.modelo,
+        model: modeloDe(cfg),
         max_tokens: 16000,
         betas: ["server-side-fallback-2026-07-01"],
         fallbacks: "default",
@@ -494,10 +514,13 @@ async function decidirAgendamento(
   if (!medico) return pend("Não deu para saber com qual médico.", pacienteId);
   if ("motivo" in quem) return pend(quem.motivo, null);
 
-  const horarios = refs.horarios.get(medico.id) ?? [];
+  const proprios = refs.horarios.get(medico.id) ?? [];
+  const horarios = proprios.length ? proprios : horarioPadrao(cfg);
   if (!horarios.length) return pend(`Os horários de atendimento de ${medico.nome} não estão cadastrados.`, pacienteId);
   const faixa = encaixeNoHorario(inicio, horarios);
-  if (!faixa) return pend(`Fora do horário de atendimento de ${medico.nome}.`, pacienteId);
+  if (!faixa) {
+    return pend(`Fora do horário de atendimento de ${medico.nome}${proprios.length ? "" : " (horário padrão da clínica)"}.`, pacienteId);
+  }
   const fim = new Date(inicio.getTime() + (faixa.duracao_min || 15) * 60000);
 
   const { data: bloqueios } = await db.from("bloqueios_agenda").select("id")

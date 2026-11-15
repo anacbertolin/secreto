@@ -482,6 +482,8 @@ function Configuracao() {
     const { error } = await supabase.from("whatsapp_extrator_config").update({
       ligado: novo.ligado, agendar_automatico: novo.agendar_automatico, criar_paciente_automatico: novo.criar_paciente_automatico,
       confianca_minima: Number(novo.confianca_minima), silencio_minutos: Number(novo.silencio_minutos),
+      modelo: novo.modelo, usar_horario_padrao: novo.usar_horario_padrao, padrao_dias: novo.padrao_dias,
+      padrao_inicio: novo.padrao_inicio, padrao_fim: novo.padrao_fim, padrao_duracao_min: Number(novo.padrao_duracao_min),
     }).eq("id", 1);
     setMsg(error ? { tipo: "erro", texto: msgErro(error) } : { tipo: "ok", texto: "Salvo." });
   }
@@ -540,11 +542,54 @@ function Configuracao() {
               {[10, 20, 30, 60].map((v) => <option key={v} value={v}>{v} minutos</option>)}
             </select>
           </Campo>
+          <Campo rotulo="Inteligência artificial usada">
+            <select value={cfg.modelo} onChange={(e) => salvar({ modelo: e.target.value })}>
+              <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (recomendado: bom e econômico)</option>
+              <option value="claude-opus-5-5">Claude Opus 5.5 (mais caprichado, custa o dobro)</option>
+              <option value="claude-haiku-5-5">Claude Haiku 5.5 (mais barato, menos preciso)</option>
+            </select>
+          </Campo>
         </div>
         <p className="muted pequeno">
           Mesmo ligado, o assistente só marca sozinho quando: o dia, a hora e o médico foram combinados na conversa; o horário está dentro
           do horário de atendimento do médico, sem bloqueio e livre. Remarcações e cancelamentos sempre ficam para a recepção.
         </p>
+      </div>
+
+      <div className="painel">
+        <h2>Horário padrão da clínica</h2>
+        <p className="muted pequeno" style={{ marginTop: 0 }}>
+          Vale para o médico que ainda não tem horário próprio em Cadastros → Horários e bloqueios. Quem tem horário próprio
+          segue o dele.
+        </p>
+        <label className="campo" style={{ marginBottom: 12 }}>
+          <span><input type="checkbox" checked={cfg.usar_horario_padrao} onChange={(e) => salvar({ usar_horario_padrao: e.target.checked })} /> Usar o horário padrão da clínica</span>
+        </label>
+        {cfg.usar_horario_padrao && (
+          <div className="grade g4">
+            <div className="campo inteiro">Dias
+              <div className="linha">
+                {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((nome, i) => {
+                  const marcado = (cfg.padrao_dias ?? []).includes(i);
+                  return (
+                    <label key={i} className="linha" style={{ gap: 4 }}>
+                      <input type="checkbox" checked={marcado} onChange={() => salvar({
+                        padrao_dias: marcado ? cfg.padrao_dias.filter((d: number) => d !== i) : [...cfg.padrao_dias, i].sort(),
+                      })} /> {nome}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+            <Campo rotulo="Abre às"><input type="time" value={String(cfg.padrao_inicio).slice(0, 5)} onChange={(e) => e.target.value && salvar({ padrao_inicio: e.target.value })} /></Campo>
+            <Campo rotulo="Fecha às"><input type="time" value={String(cfg.padrao_fim).slice(0, 5)} onChange={(e) => e.target.value && salvar({ padrao_fim: e.target.value })} /></Campo>
+            <Campo rotulo="Duração de cada consulta">
+              <select value={String(cfg.padrao_duracao_min)} onChange={(e) => salvar({ padrao_duracao_min: e.target.value })}>
+                {[10, 15, 20, 30, 40, 60].map((v) => <option key={v} value={v}>{v} minutos</option>)}
+              </select>
+            </Campo>
+          </div>
+        )}
       </div>
 
       {(d.dados?.erros ?? []).length > 0 && (
