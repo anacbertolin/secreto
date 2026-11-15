@@ -54,6 +54,19 @@
 	header /wp-content/* Cache-Control "public, max-age=2592000"
 	header /wp-includes/* Cache-Control "public, max-age=2592000"
 
+	# CDN do Railway (ligado em 2026-11-15) NÃO separa versões pelo cabeçalho Accept.
+	# Imagens que têm versão WebP ao lado não podem ficar no CDN (senão um navegador antigo
+	# receberia WebP): "private" = só o navegador de cada visitante guarda.
+	@imgNegociada {
+		path *.jpg *.jpeg *.png *.JPG *.JPEG *.PNG
+		file {path}.webp
+	}
+	header @imgNegociada >Cache-Control "private, max-age=2592000"
+
+	# Páginas: o CDN guarda por até 1 h (o Railway limpa a cada publicação); o navegador sempre confere.
+	@paginas path / *.html */
+	header @paginas Cache-Control "public, max-age=0, s-maxage=3600"
+
 	file_server
 
 	handle_errors {
