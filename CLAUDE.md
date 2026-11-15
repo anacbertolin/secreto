@@ -1,6 +1,8 @@
 # CLAUDE.md — instruções permanentes do projeto "secreto"
 
 ## Quem é a dona do projeto e como trabalhar com ela
+- **Sempre fale em português (pedido da dona, 15/11/2026):** todas as respostas, mensagens, resumos, descrições de
+  PR e textos para a dona em português do Brasil — mesmo que a conversa, o código ou as ferramentas estejam em inglês.
 - A dona do projeto **não é técnica**. Explique tudo em português simples, sem jargão.
 - **Autorização total (dada em 2026-11-14):** Claude pode criar, configurar, publicar e
   alterar tudo no **Supabase** e no **Railway** sem pedir permissão a cada passo.
