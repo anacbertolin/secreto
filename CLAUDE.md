@@ -41,7 +41,9 @@
     Depois dele rode `trocar_marca.py`, `corrigir_defeitos.py` e `otimizar_imagens.py` (ordem em `site/LEIAME.md`).
   - Imagens otimizadas em 2026-11-14 (pedido da dona: site demorava a carregar): cada imagem tem
     um `.webp` ao lado, entregue pelo Caddy a quem aceita. Página inicial: imagens de 1,8 MB → ~0,66 MB.
-    CDN do Railway NÃO foi ligado (custo não confirmado) — perguntar à dona antes.
+    CDN do Railway LIGADO em 2026-11-15 (pedido da dona). Ele não separa versões pelo cabeçalho Accept,
+    então imagens com `.webp` ao lado vão com `Cache-Control: private` (fora do CDN); CSS/JS/fontes e
+    páginas HTML ficam no CDN (HTML por até 1 h, limpo a cada publicação). Regras no `site/Caddyfile`.
 - **Publicado em:** https://site-production-8c641078.up.railway.app (Railway, serviço `site`,
   região us-east4, Root Directory `/site`, healthcheck `/`).
   - Fonte do serviço `site`: branch **`main`** (desde 2026-11-15, a pedido da dona). Todo push no `main`
