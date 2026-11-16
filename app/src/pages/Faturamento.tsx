@@ -243,8 +243,12 @@ export function ContaDetalhe() {
   const { dados, erro: e1, carregando, recarregar } = useCarregar(async () => {
     const c = ok(await supabase.from("contas").select(SEL_CONTA).eq("id", id!).single()) as Conta;
     const itens = ok(await supabase.from("conta_itens").select("*").eq("conta_id", id!).order("criado_em")) as Item[];
+    // repasse ao médico já lançado para esta conta (só faturamento/admin enxergam)
+    const repasse = !c.convenio_id && c.status === "paga"
+      ? ((await supabase.from("repasses").select("id, numero").eq("conta_id", c.id).neq("status", "cancelado").maybeSingle()).data as { id: string; numero: number } | null)
+      : null;
     const lote = c.lote_id ? (ok(await supabase.from("lotes").select("id, numero, status").eq("id", c.lote_id).single()) as { id: string; numero: number; status: string }) : null;
-    return { c, itens, lote };
+    return { c, itens, lote, repasse };
   }, [id]);
 
   const CAMPOS_CAB = ["convenio_id", "plano_id", "tipo_guia", "data_atendimento", "carteirinha", "validade_carteirinha", "senha_autorizacao",
@@ -256,7 +260,7 @@ export function ContaDetalhe() {
 
   if (carregando && !dados) return <Carregando />;
   if (!dados || !base.dados) return <Aviso>{e1 || base.erro}</Aviso>;
-  const { c, itens, lote } = dados;
+  const { c, itens, lote, repasse } = dados;
   const { convenios, planos, procs, profs } = base.dados;
   const conv = convenios.find((x) => x.id === c.convenio_id);
   const editavel = ["aberta", "pronta"].includes(c.status) && !c.lote_id;
@@ -307,6 +311,9 @@ export function ContaDetalhe() {
         <div className="linha">
           {c.convenio_id && <Link className="botao" to={`/imprimir/guia/${c.id}`} target="_blank">🖨️ Imprimir guia</Link>}
           {!c.convenio_id && c.status === "paga" && <Link className="botao" to={`/imprimir/recibo/${c.id}`} target="_blank">🖨️ Recibo</Link>}
+          {!c.convenio_id && c.status === "paga" && fat && (repasse
+            ? <Link className="botao" to={`/repasse/${repasse.id}`}>💰 Repasse nº {repasse.numero}</Link>
+            : <Link className="botao" to={`/repasse?conta=${c.id}`}>💰 Calcular repasse ao médico</Link>)}
           {c.status === "aberta" && c.convenio_id && <button className="primario" disabled={pend.length > 0} title={pend.join(", ")} onClick={() => mudarStatus("pronta")}>✅ Conferida (pronta p/ lote)</button>}
           {c.status === "pronta" && !c.lote_id && <button onClick={() => mudarStatus("aberta")}>↩️ Voltar para conferência</button>}
           {c.status === "aberta" && !c.convenio_id && <button className="primario" disabled={itens.length === 0} onClick={() => setModal("receber")}>💵 Receber</button>}

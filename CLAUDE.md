@@ -121,7 +121,8 @@
 - Identidade visual: Consumed · Clínica de Olhos (logos em `app/public`, dados da clínica em `app/src/lib/marca.ts`).
 - Módulos v1: Agenda, Recepção, Pacientes, Consultório/Prontuário (PEP oftalmológico), Exames e laudos, Cadastros,
   **Faturamento** (contas/guias, lotes, glosas, produção; migrações 0009–0010; função de equipe `faturamento`),
-  **Relatórios** (funções `rel_*`, migração 0011). Listas oficiais CID-10/ANVISA em `app/public/dados/` (script `app/scripts/gerar_listas.py`).
+  **Relatórios** (funções `rel_*`, migração 0011).
+  **Repasse médico** (cirurgia particular; migração 0060; menu 💰, só faturamento/admin; regras em `docs/sistema/HISTORICO.md`, 16/11). Listas oficiais CID-10/ANVISA em `app/public/dados/` (script `app/scripts/gerar_listas.py`).
 - Testes de tela com login: NÃO publicar a função `equipe-acesso` com chave mestra/bootstrap (o sistema de segurança
   bloqueia e está certo). Peça à dona um acesso de teste criado por ela na tela Equipe.
 - Arquivos de exames: bucket privado `exames` no Storage (até 50 MB por arquivo).
