@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase, SUPABASE_URL, SUPABASE_CHAVE } from "./supabase";
+import type { Profissional } from "./auth";
+
+/** Qual número recebeu a conversa: o da clínica ou o da Orientação Cirúrgica */
+export type SetorWA = "clinica" | "orientacao";
 
 export interface Conversa {
   id: string;
+  setor: SetorWA;
   telefone: string;
   nome_contato: string | null;
   paciente_id: string | null;
@@ -43,6 +48,18 @@ export interface ModeloWA {
   parametros: string[];
   botoes: boolean;
   ativo: boolean;
+}
+
+/** Mesmas regras do banco (migração 0052): quem vê e quem responde cada número */
+export function podeVerSetor(eu: Profissional | null, setor: SetorWA): boolean {
+  if (!eu) return false;
+  if (setor === "orientacao") return eu.orientacao_cirurgica === true || eu.funcao === "medico" || eu.funcao === "admin";
+  return ["medico", "enfermagem", "recepcao", "admin", "faturamento"].includes(eu.funcao);
+}
+export function podeResponderSetor(eu: Profissional | null, setor: SetorWA): boolean {
+  if (!eu) return false;
+  if (setor === "orientacao") return eu.orientacao_cirurgica === true;
+  return eu.funcao === "recepcao" || eu.funcao === "admin";
 }
 
 export const SELECT_CONVERSA = "*, pacientes(id, nome, nome_social, numero_prontuario, whatsapp_autorizado)";
@@ -134,10 +151,10 @@ export function notificarComputador(titulo: string, corpo: string) {
 }
 
 /**
- * Total de mensagens não lidas (para o menu), ao vivo.
+ * Total de mensagens não lidas de um número (para o menu), ao vivo.
  * Toca o aviso quando chega mensagem nova, em qualquer tela do sistema.
  */
-export function useNaoLidas(ligado: boolean): number {
+export function useNaoLidas(ligado: boolean, setor: SetorWA = "clinica"): number {
   const [total, setTotal] = useState(0);
   const anterior = useRef<number | null>(null);
 
@@ -147,12 +164,16 @@ export function useNaoLidas(ligado: boolean): number {
     let timer: number | undefined;
 
     async function contar() {
-      const { data } = await supabase.from("whatsapp_conversas").select("nao_lidas").gt("nao_lidas", 0).eq("arquivada", false);
+      const { data } = await supabase.from("whatsapp_conversas").select("nao_lidas")
+        .eq("setor", setor).gt("nao_lidas", 0).eq("arquivada", false);
       if (!vivo) return;
       const t = (data ?? []).reduce((s, c) => s + (c.nao_lidas as number), 0);
       if (anterior.current !== null && t > anterior.current) {
         tocarAviso();
-        notificarComputador("Nova mensagem no WhatsApp", "Abra o sistema para responder.");
+        notificarComputador(
+          setor === "orientacao" ? "Nova mensagem na Orientação Cirúrgica" : "Nova mensagem no WhatsApp",
+          "Abra o sistema para responder.",
+        );
       }
       anterior.current = t;
       setTotal(t);
@@ -164,7 +185,7 @@ export function useNaoLidas(ligado: boolean): number {
 
     contar();
     const canal = supabase
-      .channel("whatsapp-nao-lidas")
+      .channel("whatsapp-nao-lidas-" + setor)
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_conversas" }, agendar)
       .subscribe();
     const reserva = window.setInterval(contar, 60_000); // se o "ao vivo" cair, confere a cada minuto
@@ -174,7 +195,7 @@ export function useNaoLidas(ligado: boolean): number {
       window.clearInterval(reserva);
       supabase.removeChannel(canal);
     };
-  }, [ligado]);
+  }, [ligado, setor]);
 
   return total;
 }

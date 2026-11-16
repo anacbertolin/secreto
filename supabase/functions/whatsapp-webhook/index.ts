@@ -8,6 +8,9 @@
 // Segredos (Supabase → Edge Functions → Secrets):
 //   WHATSAPP_VERIFY_TOKEN  senha combinada para a Meta validar este endereço
 //   WHATSAPP_APP_SECRET    "Chave secreta do aplicativo" (Meta → Configurações do app → Básico)
+//   WHATSAPP_PHONE_NUMBER_ID             número da clínica          → conversas do setor "clinica"
+//   WHATSAPP_ORIENTACAO_PHONE_NUMBER_ID  número da Orientação Cirúrgica → conversas do setor "orientacao"
+// Os dois números ficam na mesma conta da Meta, então chegam pelo mesmo endereço (e mesma assinatura).
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const TIPOS: Record<string, string> = {
@@ -125,22 +128,27 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
 
-  const meuNumero = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID") ?? "";
+  const numeroClinica = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID") ?? "";
+  const numeroOrientacao = Deno.env.get("WHATSAPP_ORIENTACAO_PHONE_NUMBER_ID") ?? "";
   let falhou = false;
 
   for (const entrada of dados.entry ?? []) {
     for (const mudanca of entrada.changes ?? []) {
       if (mudanca.field !== "messages") continue;
       const v = mudanca.value ?? {};
-      // Ignora avisos de outro número (caso a conta tenha mais de um)
-      if (meuNumero && v.metadata?.phone_number_id && v.metadata.phone_number_id !== meuNumero) continue;
+      // Qual número recebeu? Número desconhecido (outro número da conta) é ignorado.
+      const idNumero = v.metadata?.phone_number_id ?? "";
+      let setor: string | null = null;
+      if (numeroOrientacao && idNumero === numeroOrientacao) setor = "orientacao";
+      else if (!numeroClinica || !idNumero || idNumero === numeroClinica) setor = "clinica";
+      if (!setor) continue;
 
       const nomes = new Map<string, string>();
       for (const c of v.contacts ?? []) if (c.wa_id) nomes.set(String(c.wa_id), c.profile?.name ?? null);
 
       for (const m of v.messages ?? []) {
         const args = lerMensagem(m);
-        const { error } = await db.rpc("whatsapp_receber", { ...args, p_nome: nomes.get(args.p_telefone) ?? null });
+        const { error } = await db.rpc("whatsapp_receber", { ...args, p_nome: nomes.get(args.p_telefone) ?? null, p_setor: setor });
         if (error) {
           console.error("Erro ao gravar mensagem recebida", m.id, error.message);
           falhou = true;

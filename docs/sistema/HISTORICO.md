@@ -767,3 +767,48 @@ Api4Com, Nvoip e Twilio, escolheu **testar com a Api4Com** (PABX em nuvem brasil
 - Continua pendente (depende da Api4Com/dona): **número fixo próprio (DDD 21)** para sair sempre com o mesmo número e
   receber ligações no ramal (hoje o 21 96476-0292 não está apontado para o ramal 1000, por isso a entrada não chega);
   trocar a senha do ramal 1000 (apareceu no registro de outra sessão) e atualizar em Cadastros → Telefone.
+
+---
+
+## 16/11/2026 — WhatsApp da Orientação Cirúrgica (segundo número oficial)
+### Pedido da dona
+A orientação cirúrgica (Alessandra) usa há anos um número próprio de WhatsApp, fora da API oficial, para pacientes
+com complicação ou dúvida depois da cirurgia. Pedido: atender esse número pelo sistema, numa aba própria, no login dela.
+### Decisões da dona (16/11)
+- **Só pelo sistema:** o número entra na mesma conta oficial da Meta da clínica, direto (sem intermediário). Ele sai do
+  aplicativo do celular. (Usar celular + sistema ao mesmo tempo — "coexistência" — só existe via parceiro pago da Meta.)
+- **Quem vê:** quem atende a orientação, médicos e administração. Recepção, enfermagem (sem a marcação) e faturamento
+  NÃO veem. **Quem responde:** só quem atende a orientação.
+### O que entrou
+- **Migração 0052 `whatsapp_orientacao_cirurgica`** (aplicada): `profissionais.orientacao_cirurgica` (marcação no
+  cadastro da equipe; só admin altera) e `interno.atende_orientacao()`; `whatsapp_conversas.setor`
+  ('clinica' | 'orientacao'), único agora por (setor, telefone) — o mesmo paciente pode ter conversa nos dois números;
+  RLS de conversas/mensagens por setor; modelo novo `retomar_orientacao` (nasce desligado); `whatsapp_conversa` e
+  `whatsapp_receber` ganharam `p_setor` (padrão 'clinica'); botões do lembrete e "SAIR" só valem no número da clínica;
+  assistente de IA (extrator) só analisa conversas da clínica.
+- **Funções Edge:** `whatsapp-webhook` v3 (separa pelo `phone_number_id`: `WHATSAPP_PHONE_NUMBER_ID` → clínica,
+  `WHATSAPP_ORIENTACAO_PHONE_NUMBER_ID` → orientação; número desconhecido é ignorado), `whatsapp-enviar` v4 (envia pelo
+  número do setor da conversa; confere quem vê/responde; `estado` devolve `orientacao_configurado`; na orientação o
+  "SAIR" da clínica não bloqueia o "chamar de novo"), `whatsapp-transcrever` v3 (quem atende a orientação pede
+  transcrição dos áudios dela).
+- **Telas:** menu **🩹 Orientação cirúrgica** (`/orientacao-cirurgica`, mesma tela do WhatsApp com `setor="orientacao"`:
+  sem lembretes; Modelos mostra só o da orientação); contador/som de não lidas só para quem atende a orientação;
+  Equipe ganhou a caixa "Atende a Orientação cirúrgica"; ficha do paciente ganhou o botão 🩹 para quem atende.
+### Testes
+- Banco real, numa transação desfeita: mesmo telefone vira 2 conversas (uma por número); admin e médico veem e não
+  alteram a orientação; quem tem a marcação vê e altera; recepção e faturamento não veem (nem as mensagens);
+  "SAIR" no número da orientação não muda a autorização. Advisors: nada novo.
+- `deno check` nas 3 funções; `npm run build`; tela conferida no navegador com dados simulados (computador e celular).
+- **Ainda sem teste com a Meta de verdade** (falta a conta e o número).
+### Para ligar (dona)
+1. Fazer backup das conversas do celular da Alessandra (Exportar conversa, se quiser guardar alguma).
+2. Na Meta (WhatsApp Manager da mesma conta da clínica) → **Adicionar número de telefone** → número da Alessandra
+   (nome de exibição, ex.: "Orientação Cirúrgica Consumed"). A Meta pede para **apagar a conta do WhatsApp desse número
+   no celular** antes; depois confirma por SMS/ligação.
+3. Copiar a "Identificação do número de telefone" e cadastrar no Supabase como segredo
+   `WHATSAPP_ORIENTACAO_PHONE_NUMBER_ID` (o token, o webhook e a chave secreta são os mesmos da clínica).
+4. Cadastrar na Meta o modelo `retomar_orientacao` (Utilidade, pt_BR, texto na tela Modelos da aba) e, aprovado, ligar.
+5. Cadastrar a Alessandra em Cadastros → Equipe (com e-mail), marcar "Atende a Orientação cirúrgica" e gerar a senha.
+### Pendências / ideias
+- Mostrar na ficha ao lado da conversa a última cirurgia do paciente (data, olho, procedimento).
+- Respostas prontas para as dúvidas mais comuns do pós-operatório.

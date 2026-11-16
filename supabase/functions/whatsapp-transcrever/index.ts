@@ -4,7 +4,8 @@
 //   * o banco (gatilho ao chegar um áudio e o agendador a cada 10 min), com o cabeçalho x-extrator-chave:
 //       { acao: "transcrever", mensagem_id }   → um áudio
 //       { acao: "pendentes" }                  → até 10 áudios que ficaram pendentes
-//   * a tela do WhatsApp (recepção/admin logados): { acao: "transcrever", mensagem_id } (botão "Transcrever")
+//   * a tela do WhatsApp (recepção/admin logados; na Orientação Cirúrgica, quem atende a orientação):
+//       { acao: "transcrever", mensagem_id } (botão "Transcrever")
 //
 // Segredos (Supabase → Edge Functions → Secrets): OPENAI_API_KEY, WHATSAPP_TOKEN (já existe),
 // WHATSAPP_API_VERSION (opcional). Sem a chave da OpenAI a função responde que falta configurar.
@@ -25,7 +26,8 @@ const MAX_TENTATIVAS = 3;
 // Vocabulário da clínica: ajuda o Whisper a acertar termos e nomes
 const DICA = "Conversa de paciente com a recepção de uma clínica de oftalmologia. Consulta, retorno, exame, " +
   "mapeamento de retina, fundo de olho, pressão do olho, catarata, glaucoma, óculos, lente, colírio, convênio, " +
-  "Unimed, Amil, Bradesco Saúde, SulAmérica, particular, carteirinha, Dr. Max.";
+  "Unimed, Amil, Bradesco Saúde, SulAmérica, particular, carteirinha, Dr. Max. " +
+  "Pós-operatório, cirurgia, tampão, protetor ocular, olho vermelho, vista embaçada, lacrimejamento.";
 
 const EXTENSAO: Record<string, string> = {
   "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/aac": "m4a", "audio/amr": "amr",
@@ -56,11 +58,20 @@ Deno.serve(async (req) => {
     const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
     const { data: u, error } = await db.auth.getUser(jwt);
     if (error || !u?.user?.email) return resposta({ erro: "Sessão inválida. Entre novamente." }, 401);
-    const { data: p } = await db.from("profissionais").select("funcao, ativo").eq("email", u.user.email.toLowerCase()).maybeSingle();
-    if (!p?.ativo || !["recepcao", "admin"].includes(p.funcao)) {
-      return resposta({ erro: "Só a recepção e a administração pedem transcrição." }, 403);
-    }
+    const { data: p } = await db.from("profissionais").select("funcao, ativo, orientacao_cirurgica")
+      .eq("email", u.user.email.toLowerCase()).maybeSingle();
     if (corpo.acao !== "transcrever") return resposta({ erro: "Ação não permitida" }, 403);
+    // Quem pede: no número da clínica, recepção/admin; no da Orientação Cirúrgica, quem atende a orientação
+    const { data: m } = await db.from("whatsapp_mensagens").select("whatsapp_conversas(setor)")
+      .eq("id", String(corpo.mensagem_id ?? "")).maybeSingle();
+    // deno-lint-ignore no-explicit-any
+    const setor = (m as any)?.whatsapp_conversas?.setor ?? "clinica";
+    const pode = !!p?.ativo && (setor === "orientacao" ? p.orientacao_cirurgica === true : ["recepcao", "admin"].includes(p.funcao));
+    if (!pode) {
+      return resposta({ erro: setor === "orientacao"
+        ? "Só quem atende a Orientação Cirúrgica pede transcrição destes áudios."
+        : "Só a recepção e a administração pedem transcrição." }, 403);
+    }
   }
 
   if (!Deno.env.get("OPENAI_API_KEY")) {

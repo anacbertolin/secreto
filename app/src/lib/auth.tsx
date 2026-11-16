@@ -14,6 +14,8 @@ export interface Profissional {
   especialidade: string | null;
   rqe: string | null;
   ativo: boolean;
+  /** Atende o WhatsApp da Orientação Cirúrgica (migração 0052) */
+  orientacao_cirurgica?: boolean;
 }
 
 interface Ctx {
