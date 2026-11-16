@@ -115,7 +115,9 @@
   combinados com a sessão de migração, pendências). Acrescente uma seção ao fim a cada dia de trabalho.
 - React + Vite + TypeScript, servido como site estático (`npm run build` → `npm start`) no Railway (serviço `sistema`, pasta raiz `/app`).
 - Fala direto com o Supabase usando só a chave **publicável**; quem protege os dados são as regras RLS.
-- Login: e-mail + senha (Supabase Auth). Só e-mails cadastrados e ativos em `profissionais` conseguem criar conta
+- Login: **usuário + senha** para médicos e funcionários; **e-mail + senha** só para a administração (decisão da dona, 16/11;
+  migração 0063: o usuário vira por trás o e-mail interno `<usuario>@equipe.consumedolhos.com.br`, que nunca recebe nada).
+  Só e-mails cadastrados e ativos em `profissionais` conseguem criar conta
   (gatilho `somente_equipe` em `auth.users`). Senhas temporárias são criadas pelo admin na tela Equipe
   (função Edge `equipe-acesso`); a pessoa troca no primeiro acesso.
 - Identidade visual: Consumed · Clínica de Olhos (logos em `app/public`, dados da clínica em `app/src/lib/marca.ts`).

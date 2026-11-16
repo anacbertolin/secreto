@@ -2,9 +2,10 @@ import { useState, type FormEvent } from "react";
 import { supabase, msgErro } from "../lib/supabase";
 import { Aviso, Campo } from "../components/ui";
 import { CLINICA } from "../lib/marca";
+import { emailDoLogin } from "../lib/util";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [login, setLogin] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -14,7 +15,7 @@ export default function Login() {
     e.preventDefault();
     setEnviando(true);
     setErro("");
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: senha });
+    const { error } = await supabase.auth.signInWithPassword({ email: emailDoLogin(login), password: senha });
     if (error) setErro(msgErro(error));
     setEnviando(false);
   }
@@ -27,8 +28,8 @@ export default function Login() {
           <p className="muted" style={{ margin: "10px 0 0" }}>Sistema da clínica · acesso da equipe</p>
         </div>
         <Aviso>{erro}</Aviso>
-        <Campo rotulo="E-mail">
-          <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
+        <Campo rotulo="Usuário (ou e-mail da administração)">
+          <input type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={login} onChange={(e) => setLogin(e.target.value)} required autoFocus />
         </Campo>
         <Campo rotulo="Senha">
           <input type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
