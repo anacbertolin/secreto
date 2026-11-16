@@ -101,7 +101,7 @@ export function fmtNumeroTel(n: string | null | undefined): string {
 }
 
 // ---------- Trava contra rajadas de ligações ----------
-export const INTERVALO_MIN_MS = 10_000;       // entre uma tentativa e outra (qualquer número)
+export const INTERVALO_MIN_MS = 3_000;        // entre uma tentativa e outra (qualquer número)
 export const MAX_TENTATIVAS_NUMERO = 3;       // para o mesmo número…
 export const JANELA_NUMERO_MS = 10 * 60_000;  // …dentro de 10 minutos
 

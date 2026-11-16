@@ -760,7 +760,7 @@ Api4Com, Nvoip e Twilio, escolheu **testar com a Api4Com** (PABX em nuvem brasil
 ## 16/11/2026 — Telefone: trava contra rajadas de ligações
 - **Por quê:** no teste de 15/11 vários cliques seguidos em "Ligar" (12 tentativas em 6 s para o mesmo número) e a BINA
   variável da Api4Com fizeram as operadoras barrarem as ligações ("número indisponível").
-- **O que mudou** (`app/src/lib/telefone.tsx`): no mínimo **10 s** entre uma tentativa e outra, e no máximo **3 tentativas
+- **O que mudou** (`app/src/lib/telefone.tsx`): no mínimo **3 s** entre uma tentativa e outra (era 10 s; a dona pediu 3 s em 16/11), e no máximo **3 tentativas
   para o mesmo número em 10 minutos**. A tela explica o motivo e quanto falta; o aviso aparece mesmo com o telefone
   fechado (quando se liga pelo botão do WhatsApp/ficha). Vale por aba do navegador (não é trava no banco).
 - Testado no navegador com a central simulada: o segundo clique logo em seguida é barrado e só 1 ligação sai.
