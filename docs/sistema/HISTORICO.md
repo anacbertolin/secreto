@@ -756,3 +756,14 @@ Api4Com, Nvoip e Twilio, escolheu **testar com a Api4Com** (PABX em nuvem brasil
   `X-Access-Token`, que a API aceita). A listagem de chamadas (`GET /calls`) não aceitou esse acesso.
 - Pendente: um ramal por atendente (5) — aumenta a mensalidade da Api4Com, decidir com a dona; linhas "não atendeu"
   dos testes em `ligacoes` (apagar só com ok da dona).
+
+## 16/11/2026 — Telefone: trava contra rajadas de ligações
+- **Por quê:** no teste de 15/11 vários cliques seguidos em "Ligar" (12 tentativas em 6 s para o mesmo número) e a BINA
+  variável da Api4Com fizeram as operadoras barrarem as ligações ("número indisponível").
+- **O que mudou** (`app/src/lib/telefone.tsx`): no mínimo **10 s** entre uma tentativa e outra, e no máximo **3 tentativas
+  para o mesmo número em 10 minutos**. A tela explica o motivo e quanto falta; o aviso aparece mesmo com o telefone
+  fechado (quando se liga pelo botão do WhatsApp/ficha). Vale por aba do navegador (não é trava no banco).
+- Testado no navegador com a central simulada: o segundo clique logo em seguida é barrado e só 1 ligação sai.
+- Continua pendente (depende da Api4Com/dona): **número fixo próprio (DDD 21)** para sair sempre com o mesmo número e
+  receber ligações no ramal (hoje o 21 96476-0292 não está apontado para o ramal 1000, por isso a entrada não chega);
+  trocar a senha do ramal 1000 (apareceu no registro de outra sessão) e atualizar em Cadastros → Telefone.

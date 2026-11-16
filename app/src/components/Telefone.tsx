@@ -165,9 +165,12 @@ export default function Telefone() {
   // ---------- Fechado: botão pequeno ----------
   if (!aberto) {
     return (
-      <button className="tel tel-fechado" onClick={() => setAberto(true)} title={`Telefone · ramal ${tel.ramal ?? ""}`}>
-        <span className="tel-bolinha" style={{ background: est.cor }} /> 📞 {est.texto}
-      </button>
+      <div className="tel tel-fechado-caixa">
+        {tel.erro && <div className="tel-erro tel-erro-solto" role="alert" onClick={() => setAberto(true)}>{tel.erro}</div>}
+        <button className="tel-fechado" onClick={() => setAberto(true)} title={`Telefone · ramal ${tel.ramal ?? ""}`}>
+          <span className="tel-bolinha" style={{ background: est.cor }} /> 📞 {est.texto}
+        </button>
+      </div>
     );
   }
 

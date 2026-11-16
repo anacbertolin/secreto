@@ -392,3 +392,5 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .tel textarea { width: 100%; box-sizing: border-box; }
 @media (max-width: 860px) { .tel { right: 10px; bottom: 10px; } }
 @media print { .tel { display: none; } }
+.tel-fechado-caixa { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.tel-erro-solto { max-width: 300px; box-shadow: 0 4px 14px rgba(16, 24, 40, 0.18); cursor: pointer; }
