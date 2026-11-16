@@ -153,6 +153,33 @@ export function nomeExibicao(p: { nome: string; nome_social?: string | null }): 
   return p.nome_social ? `${p.nome_social} (${p.nome})` : p.nome;
 }
 
+// ---------- Login por usuário (migração 0063) ----------
+// Quem entra com usuário tem, por trás, um e-mail interno que nunca recebe mensagens.
+export const DOMINIO_USUARIO = "equipe.consumedolhos.com.br";
+export const USUARIO_VALIDO = /^[a-z0-9][a-z0-9._-]{1,38}[a-z0-9]$/;
+
+/** O que a pessoa digitou na tela de entrada → e-mail usado no login. */
+export function emailDoLogin(texto: string): string {
+  const t = texto.trim().toLowerCase();
+  return t.includes("@") ? t : `${t}@${DOMINIO_USUARIO}`;
+}
+
+/** Mostra o login como a pessoa digita (sem o e-mail interno). */
+export function loginExibicao(email: string | null | undefined): string {
+  if (!email) return "";
+  const fim = `@${DOMINIO_USUARIO}`;
+  return email.endsWith(fim) ? email.slice(0, -fim.length) : email;
+}
+
+/** Sugere usuário a partir do nome: primeiro nome + último sobrenome, sem acento. Ex.: "gelson.brasil". */
+export function sugerirUsuario(nome: string): string {
+  const partes = nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/^(dra?\.?)\s+/, "").replace(/[^a-z0-9 ]/g, " ").split(/\s+/)
+    .filter((x) => x && !["de", "da", "do", "das", "dos", "e"].includes(x));
+  if (!partes.length) return "";
+  return partes.length > 1 ? `${partes[0]}.${partes[partes.length - 1]}` : partes[0];
+}
+
 export function senhaAleatoria(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
   const arr = new Uint32Array(10);

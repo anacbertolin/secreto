@@ -17,7 +17,7 @@ export function msgErro(e: unknown): string {
   if (/cpf_check|pacientes_cpf_check/.test(m)) return "CPF deve ter 11 números.";
   if (/cns_check/.test(m)) return "Cartão SUS (CNS) deve ter 15 números.";
   if (/row-level security|permission denied/i.test(m)) return "Você não tem permissão para fazer isso.";
-  if (/Invalid login credentials/i.test(m)) return "E-mail ou senha incorretos.";
+  if (/Invalid login credentials/i.test(m)) return "Usuário ou senha incorretos.";
   if (/duplicate key/.test(m)) return "Este registro já existe.";
   return m;
 }

@@ -872,3 +872,16 @@ Convênios, lente/material e regras por médico ficam para depois.
 - Ficaram **inativos** porque o site não tem e-mail e a regra do banco exige e-mail para quem está ativo (é o login).
   Para ligar cada um: tela Equipe → editar → pôr o e-mail → marcar "Ativo". Só então aparece na Agenda.
 - Faltam (não estão no site): e-mails, RQE e demais documentos. Funcionários não médicos não aparecem no site.
+
+### 16/11 (noite) — Login por nome de usuário (migração 0063, decisão da dona)
+- **Médicos e funcionários entram com USUÁRIO e senha; a administração (dona) continua com e-mail.**
+- Como funciona: coluna `profissionais.usuario` (minúsculas, sem acento, 3–40 caracteres; letras, números, `.`, `-`, `_`).
+  O gatilho `profissional_usuario` grava em `email` o e-mail interno `<usuario>@equipe.consumedolhos.com.br`
+  (subdomínio sem caixa de correio; nada é enviado — a função `equipe-acesso` cria a conta já confirmada).
+  Por isso RLS, `somente_equipe`, `equipe-acesso` e `auth.tsx` continuam sem mudança.
+- Tela de entrada: campo "Usuário (ou e-mail da administração)"; sem "@" o sistema completa o e-mail interno.
+- Tela Equipe: "Entra no sistema com: Usuário e senha / E-mail e senha"; sugere o usuário (primeiro nome + último
+  sobrenome); coluna "Login" mostra 👤 usuário. Trocar o usuário de quem já tem acesso exige criar a senha de novo (🔑).
+- Sem e-mail não há "esqueci minha senha" sozinho: a admin gera nova senha temporária (já era o fluxo).
+- Os 7 médicos foram **ativados** com usuário: gelson.brasil, gisele.brasil, max.guimaraes, luiza.pereira,
+  matheus.pereira, renato.queiroz, pedro.goncalves. As senhas ainda não foram criadas (a dona cria pelo botão 🔑).

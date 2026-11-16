@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./lib/auth";
-import { FUNCOES, type Funcao } from "./lib/util";
+import { FUNCOES, loginExibicao, type Funcao } from "./lib/util";
 import { CLINICA } from "./lib/marca";
 import Login, { TrocarSenha } from "./pages/Login";
 import Inicio from "./pages/Inicio";
@@ -104,7 +104,7 @@ export default function App() {
       <div className="tela-login">
         <div className="caixa-login">
           <h2>Acesso não liberado</h2>
-          <p>O e-mail <b>{session.user.email}</b> não está cadastrado (ou está inativo) na equipe.</p>
+          <p>O acesso <b>{loginExibicao(session.user.email)}</b> não está cadastrado (ou está inativo) na equipe.</p>
           <p className="muted">Peça à administração para cadastrar você em Cadastros → Equipe.</p>
           <button onClick={sair}>Sair</button>
         </div>
