@@ -6,7 +6,7 @@ export interface RegrasRepasse {
   centro_cirurgico_pct: number;
   taxa_arredondamento: "truncar" | "arredondar";
 }
-export interface TaxaCartao { id: string; parcelas: number; taxa_cartao: number; taxa_antecipacao: number; taxa_total: number }
+export interface TaxaCartao { id: string; forma: "credito" | "debito"; parcelas: number; taxa_cartao: number; taxa_antecipacao: number; taxa_total: number }
 
 export const FORMAS_REPASSE: Record<string, string> = {
   dinheiro: "Dinheiro", pix: "PIX", debito: "Cartão de débito", credito: "Cartão de crédito",
@@ -19,8 +19,8 @@ const trunc2 = (v: number) => Math.trunc(Math.round(v * 1e6) / 1e4) / 100; // co
 const round2 = (v: number) => Math.round(Math.round(v * 1e6) / 1e4) / 100;
 
 export function taxaInternaPct(forma: string, parcelas: number, taxas: TaxaCartao[]): number | null {
-  if (forma !== "credito" || parcelas < 2) return 0;
-  const t = taxas.find((x) => x.parcelas === parcelas);
+  if (forma !== "credito" && forma !== "debito") return 0; // dinheiro e PIX: sem taxa interna
+  const t = taxas.find((x) => x.forma === forma && x.parcelas === (forma === "debito" ? 1 : parcelas));
   return t ? Number(t.taxa_total) : null;
 }
 
