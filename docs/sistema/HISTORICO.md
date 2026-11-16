@@ -816,3 +816,12 @@ Convênios, lente/material e regras por médico ficam para depois.
 - 15%/20% mudam por médico ou procedimento? Lente/material na catarata? Refrativa AO = 1 ou 2 cirurgias? Convênios.
 - O Luciano precisa de login com a função **Faturamento** (tela Equipe). Rodar em **paralelo** com o cálculo à mão por
   2–3 meses; mostrar as regras de imposto ao contador.
+
+### 16/11 (noite) — Repasse: taxa interna no débito e no crédito 1x (migração 0061)
+- **Decisão da dona:** débito e crédito à vista (1x) passam a descontar **2,34%** (só a taxa do cartão, sem antecipação).
+  Mesma forma do parcelado: sobre o valor que **entrou**, centavos cortados. Dinheiro e PIX continuam sem taxa interna.
+- `repasse_taxas_cartao` ganhou a coluna `forma` (crédito/débito), aceita 1 parcela (débito só 1x); linhas novas
+  crédito 1x e débito 1x = 2,34 + 0. `interno.tg_repasse_regras` busca a taxa por forma + parcelas.
+- Exemplo: débito R$ 4.820,00, entrou R$ 4.770,00 → imposto 723,00, centro 819,40, taxa 2,34% de 4.770 = 111,618 → 111,61
+  → médico **3.115,99** (antes da mudança: 3.227,60). Testado no banco local e no real (transação desfeita).
+- O repasse nº 2 já lançado (12x, 9,72%) não muda. Tela "Regras e taxas" mostra Débito e Crédito 1x na tabela.

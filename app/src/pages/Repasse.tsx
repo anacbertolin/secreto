@@ -40,7 +40,7 @@ function primeiroDiaMes(d = new Date()) { return isoDia(new Date(d.getFullYear()
 async function carregarBase() {
   const [cfg, taxas, medicos] = await Promise.all([
     supabase.from("repasse_config").select("*").single().then((x) => ok(x) as Config),
-    supabase.from("repasse_taxas_cartao").select("*").order("parcelas").then((x) => ok(x) as TaxaCartao[]),
+    supabase.from("repasse_taxas_cartao").select("*").order("forma", { ascending: false }).order("parcelas").then((x) => ok(x) as TaxaCartao[]),
     supabase.from("profissionais").select("id, nome").eq("funcao", "medico").order("nome").then((x) => ok(x) as Medico[]),
   ]);
   return { cfg, taxas, medicos };
@@ -241,8 +241,7 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
         {f.forma === "credito" ? (
           <Campo rotulo="Parcelas">
             <select value={f.parcelas} onChange={set("parcelas")}>
-              <option value="1">1x (à vista)</option>
-              {base.taxas.map((t) => <option key={t.id} value={t.parcelas}>{t.parcelas}x · taxa {pct(t.taxa_total)}</option>)}
+              {base.taxas.filter((t) => t.forma === "credito").map((t) => <option key={t.id} value={t.parcelas}>{t.parcelas === 1 ? "1x (à vista)" : `${t.parcelas}x`} · taxa {pct(t.taxa_total)}</option>)}
             </select>
           </Campo>
         ) : <span />}
@@ -258,14 +257,14 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
               <tr><td>Valor da cirurgia</td><td style={num}>{fmtMoeda(valor)}</td></tr>
               <tr><td>1. Imposto ({pct(base.cfg.imposto_pct)} do total)</td><td style={num}>− {fmtMoeda(prev.imposto)}</td></tr>
               <tr><td>2. Centro cirúrgico ({pct(base.cfg.centro_cirurgico_pct)} do que sobra: {fmtMoeda(valor - prev.imposto)})</td><td style={num}>− {fmtMoeda(prev.centro)}</td></tr>
-              {n === 1 && (f.forma === "dinheiro" || f.forma === "pix") && (
+              {(f.forma === "dinheiro" || f.forma === "pix") && (
                 <tr><td><b>3. Médico</b></td><td style={num}><b>{fmtMoeda(valor - prev.imposto - prev.centro)}</b></td></tr>
               )}
             </tbody>
           </table>
-          {n === 1 && (f.forma === "debito" || f.forma === "credito") && (
-            <p className="muted pequeno">No {f.forma === "debito" ? "débito" : "crédito à vista"} não há taxa interna. O médico recebe o que a maquininha depositar, menos imposto e centro cirúrgico.
-              Depois de lançar, digite o valor que entrou.</p>
+          {n === 1 && (f.forma === "debito" || f.forma === "credito") && taxaPct !== null && (
+            <p className="pequeno">No {f.forma === "debito" ? "débito" : "crédito à vista"}: taxa interna <b>{pct(taxaPct)}</b> sobre o valor que a maquininha depositar (centavos {base.cfg.taxa_arredondamento === "truncar" ? "cortados" : "arredondados"}).
+              O médico recebe o depósito − imposto − centro cirúrgico − taxa interna. Depois de lançar, digite o valor que entrou.</p>
           )}
           {n > 1 && prev.sim && (
             <>
@@ -562,18 +561,18 @@ function Regras({ cfg, taxas, aoMudar }: { cfg: Config; taxas: TaxaCartao[]; aoM
     setErro(""); setOkMsg("");
     for (const x of taxas) {
       const a = numOuNulo(t[x.id]?.cartao), b = numOuNulo(t[x.id]?.antecipacao);
-      if (!valido(a) || !valido(b)) return setErro(`Taxa inválida em ${x.parcelas}x.`);
+      if (!valido(a) || !valido(b)) return setErro(`Taxa inválida em ${x.forma === "debito" ? "débito" : `${x.parcelas}x`}.`);
       if (a === Number(x.taxa_cartao) && b === Number(x.taxa_antecipacao)) continue;
       const { error } = await supabase.from("repasse_taxas_cartao").update({ taxa_cartao: a, taxa_antecipacao: b }).eq("id", x.id);
-      if (error) return setErro(`${x.parcelas}x: ${msgErro(error)}`);
+      if (error) return setErro(`${x.forma === "debito" ? "Débito" : `${x.parcelas}x`}: ${msgErro(error)}`);
     }
     setOkMsg("Taxas salvas. Valem para os repasses lançados daqui para a frente."); aoMudar();
   }
   async function incluir() {
     setErro(""); setOkMsg("");
     const n = Number(nova.parcelas), a = numOuNulo(nova.cartao), b = numOuNulo(nova.antecipacao);
-    if (!(n >= 2 && n <= 24) || !valido(a) || !valido(b)) return setErro("Preencha parcelas (2 a 24) e as duas taxas.");
-    const { error } = await supabase.from("repasse_taxas_cartao").insert({ parcelas: n, taxa_cartao: a, taxa_antecipacao: b });
+    if (!(n >= 1 && n <= 24) || !valido(a) || !valido(b)) return setErro("Preencha parcelas do crédito (1 a 24) e as duas taxas.");
+    const { error } = await supabase.from("repasse_taxas_cartao").insert({ forma: "credito", parcelas: n, taxa_cartao: a, taxa_antecipacao: b });
     if (error) return setErro(msgErro(error));
     setNova({ parcelas: "", cartao: "", antecipacao: "" }); aoMudar();
   }
@@ -587,7 +586,7 @@ function Regras({ cfg, taxas, aoMudar }: { cfg: Config; taxas: TaxaCartao[]; aoM
         <ol className="pequeno">
           <li><b>Imposto</b>: % do valor total da cirurgia.</li>
           <li><b>Centro cirúrgico</b>: % do que sobra depois do imposto.</li>
-          <li><b>Taxa interna</b>: só no crédito parcelado (2x ou mais), pela tabela abaixo, sobre o valor que entrou em cada parcela. Dinheiro, PIX, débito e crédito 1x: sem taxa interna.</li>
+          <li><b>Taxa interna</b>: no cartão (débito, crédito à vista e parcelado), pela tabela abaixo, sobre o valor que entrou em cada parcela. Dinheiro e PIX: sem taxa interna.</li>
           <li><b>Médico</b>: o que realmente entrou − imposto − centro cirúrgico − taxa interna. (No cartão, a taxa da maquininha fica com o médico.)</li>
         </ol>
         <p className="muted pequeno">Imposto e centro cirúrgico são divididos igualmente entre as parcelas; a sobra de centavos fica na última. O médico recebe conforme cada parcela entra.</p>
@@ -604,15 +603,15 @@ function Regras({ cfg, taxas, aoMudar }: { cfg: Config; taxas: TaxaCartao[]; aoM
       </div>
 
       <div className="painel rolagem">
-        <h2>Tabela de taxas do crédito parcelado</h2>
-        <p className="muted pequeno">Taxa interna = taxa do cartão + taxa de antecipação. Mudanças valem só para repasses lançados depois.</p>
+        <h2>Tabela de taxas do cartão</h2>
+        <p className="muted pequeno">Taxa interna = taxa do cartão + taxa de antecipação (débito e crédito 1x não têm antecipação). Mudanças valem só para repasses lançados depois.</p>
         <table className="tabela" style={{ maxWidth: 560 }}>
-          <thead><tr><th>Parcelas</th><th>Taxa do cartão (%)</th><th>Antecipação (%)</th><th style={num}>Taxa total</th></tr></thead>
+          <thead><tr><th>Cartão</th><th>Taxa do cartão (%)</th><th>Antecipação (%)</th><th style={num}>Taxa total</th></tr></thead>
           <tbody>
             {taxas.map((x) => {
               const a = numOuNulo(t[x.id]?.cartao) ?? 0, b = numOuNulo(t[x.id]?.antecipacao) ?? 0;
               return (
-                <tr key={x.id}><td><b>{x.parcelas}x</b></td>
+                <tr key={x.id}><td><b>{x.forma === "debito" ? "Débito" : x.parcelas === 1 ? "Crédito 1x" : `Crédito ${x.parcelas}x`}</b></td>
                   <td><input style={{ width: 90 }} inputMode="decimal" value={t[x.id]?.cartao ?? ""} onChange={(e) => setT({ ...t, [x.id]: { ...t[x.id], cartao: e.target.value } })} /></td>
                   <td><input style={{ width: 90 }} inputMode="decimal" value={t[x.id]?.antecipacao ?? ""} onChange={(e) => setT({ ...t, [x.id]: { ...t[x.id], antecipacao: e.target.value } })} /></td>
                   <td style={num}><b>{pct(Math.round((a + b) * 100) / 100)}</b></td></tr>
