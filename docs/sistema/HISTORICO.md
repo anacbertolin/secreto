@@ -863,3 +863,12 @@ Convênios, lente/material e regras por médico ficam para depois.
   lança no **Invistto** (sistema de gestão de ótica) para o estoque. Ideia: botão "Emitir nota" integrado, pela API do
   Invistto (se existir; perguntar ao suporte) ou por um serviço de NF-e próprio. A dona vai levantar como o Luciano faz hoje.
 - Melhoria oferecida e ainda sem resposta: no relatório por médico, mostrar o **previsto para o mês** (parcelas que vão cair).
+
+### 16/11 (noite) — Médicos da clínica cadastrados na Equipe (pedido da dona)
+- Os 7 médicos da página **Equipe** do site (conferida também no site original no ar) foram cadastrados em `profissionais`
+  (função médico, CRM-RJ, especialidade resumida, CBO 225265): Gelson Moura Brasil (52.86360-2), Gisele Moura Brasil
+  (52.87379-9), Max Oliveira Guimarães (52.86386-6), Luiza Morone Pereira (52.91775-3), Matheus de Souza Cerveira Pereira
+  (52.0127737-5), Renato Sztern Queiroz (52.92743-0), Pedro Boni Gonçalves (52.86698-9). Nome sem "Dr./Dra." (padrão da tabela).
+- Ficaram **inativos** porque o site não tem e-mail e a regra do banco exige e-mail para quem está ativo (é o login).
+  Para ligar cada um: tela Equipe → editar → pôr o e-mail → marcar "Ativo". Só então aparece na Agenda.
+- Faltam (não estão no site): e-mails, RQE e demais documentos. Funcionários não médicos não aparecem no site.
