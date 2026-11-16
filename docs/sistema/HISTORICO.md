@@ -839,3 +839,16 @@ Convênios, lente/material e regras por médico ficam para depois.
 - Confirmado: no parcelado o médico recebe **conforme cada parcela cai**; continuar **cortando os centavos**. O que importa no
   fim é **quanto se transfere ao médico a cada mês**.
 - O repasse nº 2 (12x de R$ 5.220) no banco é **de teste**.
+
+### 16/11 (noite) — Repasse: REGRA NOVA aplicada (migração 0062) + nome "Clínica"
+- **Dona autorizou a regra alternativa.** Vale para a **refrativa**: imposto (15%) e taxa do cartão (tabela; débito/1x 2,34%;
+  parcelado cartão + antecipação) **sobre o valor total da venda**, centavos da taxa cortados. Sobra = **honorários**:
+  **clínica 20%** (arredondado), **médico o restante**. Cada parte é dividida igualmente pelas parcelas (sobra de centavos
+  na última); o médico recebe quando a parcela **entra** ("Entrou hoje"); o valor depositado pela maquininha não entra mais
+  no cálculo (coluna `valor_recebido` só informativa).
+- Banco: `repasses.taxa_interna_total`, `repasses.medico_total`, `repasse_parcelas.valor`; gatilhos refeitos; todas as partes
+  da parcela são fixas desde o lançamento; "pago ao médico" exige "entrou". As colunas `centro_cirurgico_*` continuam com esse
+  nome, mas significam **parte da clínica sobre os honorários**; na tela aparecem como **"Clínica (20% dos honorários)"**.
+- Conferido (local e real, transação desfeita): PIX 4.820 → médico 3.277,60; débito 4.820 → taxa 112,78, clínica 796,84,
+  médico 3.187,38; 12x 5.220 → imposto 783,00, taxa 507,38, clínica 785,92, médico 3.143,70 (261,97/mês; última 262,03).
+- Repasse de teste nº 2 **cancelado** a pedido da dona (motivo registrado).
