@@ -1,4 +1,4 @@
-// Cálculo do repasse médico (cirurgia particular) — mesma regra do banco (migração 0060).
+// Cálculo do repasse médico (cirurgia particular) — mesma regra do banco (migrações 0060–0062).
 // Serve só para a PRÉVIA na tela; o valor oficial é sempre o calculado pelo banco.
 
 export interface RegrasRepasse {
@@ -24,21 +24,19 @@ export function taxaInternaPct(forma: string, parcelas: number, taxas: TaxaCarta
   return t ? Number(t.taxa_total) : null;
 }
 
-export function totaisRepasse(valorTotal: number, regras: RegrasRepasse) {
+/** Regra da refrativa (migração 0062): imposto e taxa do cartão sobre o VALOR TOTAL; da sobra, clínica % e médico o resto */
+export function calcularRepasse(valorTotal: number, regras: RegrasRepasse, taxaPct: number) {
   const imposto = round2((valorTotal * regras.imposto_pct) / 100);
-  const centro = round2(((valorTotal - imposto) * regras.centro_cirurgico_pct) / 100);
-  return { imposto, centro };
+  const bruto = (valorTotal * taxaPct) / 100;
+  const taxa = regras.taxa_arredondamento === "arredondar" ? round2(bruto) : trunc2(bruto);
+  const sobra = r(c(valorTotal) - c(imposto) - c(taxa));
+  const clinica = round2((sobra * regras.centro_cirurgico_pct) / 100);
+  const medico = r(c(sobra) - c(clinica));
+  return { imposto, taxa, sobra, clinica, medico };
 }
 
 /** Partes fixas de cada parcela: divisão igual, sobra de centavos na última */
 export function partesPorParcela(total: number, n: number): number[] {
   const parte = Math.trunc(c(total) / n);
   return Array.from({ length: n }, (_, i) => r(i === n - 1 ? c(total) - parte * (n - 1) : parte));
-}
-
-export function calcularParcela(valorRecebido: number, imposto: number, centro: number, taxaPct: number, arred: RegrasRepasse["taxa_arredondamento"]) {
-  const bruto = (valorRecebido * taxaPct) / 100;
-  const taxa = arred === "arredondar" ? round2(bruto) : trunc2(bruto);
-  const medico = r(c(valorRecebido) - c(imposto) - c(centro) - c(taxa));
-  return { taxa, medico };
 }

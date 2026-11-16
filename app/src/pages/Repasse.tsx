@@ -1,24 +1,24 @@
-// Repasse médico (área do Luciano, administrador) — migração 0060.
-// Cirurgia particular: imposto → centro cirúrgico → taxa interna (só crédito parcelado) → médico.
+// Repasse médico (área do Luciano, administrador) — migrações 0060–0062.
+// Cirurgia REFRATIVA particular: imposto e taxa do cartão sobre o valor total; da sobra, 20% clínica e 80% médico.
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase, msgErro } from "../lib/supabase";
 import { useCarregar, ok, Aviso, Carregando, Etiqueta, Modal, Campo, BuscaPaciente, type PacienteResumo } from "../components/ui";
 import { fmtData, fmtMoeda, isoDia, nomeExibicao, numOuNulo } from "../lib/util";
 import {
-  FORMAS_REPASSE, calcularParcela, partesPorParcela, taxaInternaPct, totaisRepasse, type RegrasRepasse, type TaxaCartao,
+  FORMAS_REPASSE, calcularRepasse, partesPorParcela, taxaInternaPct, type RegrasRepasse, type TaxaCartao,
 } from "../lib/repasse";
 
 // ------------------------------------------------------------------ tipos
 interface Parcela {
-  id: string; repasse_id: string; numero: number; data_prevista: string; valor_recebido: number | null; recebido_em: string | null;
+  id: string; repasse_id: string; numero: number; data_prevista: string; valor: number | null; valor_recebido: number | null; recebido_em: string | null;
   imposto: number; centro_cirurgico: number; taxa_interna: number | null; medico: number | null; pago_medico_em: string | null;
 }
 interface Repasse {
   id: string; numero: number; conta_id: string | null; paciente_id: string | null; profissional_id: string; procedimento: string;
   data_cirurgia: string; data_pagamento: string; valor_total: number; forma_pagamento: string; parcelas: number;
   imposto_pct: number; centro_cirurgico_pct: number; taxa_interna_pct: number; taxa_arredondamento: "truncar" | "arredondar";
-  imposto_total: number; centro_cirurgico_total: number; status: string; motivo_cancelamento: string | null; observacoes: string | null;
+  imposto_total: number; centro_cirurgico_total: number; taxa_interna_total: number; medico_total: number; status: string; motivo_cancelamento: string | null; observacoes: string | null;
   pacientes?: { nome: string; nome_social: string | null; numero_prontuario: number } | null;
   profissionais?: { nome: string } | null;
   repasse_parcelas?: Parcela[];
@@ -56,7 +56,7 @@ export default function RepasseMedico() {
       <div className="cabecalho">
         <div>
           <h1>Repasse médico</h1>
-          <p className="sub" style={{ margin: 0 }}>Cirurgia particular: imposto → centro cirúrgico → taxa interna (crédito parcelado) → médico</p>
+          <p className="sub" style={{ margin: 0 }}>Cirurgia refrativa particular: imposto e taxa do cartão sobre o total → honorários: 20% clínica, 80% médico</p>
         </div>
       </div>
       <Aviso>{base.erro}</Aviso>
@@ -114,7 +114,7 @@ function Lancamentos({ base }: { base: Awaited<ReturnType<typeof carregarBase>> 
             <tbody>
               {lista.map((r) => {
                 const ps = r.repasse_parcelas ?? [];
-                const entrou = ps.filter((p) => p.valor_recebido !== null).length;
+                const entrou = ps.filter((p) => p.recebido_em).length;
                 const pagas = ps.filter((p) => p.pago_medico_em).length;
                 return (
                   <tr key={r.id} className="clicavel" onClick={() => nav(`/repasse/${r.id}`)}>
@@ -185,13 +185,9 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
   const n = f.forma === "credito" ? Number(f.parcelas) : 1;
   const taxaPct = taxaInternaPct(f.forma, n, base.taxas);
   const prev = useMemo(() => {
-    if (valor <= 0) return null;
-    const { imposto, centro } = totaisRepasse(valor, base.cfg);
-    const imps = partesPorParcela(imposto, n), ccs = partesPorParcela(centro, n);
-    // simulação: parcela que entra = valor ÷ parcelas (a maquininha desconta a taxa dela; o valor real o Luciano digita depois)
-    const bruta = partesPorParcela(valor, n)[0];
-    const sim = taxaPct === null ? null : calcularParcela(bruta, imps[0], ccs[0], taxaPct, base.cfg.taxa_arredondamento);
-    return { imposto, centro, imps, ccs, bruta, sim };
+    if (valor <= 0 || taxaPct === null) return null;
+    const t = calcularRepasse(valor, base.cfg, taxaPct);
+    return { ...t, medParc: partesPorParcela(t.medico, n) };
   }, [valor, n, taxaPct, base.cfg]);
 
   async function salvar() {
@@ -254,26 +250,17 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
           <h2 style={{ marginTop: 0 }}>Prévia do cálculo</h2>
           <table className="tabela">
             <tbody>
-              <tr><td>Valor da cirurgia</td><td style={num}>{fmtMoeda(valor)}</td></tr>
+              <tr><td>Valor total da venda</td><td style={num}>{fmtMoeda(valor)}</td></tr>
               <tr><td>1. Imposto ({pct(base.cfg.imposto_pct)} do total)</td><td style={num}>− {fmtMoeda(prev.imposto)}</td></tr>
-              <tr><td>2. Centro cirúrgico ({pct(base.cfg.centro_cirurgico_pct)} do que sobra: {fmtMoeda(valor - prev.imposto)})</td><td style={num}>− {fmtMoeda(prev.centro)}</td></tr>
-              {(f.forma === "dinheiro" || f.forma === "pix") && (
-                <tr><td><b>3. Médico</b></td><td style={num}><b>{fmtMoeda(valor - prev.imposto - prev.centro)}</b></td></tr>
-              )}
+              {taxaPct! > 0 && <tr><td>2. Taxa do cartão ({pct(taxaPct!)} do total{f.forma === "credito" && n > 1 ? ", com antecipação" : ""})</td><td style={num}>− {fmtMoeda(prev.taxa)}</td></tr>}
+              <tr><td className="muted">Honorários (o que sobra)</td><td style={num} className="muted">{fmtMoeda(prev.sobra)}</td></tr>
+              <tr><td>{taxaPct! > 0 ? "3" : "2"}. Clínica ({pct(base.cfg.centro_cirurgico_pct)} dos honorários)</td><td style={num}>− {fmtMoeda(prev.clinica)}</td></tr>
+              <tr><td><b>Médico ({pct(100 - base.cfg.centro_cirurgico_pct)} dos honorários)</b></td><td style={num}><b>{fmtMoeda(prev.medico)}</b></td></tr>
             </tbody>
           </table>
-          {n === 1 && (f.forma === "debito" || f.forma === "credito") && taxaPct !== null && (
-            <p className="pequeno">No {f.forma === "debito" ? "débito" : "crédito à vista"}: taxa interna <b>{pct(taxaPct)}</b> sobre o valor que a maquininha depositar (centavos {base.cfg.taxa_arredondamento === "truncar" ? "cortados" : "arredondados"}).
-              O médico recebe o depósito − imposto − centro cirúrgico − taxa interna. Depois de lançar, digite o valor que entrou.</p>
-          )}
-          {n > 1 && prev.sim && (
-            <>
-              <p className="pequeno">Em cada uma das {n} parcelas: imposto <b>{fmtMoeda(prev.imps[0])}</b> · centro cirúrgico <b>{fmtMoeda(prev.ccs[0])}</b>
-                {prev.imps[n - 1] !== prev.imps[0] || prev.ccs[n - 1] !== prev.ccs[0] ? <> (a última parcela leva a sobra de centavos: {fmtMoeda(prev.imps[n - 1])} e {fmtMoeda(prev.ccs[n - 1])})</> : null}
-                {" "}· taxa interna <b>{pct(taxaPct!)}</b> do valor que entrar (centavos {base.cfg.taxa_arredondamento === "truncar" ? "cortados" : "arredondados"}).</p>
-              <p className="muted pequeno">Só para ter uma ideia: se cada parcela entrasse inteira ({fmtMoeda(prev.bruta)}), o médico receberia cerca de {fmtMoeda(prev.sim.medico)} por parcela.
-                Na prática entra um pouco menos, porque a maquininha desconta a taxa dela. O valor certo sai quando você digitar quanto entrou em cada parcela.</p>
-            </>
+          {n > 1 && (
+            <p className="pequeno">O médico recebe <b>{fmtMoeda(prev.medParc[0])}</b> por parcela, conforme cada uma cai
+              {prev.medParc[n - 1] !== prev.medParc[0] && <> (a última leva a sobra de centavos: {fmtMoeda(prev.medParc[n - 1])})</>}.</p>
           )}
         </div>
       )}
@@ -292,33 +279,19 @@ export function RepasseDetalhe() {
     r.repasse_parcelas = (r.repasse_parcelas ?? []).sort((a, b) => a.numero - b.numero);
     return r;
   }, [id]);
-  const [valores, setValores] = useState<Record<string, string>>({});
-  useEffect(() => {
-    if (dados) setValores(Object.fromEntries((dados.repasse_parcelas ?? []).map((p) => [p.id, p.valor_recebido === null ? "" : String(p.valor_recebido).replace(".", ",")])));
-  }, [dados]);
 
   if (carregando && !dados) return <Carregando />;
   if (!dados) return <Aviso>{e1}</Aviso>;
   const r = dados;
   const ps = r.repasse_parcelas ?? [];
   const ativo = r.status !== "cancelado";
-  const recebido = soma(ps, "valor_recebido");
-  const todasEntraram = ps.every((p) => p.valor_recebido !== null);
-  // previsão das parcelas que ainda não entraram: mesmo valor da última que entrou
-  const previsao = [...ps].reverse().find((p) => p.valor_recebido !== null)?.valor_recebido ?? null;
+  const entraram = ps.filter((p) => p.recebido_em);
 
   async function atualizar(p: Parcela, campos: Record<string, unknown>, msg: string) {
     setErro(""); setOkMsg("");
     const { error } = await supabase.from("repasse_parcelas").update(campos).eq("id", p.id);
     if (error) return setErro(msgErro(error));
     setOkMsg(msg); recarregar();
-  }
-  async function salvarValor(p: Parcela) {
-    const t = valores[p.id]?.trim() ?? "";
-    const v = t === "" ? null : numOuNulo(t);
-    if (t !== "" && (v === null || v < 0)) return setErro(`Valor inválido na parcela ${p.numero}.`);
-    if (v === (p.valor_recebido === null ? null : Number(p.valor_recebido))) return;
-    await atualizar(p, { valor_recebido: v, recebido_em: v === null ? null : p.recebido_em ?? isoDia(new Date()) }, `Parcela ${p.numero} atualizada.`);
   }
   async function cancelarRepasse(motivo: string) {
     setErro(""); setOkMsg("");
@@ -355,12 +328,10 @@ export function RepasseDetalhe() {
           <tbody>
             <tr><td>Valor da cirurgia · {FORMAS_REPASSE[r.forma_pagamento]}{r.parcelas > 1 ? ` em ${r.parcelas}x` : ""}</td><td style={num}><b>{fmtMoeda(r.valor_total)}</b></td></tr>
             <tr><td>Imposto ({pct(r.imposto_pct)} do total)</td><td style={num}>{fmtMoeda(r.imposto_total)}</td></tr>
-            <tr><td>Centro cirúrgico ({pct(r.centro_cirurgico_pct)} do que sobra)</td><td style={num}>{fmtMoeda(r.centro_cirurgico_total)}</td></tr>
-            {r.taxa_interna_pct > 0 && <tr><td>Taxa interna retida ({pct(r.taxa_interna_pct)} de cada parcela que entra)</td><td style={num}>{fmtMoeda(soma(ps, "taxa_interna"))}{!todasEntraram && " até agora"}</td></tr>}
-            {r.forma_pagamento !== "dinheiro" && r.forma_pagamento !== "pix" && todasEntraram && (
-              <tr><td>Taxa já descontada pela maquininha</td><td style={num}>{fmtMoeda(r.valor_total - recebido)}</td></tr>
-            )}
-            <tr><td><b>Médico</b>{!todasEntraram && " (das parcelas que já entraram)"}</td><td style={num}><b>{fmtMoeda(soma(ps, "medico"))}</b></td></tr>
+            {r.taxa_interna_pct > 0 && <tr><td>Taxa do cartão ({pct(r.taxa_interna_pct)} do total)</td><td style={num}>{fmtMoeda(r.taxa_interna_total)}</td></tr>}
+            <tr><td>Clínica ({pct(r.centro_cirurgico_pct)} dos honorários)</td><td style={num}>{fmtMoeda(r.centro_cirurgico_total)}</td></tr>
+            <tr><td><b>Médico</b> ({pct(100 - r.centro_cirurgico_pct)} dos honorários)</td><td style={num}><b>{fmtMoeda(r.medico_total)}</b></td></tr>
+            <tr><td className="muted">Parcelas que já entraram</td><td style={num} className="muted">{entraram.length} de {r.parcelas} · médico {fmtMoeda(soma(entraram, "medico"))}</td></tr>
             <tr><td className="muted">Já pago ao médico / falta pagar</td><td style={num} className="muted">
               {fmtMoeda(soma(ps.filter((p) => p.pago_medico_em), "medico"))} / {fmtMoeda(soma(ps.filter((p) => !p.pago_medico_em), "medico"))}</td></tr>
           </tbody>
@@ -370,52 +341,46 @@ export function RepasseDetalhe() {
 
       <div className="painel">
         <h2>Parcelas</h2>
-        {ativo && r.forma_pagamento !== "dinheiro" && r.forma_pagamento !== "pix" && (
-          <p className="muted pequeno">Digite quanto <b>realmente entrou</b> em cada parcela (o valor que a maquininha depositou) e saia do campo: o sistema calcula a parte do médico.</p>
+        {ativo && r.parcelas > 1 && (
+          <p className="muted pequeno">Quando cada parcela cair na conta, clique em <b>"Entrou hoje"</b>. Depois de transferir ao médico, clique em <b>"Marcar pago hoje"</b>.</p>
         )}
         <div className="rolagem">
           <table className="tabela">
-            <thead><tr><th>Parcela</th><th>Prevista</th><th style={num}>Entrou</th><th style={num}>Imposto</th><th style={num}>Centro cir.</th>
-              <th style={num}>Taxa interna</th><th style={num}>Médico</th><th>Pago ao médico</th></tr></thead>
+            <thead><tr><th>Parcela</th><th>Prevista</th><th style={num}>Valor</th><th style={num}>Imposto</th><th style={num}>Taxa cartão</th>
+              <th style={num}>Clínica</th><th style={num}>Médico</th><th>Entrou</th><th>Pago ao médico</th></tr></thead>
             <tbody>
-              {ps.map((p) => {
-                const editavel = ativo && !p.pago_medico_em;
-                return (
-                  <tr key={p.id}>
-                    <td>{p.numero}/{r.parcelas}</td>
-                    <td>{fmtData(p.data_prevista)}</td>
-                    <td style={num}>
-                      {editavel ? (
-                        <div className="linha" style={{ justifyContent: "flex-end", gap: 4 }}>
-                          <input style={{ width: 110, textAlign: "right" }} inputMode="decimal" aria-label={`Valor que entrou na parcela ${p.numero}`}
-                            value={valores[p.id] ?? ""} onChange={(e) => setValores({ ...valores, [p.id]: e.target.value })} onBlur={() => salvarValor(p)}
-                            onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()} placeholder="0,00" />
-                        </div>
-                      ) : fmtMoeda(p.valor_recebido)}
-                      {p.recebido_em && <div className="muted pequeno">em {fmtData(p.recebido_em)}</div>}
-                    </td>
-                    <td style={num}>{fmtMoeda(p.imposto)}</td>
-                    <td style={num}>{fmtMoeda(p.centro_cirurgico)}</td>
-                    <td style={num}>{p.valor_recebido === null ? "—" : fmtMoeda(p.taxa_interna)}</td>
-                    <td style={num}>{p.valor_recebido === null
-                      ? <><span className="muted">aguardando</span>{previsao && <div className="muted pequeno" title="Se entrar o mesmo valor da última parcela recebida">previsão {fmtMoeda(calcularParcela(previsao, p.imposto, p.centro_cirurgico, r.taxa_interna_pct, r.taxa_arredondamento).medico)}</div>}</>
-                      : <b>{fmtMoeda(p.medico)}</b>}</td>
-                    <td>
-                      {p.pago_medico_em ? (
-                        <span className="linha">✅ {fmtData(p.pago_medico_em)}
-                          {ativo && <button className="sutil pequeno" onClick={() => confirm(`Desmarcar o pagamento da parcela ${p.numero}?`) && atualizar(p, { pago_medico_em: null }, `Pagamento da parcela ${p.numero} desmarcado.`)}>desfazer</button>}</span>
-                      ) : ativo && p.valor_recebido !== null ? (
-                        <button className="pequeno" onClick={() => atualizar(p, { pago_medico_em: isoDia(new Date()) }, `Parcela ${p.numero} marcada como paga ao médico.`)}>Marcar pago hoje</button>
-                      ) : <span className="muted pequeno">—</span>}
-                    </td>
-                  </tr>
-                );
-              })}
+              {ps.map((p) => (
+                <tr key={p.id}>
+                  <td>{p.numero}/{r.parcelas}</td>
+                  <td>{fmtData(p.data_prevista)}</td>
+                  <td style={num}>{fmtMoeda(p.valor ?? Number(p.imposto) + Number(p.taxa_interna ?? 0) + Number(p.centro_cirurgico) + Number(p.medico ?? 0))}</td>
+                  <td style={num}>{fmtMoeda(p.imposto)}</td>
+                  <td style={num}>{fmtMoeda(p.taxa_interna)}</td>
+                  <td style={num}>{fmtMoeda(p.centro_cirurgico)}</td>
+                  <td style={num}><b>{fmtMoeda(p.medico)}</b></td>
+                  <td>
+                    {p.recebido_em ? (
+                      <span className="linha">✅ {fmtData(p.recebido_em)}
+                        {ativo && !p.pago_medico_em && <button className="sutil pequeno" onClick={() => confirm(`Desmarcar a entrada da parcela ${p.numero}?`) && atualizar(p, { recebido_em: null }, `Entrada da parcela ${p.numero} desmarcada.`)}>desfazer</button>}</span>
+                    ) : ativo ? (
+                      <button className="pequeno" onClick={() => atualizar(p, { recebido_em: isoDia(new Date()) }, `Parcela ${p.numero} marcada como recebida.`)}>Entrou hoje</button>
+                    ) : <span className="muted pequeno">—</span>}
+                  </td>
+                  <td>
+                    {p.pago_medico_em ? (
+                      <span className="linha">✅ {fmtData(p.pago_medico_em)}
+                        {ativo && <button className="sutil pequeno" onClick={() => confirm(`Desmarcar o pagamento da parcela ${p.numero}?`) && atualizar(p, { pago_medico_em: null }, `Pagamento da parcela ${p.numero} desmarcado.`)}>desfazer</button>}</span>
+                    ) : ativo && p.recebido_em ? (
+                      <button className="pequeno" onClick={() => atualizar(p, { pago_medico_em: isoDia(new Date()) }, `Parcela ${p.numero} marcada como paga ao médico.`)}>Marcar pago hoje</button>
+                    ) : <span className="muted pequeno">—</span>}
+                  </td>
+                </tr>
+              ))}
             </tbody>
             {ps.length > 1 && (
-              <tfoot><tr><th colSpan={2}>Total</th><th style={num}>{fmtMoeda(recebido)}</th><th style={num}>{fmtMoeda(soma(ps, "imposto"))}</th>
-                <th style={num}>{fmtMoeda(soma(ps, "centro_cirurgico"))}</th><th style={num}>{fmtMoeda(soma(ps, "taxa_interna"))}</th>
-                <th style={num}>{fmtMoeda(soma(ps, "medico"))}</th><th></th></tr></tfoot>
+              <tfoot><tr><th colSpan={2}>Total</th><th style={num}>{fmtMoeda(soma(ps, "valor"))}</th><th style={num}>{fmtMoeda(soma(ps, "imposto"))}</th>
+                <th style={num}>{fmtMoeda(soma(ps, "taxa_interna"))}</th><th style={num}>{fmtMoeda(soma(ps, "centro_cirurgico"))}</th>
+                <th style={num}>{fmtMoeda(soma(ps, "medico"))}</th><th></th><th></th></tr></tfoot>
             )}
           </table>
         </div>
@@ -444,7 +409,7 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
   const { dados, erro, carregando } = useCarregar(async () => {
     const q = supabase.from("repasse_parcelas")
       .select("*, repasses!inner(numero, procedimento, data_cirurgia, profissional_id, forma_pagamento, parcelas, status, profissionais(nome), pacientes(nome, nome_social))")
-      .not("valor_recebido", "is", null).gte("recebido_em", f.de).lte("recebido_em", f.ate).neq("repasses.status", "cancelado")
+      .not("recebido_em", "is", null).gte("recebido_em", f.de).lte("recebido_em", f.ate).neq("repasses.status", "cancelado")
       .order("recebido_em").limit(5000);
     return ok(await (f.medico === "todos" ? q : q.eq("repasses.profissional_id", f.medico))) as LinhaRel[];
   }, [f.de, f.ate, f.medico]);
@@ -461,11 +426,11 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
   }, [linhas]);
 
   function exportarCSV() {
-    const cab = ["Medico", "Repasse", "Procedimento", "Cirurgia", "Pagamento", "Parcela", "Entrou em", "Entrou", "Imposto", "Centro cirurgico", "Taxa interna", "Medico", "Pago ao medico em"];
+    const cab = ["Medico", "Repasse", "Procedimento", "Cirurgia", "Pagamento", "Parcela", "Entrou em", "Valor", "Imposto", "Taxa cartao", "Clinica", "Medico", "Pago ao medico em"];
     const v = (x: number | null) => (x === null ? "" : Number(x).toFixed(2).replace(".", ","));
     const corpo = linhas.map((l) => [l.repasses.profissionais?.nome ?? "", l.repasses.numero, l.repasses.procedimento, l.repasses.data_cirurgia,
-      FORMAS_REPASSE[l.repasses.forma_pagamento], `${l.numero}/${l.repasses.parcelas}`, l.recebido_em ?? "", v(l.valor_recebido), v(l.imposto),
-      v(l.centro_cirurgico), v(l.taxa_interna), v(l.medico), l.pago_medico_em ?? ""]);
+      FORMAS_REPASSE[l.repasses.forma_pagamento], `${l.numero}/${l.repasses.parcelas}`, l.recebido_em ?? "", v(l.valor), v(l.imposto),
+      v(l.taxa_interna), v(l.centro_cirurgico), v(l.medico), l.pago_medico_em ?? ""]);
     const csv = [cab, ...corpo].map((r) => r.map((x) => `"${String(x).replace(/"/g, '""')}"`).join(";")).join("\r\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
@@ -493,20 +458,20 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
           <div className="painel rolagem">
             <h2>Resumo do período</h2>
             <table className="tabela">
-              <thead><tr><th>Médico</th><th>Parcelas</th><th style={num}>Entrou</th><th style={num}>Imposto</th><th style={num}>Centro cir.</th>
-                <th style={num}>Taxa interna</th><th style={num}>Médico</th><th style={num}>Já pago</th><th style={num}>A pagar</th></tr></thead>
+              <thead><tr><th>Médico</th><th>Parcelas</th><th style={num}>Valor</th><th style={num}>Imposto</th><th style={num}>Taxa cartão</th>
+                <th style={num}>Clínica</th><th style={num}>Médico</th><th style={num}>Já pago</th><th style={num}>A pagar</th></tr></thead>
               <tbody>
                 {grupos.map((g) => (
-                  <tr key={g.nome}><td><b>{g.nome}</b></td><td>{g.ls.length}</td><td style={num}>{fmtMoeda(soma(g.ls, "valor_recebido"))}</td>
-                    <td style={num}>{fmtMoeda(soma(g.ls, "imposto"))}</td><td style={num}>{fmtMoeda(soma(g.ls, "centro_cirurgico"))}</td>
-                    <td style={num}>{fmtMoeda(soma(g.ls, "taxa_interna"))}</td><td style={num}><b>{fmtMoeda(soma(g.ls, "medico"))}</b></td>
+                  <tr key={g.nome}><td><b>{g.nome}</b></td><td>{g.ls.length}</td><td style={num}>{fmtMoeda(soma(g.ls, "valor"))}</td>
+                    <td style={num}>{fmtMoeda(soma(g.ls, "imposto"))}</td><td style={num}>{fmtMoeda(soma(g.ls, "taxa_interna"))}</td>
+                    <td style={num}>{fmtMoeda(soma(g.ls, "centro_cirurgico"))}</td><td style={num}><b>{fmtMoeda(soma(g.ls, "medico"))}</b></td>
                     <td style={num}>{fmtMoeda(soma(g.ls.filter((l) => l.pago_medico_em), "medico"))}</td>
                     <td style={num}>{fmtMoeda(soma(g.ls.filter((l) => !l.pago_medico_em), "medico"))}</td></tr>
                 ))}
               </tbody>
               {grupos.length > 1 && (
-                <tfoot><tr><th>Total</th><th>{linhas.length}</th><th style={num}>{fmtMoeda(soma(linhas, "valor_recebido"))}</th><th style={num}>{fmtMoeda(soma(linhas, "imposto"))}</th>
-                  <th style={num}>{fmtMoeda(soma(linhas, "centro_cirurgico"))}</th><th style={num}>{fmtMoeda(soma(linhas, "taxa_interna"))}</th>
+                <tfoot><tr><th>Total</th><th>{linhas.length}</th><th style={num}>{fmtMoeda(soma(linhas, "valor"))}</th><th style={num}>{fmtMoeda(soma(linhas, "imposto"))}</th>
+                  <th style={num}>{fmtMoeda(soma(linhas, "taxa_interna"))}</th><th style={num}>{fmtMoeda(soma(linhas, "centro_cirurgico"))}</th>
                   <th style={num}>{fmtMoeda(soma(linhas, "medico"))}</th><th style={num}>{fmtMoeda(soma(linhas.filter((l) => l.pago_medico_em), "medico"))}</th>
                   <th style={num}>{fmtMoeda(soma(linhas.filter((l) => !l.pago_medico_em), "medico"))}</th></tr></tfoot>
               )}
@@ -516,15 +481,15 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
             <div className="painel rolagem" key={g.nome}>
               <h2>{g.nome}</h2>
               <table className="tabela">
-                <thead><tr><th>Entrou em</th><th>Repasse</th><th>Paciente / procedimento</th><th>Parcela</th><th style={num}>Entrou</th>
-                  <th style={num}>Imposto</th><th style={num}>Centro cir.</th><th style={num}>Taxa</th><th style={num}>Médico</th><th>Pago em</th></tr></thead>
+                <thead><tr><th>Entrou em</th><th>Repasse</th><th>Paciente / procedimento</th><th>Parcela</th><th style={num}>Valor</th>
+                  <th style={num}>Imposto</th><th style={num}>Taxa cartão</th><th style={num}>Clínica</th><th style={num}>Médico</th><th>Pago em</th></tr></thead>
                 <tbody>
                   {g.ls.map((l) => (
                     <tr key={l.id}><td>{fmtData(l.recebido_em)}</td><td><Link to={`/repasse/${l.repasse_id}`}>nº {l.repasses.numero}</Link></td>
                       <td>{l.repasses.pacientes ? nomeExibicao(l.repasses.pacientes) : "—"}<div className="muted pequeno">{l.repasses.procedimento} · {fmtData(l.repasses.data_cirurgia)}</div></td>
                       <td>{l.numero}/{l.repasses.parcelas}<div className="muted pequeno">{FORMAS_REPASSE[l.repasses.forma_pagamento]}</div></td>
-                      <td style={num}>{fmtMoeda(l.valor_recebido)}</td><td style={num}>{fmtMoeda(l.imposto)}</td><td style={num}>{fmtMoeda(l.centro_cirurgico)}</td>
-                      <td style={num}>{fmtMoeda(l.taxa_interna)}</td><td style={num}><b>{fmtMoeda(l.medico)}</b></td>
+                      <td style={num}>{fmtMoeda(l.valor)}</td><td style={num}>{fmtMoeda(l.imposto)}</td><td style={num}>{fmtMoeda(l.taxa_interna)}</td>
+                      <td style={num}>{fmtMoeda(l.centro_cirurgico)}</td><td style={num}><b>{fmtMoeda(l.medico)}</b></td>
                       <td>{l.pago_medico_em ? fmtData(l.pago_medico_em) : <Etiqueta cor="amarelo">a pagar</Etiqueta>}</td></tr>
                   ))}
                 </tbody>
@@ -584,15 +549,15 @@ function Regras({ cfg, taxas, aoMudar }: { cfg: Config; taxas: TaxaCartao[]; aoM
       <div className="painel">
         <h2>Regras da divisão</h2>
         <ol className="pequeno">
-          <li><b>Imposto</b>: % do valor total da cirurgia.</li>
-          <li><b>Centro cirúrgico</b>: % do que sobra depois do imposto.</li>
-          <li><b>Taxa interna</b>: no cartão (débito, crédito à vista e parcelado), pela tabela abaixo, sobre o valor que entrou em cada parcela. Dinheiro e PIX: sem taxa interna.</li>
-          <li><b>Médico</b>: o que realmente entrou − imposto − centro cirúrgico − taxa interna. (No cartão, a taxa da maquininha fica com o médico.)</li>
+          <li><b>Imposto</b>: % do valor total da venda.</li>
+          <li><b>Taxa do cartão</b>: % da tabela abaixo sobre o valor total da venda (débito e crédito 1x: só a taxa do cartão; parcelado: cartão + antecipação). Dinheiro e PIX: sem taxa.</li>
+          <li><b>Honorários</b>: o que sobra (total − imposto − taxa).</li>
+          <li><b>Clínica</b>: % dos honorários. <b>Médico</b>: o restante dos honorários.</li>
         </ol>
-        <p className="muted pequeno">Imposto e centro cirúrgico são divididos igualmente entre as parcelas; a sobra de centavos fica na última. O médico recebe conforme cada parcela entra.</p>
+        <p className="muted pequeno">Vale para a cirurgia <b>refrativa</b> (feita fora da clínica; a taxa de sala o paciente paga ao centro cirúrgico). Cada parte é dividida igualmente entre as parcelas (sobra de centavos na última). O médico recebe conforme cada parcela entra.</p>
         <div className="grade g3" style={{ maxWidth: 640 }}>
           <Campo rotulo="Imposto (%)"><input inputMode="decimal" value={c.imposto} onChange={(e) => setC({ ...c, imposto: e.target.value })} /></Campo>
-          <Campo rotulo="Centro cirúrgico (%)"><input inputMode="decimal" value={c.centro} onChange={(e) => setC({ ...c, centro: e.target.value })} /></Campo>
+          <Campo rotulo="Clínica (% dos honorários)"><input inputMode="decimal" value={c.centro} onChange={(e) => setC({ ...c, centro: e.target.value })} /></Campo>
           <Campo rotulo="Centavos da taxa interna">
             <select value={c.arred} onChange={(e) => setC({ ...c, arred: e.target.value as Config["taxa_arredondamento"] })}>
               <option value="truncar">Cortar (ex.: 41,187 → 41,18)</option><option value="arredondar">Arredondar (ex.: 41,187 → 41,19)</option>
@@ -604,7 +569,7 @@ function Regras({ cfg, taxas, aoMudar }: { cfg: Config; taxas: TaxaCartao[]; aoM
 
       <div className="painel rolagem">
         <h2>Tabela de taxas do cartão</h2>
-        <p className="muted pequeno">Taxa interna = taxa do cartão + taxa de antecipação (débito e crédito 1x não têm antecipação). Mudanças valem só para repasses lançados depois.</p>
+        <p className="muted pequeno">Taxa interna = taxa do cartão + taxa de antecipação (débito e crédito 1x não têm antecipação), sobre o valor total da venda. Mudanças valem só para repasses lançados depois.</p>
         <table className="tabela" style={{ maxWidth: 560 }}>
           <thead><tr><th>Cartão</th><th>Taxa do cartão (%)</th><th>Antecipação (%)</th><th style={num}>Taxa total</th></tr></thead>
           <tbody>
