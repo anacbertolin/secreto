@@ -852,3 +852,14 @@ Convênios, lente/material e regras por médico ficam para depois.
 - Conferido (local e real, transação desfeita): PIX 4.820 → médico 3.277,60; débito 4.820 → taxa 112,78, clínica 796,84,
   médico 3.187,38; 12x 5.220 → imposto 783,00, taxa 507,38, clínica 785,92, médico 3.143,70 (261,97/mês; última 262,03).
 - Repasse de teste nº 2 **cancelado** a pedido da dona (motivo registrado).
+
+### 16/11 (noite) — Repasse: correção e próximos assuntos
+- **Correção (PR #45):** a lista do Repasse dava erro "more than one relationship… 'repasses' and 'profissionais'"
+  (`profissional_id` e `criado_por` apontam para `profissionais`). As consultas usam
+  `profissionais!repasses_profissional_id_fkey(nome)`. Confirmado pela dona: a tela abriu sem erro.
+  Lição: o teste com dados simulados não pega esse tipo de erro; ao embutir `profissionais`, sempre indicar a ligação.
+- **Lentes intraoculares (futuro):** vendidas como particular (PIX ou cartão até 12x), com repasse ao médico que operou.
+  A dona vai mandar o cadastro de tipos e valores. A clínica já emite NF-e de mercadoria; hoje o Luciano emite a nota e
+  lança no **Invistto** (sistema de gestão de ótica) para o estoque. Ideia: botão "Emitir nota" integrado, pela API do
+  Invistto (se existir; perguntar ao suporte) ou por um serviço de NF-e próprio. A dona vai levantar como o Luciano faz hoje.
+- Melhoria oferecida e ainda sem resposta: no relatório por médico, mostrar o **previsto para o mês** (parcelas que vão cair).
