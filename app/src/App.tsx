@@ -16,6 +16,7 @@ import Imprimir from "./pages/Imprimir";
 import { Equipe, Convenios, Locais, Horarios, CatalogoExames, Modelos } from "./pages/Cadastros";
 import Faturamento, { ContaDetalhe, LoteDetalhe } from "./pages/Faturamento";
 import Procedimentos from "./pages/Procedimentos";
+import RepasseMedico, { RepasseDetalhe } from "./pages/Repasse";
 import Relatorios from "./pages/Relatorios";
 import WhatsApp from "./pages/WhatsApp";
 import AssistenteWhatsApp from "./pages/AssistenteWhatsApp";
@@ -50,6 +51,7 @@ const MENU: ItemMenu[] = [
   { para: "/estoque", rotulo: "Estoque", icone: "📦", funcoes: ["medico", "enfermagem", "admin", "faturamento"] },
   { para: "/exames", rotulo: "Exames e laudos", icone: "🔬", funcoes: ["medico", "enfermagem"] },
   { para: "/faturamento", rotulo: "Faturamento", icone: "🧾", funcoes: ["faturamento", "recepcao", "admin"] },
+  { para: "/repasse", rotulo: "Repasse médico", icone: "💰", funcoes: ["faturamento", "admin"] },
   { para: "/exames/importar", rotulo: "Arquivos dos aparelhos", icone: "📥", funcoes: ["medico", "enfermagem"] },
   { para: "/relatorios", rotulo: "Relatórios", icone: "📊" },
   { grupo: "Cadastros", para: "/cadastros/equipe", rotulo: "Equipe", icone: "👥", funcoes: ["admin"] },
@@ -174,6 +176,8 @@ export default function App() {
           <Route path="/faturamento" element={<Protegida funcoes={["faturamento", "recepcao", "admin"]}><Faturamento /></Protegida>} />
           <Route path="/faturamento/conta/:id" element={<Protegida funcoes={["faturamento", "recepcao", "admin"]}><ContaDetalhe /></Protegida>} />
           <Route path="/faturamento/lote/:id" element={<Protegida funcoes={["faturamento", "admin"]}><LoteDetalhe /></Protegida>} />
+          <Route path="/repasse" element={<Protegida funcoes={["faturamento", "admin"]}><RepasseMedico /></Protegida>} />
+          <Route path="/repasse/:id" element={<Protegida funcoes={["faturamento", "admin"]}><RepasseDetalhe /></Protegida>} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/whatsapp" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><WhatsApp /></Protegida>} />
           <Route path="/whatsapp/assistente" element={<Protegida funcoes={["recepcao", "admin"]}><AssistenteWhatsApp /></Protegida>} />

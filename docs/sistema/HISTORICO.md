@@ -767,3 +767,52 @@ Api4Com, Nvoip e Twilio, escolheu **testar com a Api4Com** (PABX em nuvem brasil
 - Continua pendente (depende da Api4Com/dona): **número fixo próprio (DDD 21)** para sair sempre com o mesmo número e
   receber ligações no ramal (hoje o 21 96476-0292 não está apontado para o ramal 1000, por isso a entrada não chega);
   trocar a senha do ramal 1000 (apareceu no registro de outra sessão) e atualizar em Cadastros → Telefone.
+
+---
+
+## 16/11/2026 — Repasse médico v1 (área do Luciano) — migração 0060
+### Pedido da dona
+O Luciano (administrador da clínica) calcula à mão quanto cada médico recebe por cirurgia. A dona levantou as regras
+na aba "financeiro do Luciano" e pediu a 1ª versão no sistema ("versão mais simples", cirurgia particular — ex.: Dra. Gisele).
+Convênios, lente/material e regras por médico ficam para depois.
+### Regras (confirmadas pela dona em 16/11)
+1. **Imposto** = 15% do **valor total** da cirurgia.
+2. **Centro cirúrgico** = 20% do que sobra (total − imposto).
+3. **Taxa interna** = só no **crédito parcelado (2x a 12x)**: taxa do cartão + antecipação (tabela abaixo) sobre o valor
+   que **entrou** em cada parcela, **cortando os centavos**. É regra interna escolhida (a clínica não antecipa; a taxa forma
+   caixa) — **não questionar de novo**. Dinheiro, PIX, débito e crédito 1x: sem taxa interna.
+4. **Médico** = o que realmente entrou − imposto − centro cirúrgico − taxa interna. No débito/crédito a taxa da maquininha
+   fica com o médico (dona: "opção B").
+- Imposto e centro cirúrgico divididos igualmente entre as parcelas (sobra de centavos na **última** — sugestão, a confirmar).
+  O médico recebe **conforme cada parcela entra**. "2 dias úteis" da tabela da maquininha: desconsiderar.
+- Tabela (cartão + antecipação = total): 2x 2,34+1,61=3,95 · 3x 4,50 · 4x 5,05 · 5x 5,60 · 6x 2,34+3,81=6,15 ·
+  7x 2,61+4,36=6,97 · 8x 7,52 · 9x 8,07 · 10x 8,62 · 11x 9,17 · 12x 2,61+7,11=9,72.
+### O que entrou
+- **Migração 0060 `repasse_medico`** (aplicada; numerada 0060 porque a 0052 é de outra sessão): `repasse_config` (15%, 20%,
+  cortar/arredondar centavos), `repasse_taxas_cartao` (2x–12x, editável), `repasses` (um por cirurgia; guarda **cópia** das
+  porcentagens usadas — mudar a tabela não altera repasse já lançado; ligação opcional a uma conta **particular**) e
+  `repasse_parcelas` (criadas pelo banco; o Luciano só digita o valor que entrou e marca "pago ao médico").
+  Todo o cálculo é feito no banco (gatilhos); a tela só mostra prévia. Travas: valor/forma/parcelas/médico não mudam depois de
+  lançados (cancelar com motivo e lançar de novo); parcela paga ao médico não muda o valor; repasse com parcela paga não
+  cancela; cancelado não reabre; médico negativo é recusado; ninguém apaga. Acesso: só **faturamento e admin** (médico,
+  recepção, enfermagem e anônimo não veem). Auditoria em tudo.
+- **Telas:** menu **💰 Repasse médico** (`app/src/pages/Repasse.tsx`, cálculo da prévia em `app/src/lib/repasse.ts`):
+  Lançamentos (lista + "Novo repasse" com prévia do cálculo), detalhe com parcelas (digitar o que entrou, previsão das
+  próximas, "Marcar pago hoje"), **Relatório por médico** (período por data de entrada; já pago / a pagar; planilha e
+  impressão) e **Regras e taxas** (porcentagens e tabela editáveis). Na conta particular paga do Faturamento, botão
+  **"💰 Calcular repasse ao médico"** (puxa médico, paciente, valor, forma e parcelas).
+### Testes
+- Banco local (Postgres 16 + Supabase simulado): PIX R$ 4.820 → 723,00 / 819,40 / **3.277,60** ✔; débito entrou 4.770 →
+  **3.227,60** ✔; 12x R$ 5.220 → 65,25 / 73,95 por parcela, parcelas 2–12 (entrou 423,74) → taxa 41,18 → **243,36** ✔
+  (igual ao Luciano); 7x divide com sobra na última; todas as travas e acessos acima.
+- Banco real: mesmo exemplo de 12x dentro de transação desfeita (nada gravado) — mesmo resultado. Advisors: nada novo
+  (só "índice não usado" das tabelas novas, vazias).
+- Telas no navegador com dados simulados (sem login real): lançamento, prévia, parcelas, relatório, regras, celular; sem erros.
+### Pendências (perguntar à dona/Luciano)
+- **1ª parcela do exemplo:** entrou 423,66 → 9,72% = 41,1797 → cortando dá **41,17** → médica **243,29**. A aba DÚVIDAS
+  esperava 243,28 (taxa 41,18). Nenhuma regra única dá 41,18 nas duas parcelas (arredondando, a 1ª dá 41,18 mas as outras
+  dariam 41,19 → 243,35). Confirmar com o Luciano quanto ele pagou na 1ª parcela.
+- Sobra de centavos na última parcela? Cortar sempre os centavos da taxa? (a tela já permite trocar para arredondar)
+- 15%/20% mudam por médico ou procedimento? Lente/material na catarata? Refrativa AO = 1 ou 2 cirurgias? Convênios.
+- O Luciano precisa de login com a função **Faturamento** (tela Equipe). Rodar em **paralelo** com o cálculo à mão por
+  2–3 meses; mostrar as regras de imposto ao contador.
