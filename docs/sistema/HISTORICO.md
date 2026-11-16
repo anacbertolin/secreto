@@ -885,3 +885,10 @@ Convênios, lente/material e regras por médico ficam para depois.
 - Sem e-mail não há "esqueci minha senha" sozinho: a admin gera nova senha temporária (já era o fluxo).
 - Os 7 médicos foram **ativados** com usuário: gelson.brasil, gisele.brasil, max.guimaraes, luiza.pereira,
   matheus.pereira, renato.queiroz, pedro.goncalves. As senhas ainda não foram criadas (a dona cria pelo botão 🔑).
+
+### 16/11 (noite) — Cadastros de teste apagados (pedido da dona)
+- Apagados os 4 perfis "TESTE … (apagar)" da Equipe (médico, enfermagem, recepção, faturamento) e seus 3 logins,
+  os 3 pacientes "TESTE Paciente Silva (apagar)" e tudo ligado a eles: 2 agendamentos, 1 atendimento (com triagem,
+  receitas, exame, diagnóstico, óculos, desenho, 3 pedidos de exame), 2 contas, seguimento, link do portal, documento
+  verificável e os repasses de teste nº 2 e nº 7 (22 parcelas). Feito numa só transação, com conferência de que não
+  sobrou ligação quebrada. Mantidos: o exame "Teste ortóptico" (exame real) e o "Ramal 1000 (Ana – teste)" (ramal real da Api4Com).
