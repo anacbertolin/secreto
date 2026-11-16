@@ -100,6 +100,11 @@ export function fmtNumeroTel(n: string | null | undefined): string {
   return d || "número oculto";
 }
 
+// ---------- Trava contra rajadas de ligações ----------
+export const INTERVALO_MIN_MS = 10_000;       // entre uma tentativa e outra (qualquer número)
+export const MAX_TENTATIVAS_NUMERO = 3;       // para o mesmo número…
+export const JANELA_NUMERO_MS = 10 * 60_000;  // …dentro de 10 minutos
+
 // ---------- Toque (som de chamada chegando) ----------
 let ctxSom: AudioContext | null = null;
 function tocarToque(): () => void {
@@ -162,6 +167,9 @@ export function TelefoneProvider({ children }: { children: ReactNode }) {
   const audio = useRef<HTMLAudioElement | null>(null);
   const transferidaPara = useRef<string | null>(null);
   const pausaRef = useRef(false);
+  // Trava contra rajadas (teste de 15/11: vários cliques seguidos fizeram as operadoras barrarem as ligações)
+  const ultimaTentativa = useRef(0);
+  const tentativasPorNumero = useRef(new Map<string, number[]>());
 
   const mudar = useCallback((f: (c: Chamada | null) => Chamada | null) => {
     chamadaRef.current = f(chamadaRef.current);
@@ -323,6 +331,16 @@ export function TelefoneProvider({ children }: { children: ReactNode }) {
     if (!agente || !agente.isConnected()) return setErro("O telefone não está conectado.");
     if (sessao.current) return setErro("Termine a ligação atual antes de fazer outra.");
     if (numero.length < 3) return setErro("Número inválido.");
+    const agora = Date.now();
+    const falta = Math.ceil((INTERVALO_MIN_MS - (agora - ultimaTentativa.current)) / 1000);
+    if (falta > 0) return setErro(`Aguarde ${falta} s para ligar de novo. A pausa evita que as operadoras bloqueiem o número da clínica.`);
+    const recentes = (tentativasPorNumero.current.get(numero) ?? []).filter((t) => agora - t < JANELA_NUMERO_MS);
+    if (recentes.length >= MAX_TENTATIVAS_NUMERO) {
+      const libera = Math.ceil((JANELA_NUMERO_MS - (agora - recentes[0])) / 60000);
+      return setErro(`Já foram ${MAX_TENTATIVAS_NUMERO} tentativas para este número em ${JANELA_NUMERO_MS / 60000} minutos. Tente de novo em ${libera} min (ou mande um WhatsApp). Isso evita bloqueio pelas operadoras.`);
+    }
+    ultimaTentativa.current = agora;
+    tentativasPorNumero.current.set(numero, [...recentes, agora]);
     let s: RTCSession;
     try {
       s = agente.call(`sip:${destinoNaCentral(numero)}@${dominio.current}`, {
