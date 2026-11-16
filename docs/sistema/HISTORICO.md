@@ -825,3 +825,17 @@ Convênios, lente/material e regras por médico ficam para depois.
 - Exemplo: débito R$ 4.820,00, entrou R$ 4.770,00 → imposto 723,00, centro 819,40, taxa 2,34% de 4.770 = 111,618 → 111,61
   → médico **3.115,99** (antes da mudança: 3.227,60). Testado no banco local e no real (transação desfeita).
 - O repasse nº 2 já lançado (12x, 9,72%) não muda. Tela "Regras e taxas" mostra Débito e Crédito 1x na tabela.
+
+### 16/11 (noite) — Repasse: decisões e próximos passos combinados com a dona
+- **A regra atual vale só para cirurgia REFRATIVA**, que não é feita na clínica (o paciente paga a taxa de sala direto ao
+  centro cirúrgico de fora). Os "20%" não são de centro cirúrgico: são a parte da **clínica (empresa) sobre os honorários**;
+  os 80% restantes são os **honorários do médico**.
+- **Demais cirurgias (feitas na clínica):** vão precisar de **taxa de sala por procedimento** e de **insumos** (ex.: lente
+  intraocular). A dona vai juntar esses dados. Ainda não implementar.
+- **Regra alternativa avaliada e aprovada na lógica, mas NÃO aplicar por enquanto (decisão da dona):** imposto (15%) e taxa do
+  cartão (cartão + antecipação; 1x/débito só cartão) ambos sobre o **valor total**; o que sobra: 20% clínica, 80% médico.
+  Evita cobrar a taxa da maquininha duas vezes do médico. Exemplo 12x R$ 5.220: imposto 783,00, taxa 507,38, sobra 3.929,62,
+  clínica 785,92, médico 3.143,70 (≈ R$ 261,97/mês) — hoje 2.920,24. Débito/1x R$ 4.820: médico 3.187,38 (hoje 3.115,99).
+- Confirmado: no parcelado o médico recebe **conforme cada parcela cai**; continuar **cortando os centavos**. O que importa no
+  fim é **quanto se transfere ao médico a cada mês**.
+- O repasse nº 2 (12x de R$ 5.220) no banco é **de teste**.
