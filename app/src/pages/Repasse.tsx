@@ -31,7 +31,7 @@ const STATUS: Record<string, { rotulo: string; cor: string }> = {
   concluido: { rotulo: "Médico pago", cor: "verde" },
   cancelado: { rotulo: "Cancelado", cor: "cinza" },
 };
-const SEL = "*, pacientes(nome, nome_social, numero_prontuario), profissionais(nome), repasse_parcelas(*)";
+const SEL = "*, pacientes(nome, nome_social, numero_prontuario), profissionais!repasses_profissional_id_fkey(nome), repasse_parcelas(*)";
 const num = { textAlign: "right" as const, fontVariantNumeric: "tabular-nums" as const };
 const pct = (v: number) => `${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}%`;
 const soma = (ps: Parcela[], k: keyof Parcela) => ps.reduce((s, p) => s + Number(p[k] ?? 0), 0);
@@ -408,7 +408,7 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
   const [f, setF] = useState({ de: primeiroDiaMes(), ate: isoDia(new Date()), medico: "todos", situacao: "todas" });
   const { dados, erro, carregando } = useCarregar(async () => {
     const q = supabase.from("repasse_parcelas")
-      .select("*, repasses!inner(numero, procedimento, data_cirurgia, profissional_id, forma_pagamento, parcelas, status, profissionais(nome), pacientes(nome, nome_social))")
+      .select("*, repasses!inner(numero, procedimento, data_cirurgia, profissional_id, forma_pagamento, parcelas, status, profissionais!repasses_profissional_id_fkey(nome), pacientes(nome, nome_social))")
       .not("recebido_em", "is", null).gte("recebido_em", f.de).lte("recebido_em", f.ate).neq("repasses.status", "cancelado")
       .order("recebido_em").limit(5000);
     return ok(await (f.medico === "todos" ? q : q.eq("repasses.profissional_id", f.medico))) as LinhaRel[];
