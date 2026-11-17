@@ -115,13 +115,16 @@
   combinados com a sessão de migração, pendências). Acrescente uma seção ao fim a cada dia de trabalho.
 - React + Vite + TypeScript, servido como site estático (`npm run build` → `npm start`) no Railway (serviço `sistema`, pasta raiz `/app`).
 - Fala direto com o Supabase usando só a chave **publicável**; quem protege os dados são as regras RLS.
-- Login: e-mail + senha (Supabase Auth). Só e-mails cadastrados e ativos em `profissionais` conseguem criar conta
+- Login: **usuário + senha** para médicos e funcionários; **e-mail + senha** só para a administração (decisão da dona, 16/11;
+  migração 0063: o usuário vira por trás o e-mail interno `<usuario>@equipe.consumedolhos.com.br`, que nunca recebe nada).
+  Só e-mails cadastrados e ativos em `profissionais` conseguem criar conta
   (gatilho `somente_equipe` em `auth.users`). Senhas temporárias são criadas pelo admin na tela Equipe
   (função Edge `equipe-acesso`); a pessoa troca no primeiro acesso.
 - Identidade visual: Consumed · Clínica de Olhos (logos em `app/public`, dados da clínica em `app/src/lib/marca.ts`).
 - Módulos v1: Agenda, Recepção, Pacientes, Consultório/Prontuário (PEP oftalmológico), Exames e laudos, Cadastros,
   **Faturamento** (contas/guias, lotes, glosas, produção; migrações 0009–0010; função de equipe `faturamento`),
-  **Relatórios** (funções `rel_*`, migração 0011). Listas oficiais CID-10/ANVISA em `app/public/dados/` (script `app/scripts/gerar_listas.py`).
+  **Relatórios** (funções `rel_*`, migração 0011).
+  **Repasse médico** (cirurgia particular; migração 0060; menu 💰, só faturamento/admin; regras em `docs/sistema/HISTORICO.md`, 16/11). Listas oficiais CID-10/ANVISA em `app/public/dados/` (script `app/scripts/gerar_listas.py`).
 - Testes de tela com login: NÃO publicar a função `equipe-acesso` com chave mestra/bootstrap (o sistema de segurança
   bloqueia e está certo). Peça à dona um acesso de teste criado por ela na tela Equipe.
 - Arquivos de exames: bucket privado `exames` no Storage (até 50 MB por arquivo).

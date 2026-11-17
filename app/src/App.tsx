@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./lib/auth";
-import { FUNCOES, type Funcao } from "./lib/util";
+import { FUNCOES, loginExibicao, type Funcao } from "./lib/util";
 import { CLINICA } from "./lib/marca";
 import Login, { TrocarSenha } from "./pages/Login";
 import Inicio from "./pages/Inicio";
@@ -16,6 +16,7 @@ import Imprimir from "./pages/Imprimir";
 import { Equipe, Convenios, Locais, Horarios, CatalogoExames, Modelos } from "./pages/Cadastros";
 import Faturamento, { ContaDetalhe, LoteDetalhe } from "./pages/Faturamento";
 import Procedimentos from "./pages/Procedimentos";
+import RepasseMedico, { RepasseDetalhe } from "./pages/Repasse";
 import Relatorios from "./pages/Relatorios";
 import WhatsApp from "./pages/WhatsApp";
 import AssistenteWhatsApp from "./pages/AssistenteWhatsApp";
@@ -56,6 +57,7 @@ const MENU: ItemMenu[] = [
   { para: "/estoque", rotulo: "Estoque", icone: "📦", funcoes: ["medico", "enfermagem", "admin", "faturamento"] },
   { para: "/exames", rotulo: "Exames e laudos", icone: "🔬", funcoes: ["medico", "enfermagem"] },
   { para: "/faturamento", rotulo: "Faturamento", icone: "🧾", funcoes: ["faturamento", "recepcao", "admin"] },
+  { para: "/repasse", rotulo: "Repasse médico", icone: "💰", funcoes: ["faturamento", "admin"] },
   { para: "/exames/importar", rotulo: "Arquivos dos aparelhos", icone: "📥", funcoes: ["medico", "enfermagem"] },
   { para: "/relatorios", rotulo: "Relatórios", icone: "📊" },
   { grupo: "Cadastros", para: "/cadastros/equipe", rotulo: "Equipe", icone: "👥", funcoes: ["admin"] },
@@ -111,7 +113,7 @@ export default function App() {
       <div className="tela-login">
         <div className="caixa-login">
           <h2>Acesso não liberado</h2>
-          <p>O e-mail <b>{session.user.email}</b> não está cadastrado (ou está inativo) na equipe.</p>
+          <p>O acesso <b>{loginExibicao(session.user.email)}</b> não está cadastrado (ou está inativo) na equipe.</p>
           <p className="muted">Peça à administração para cadastrar você em Cadastros → Equipe.</p>
           <button onClick={sair}>Sair</button>
         </div>
@@ -184,6 +186,8 @@ export default function App() {
           <Route path="/faturamento" element={<Protegida funcoes={["faturamento", "recepcao", "admin"]}><Faturamento /></Protegida>} />
           <Route path="/faturamento/conta/:id" element={<Protegida funcoes={["faturamento", "recepcao", "admin"]}><ContaDetalhe /></Protegida>} />
           <Route path="/faturamento/lote/:id" element={<Protegida funcoes={["faturamento", "admin"]}><LoteDetalhe /></Protegida>} />
+          <Route path="/repasse" element={<Protegida funcoes={["faturamento", "admin"]}><RepasseMedico /></Protegida>} />
+          <Route path="/repasse/:id" element={<Protegida funcoes={["faturamento", "admin"]}><RepasseDetalhe /></Protegida>} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/whatsapp" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><WhatsApp key="clinica" /></Protegida>} />
           <Route path="/orientacao-cirurgica" element={

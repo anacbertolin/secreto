@@ -3,7 +3,7 @@ import { supabase, msgErro } from "../lib/supabase";
 import { useAuth, type Profissional } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Modal, Campo, Etiqueta } from "../components/ui";
 import { listaProfissionais, listaLocais, nomePor, type Horario, type Bloqueio } from "../lib/dados";
-import { DIAS_SEMANA, FUNCOES, fmtDataHora, senhaAleatoria, cpfValido, type Funcao } from "../lib/util";
+import { DIAS_SEMANA, FUNCOES, fmtDataHora, senhaAleatoria, cpfValido, loginExibicao, sugerirUsuario, USUARIO_VALIDO, type Funcao } from "../lib/util";
 
 // ====================================================================== Equipe
 export function Equipe() {
@@ -25,12 +25,12 @@ export function Equipe() {
       {carregando ? <Carregando /> : (
         <div className="painel rolagem">
           <table className="tabela">
-            <thead><tr><th>Nome</th><th>E-mail (login)</th><th>Função</th><th>Registro</th><th></th></tr></thead>
+            <thead><tr><th>Nome</th><th>Login</th><th>Função</th><th>Registro</th><th></th></tr></thead>
             <tbody>
               {(dados ?? []).map((p) => (
                 <tr key={p.id} style={{ opacity: p.ativo ? 1 : 0.5 }}>
                   <td><b>{p.nome}</b>{!p.ativo && <> <Etiqueta cor="cinza">inativo</Etiqueta></>}{p.especialidade && <div className="muted pequeno">{p.especialidade}</div>}</td>
-                  <td>{p.email ?? <span className="muted">— (sem login)</span>}</td>
+                  <td>{p.usuario ? <>👤 {p.usuario}</> : p.email ?? <span className="muted">— (sem login)</span>}</td>
                   <td>{FUNCOES[p.funcao]}{p.orientacao_cirurgica && <div><Etiqueta cor="azul">Orientação cirúrgica</Etiqueta></div>}</td>
                   <td>{p.conselho && `${p.conselho} ${p.numero_conselho ?? ""}/${p.uf_conselho ?? ""}`}</td>
                   <td style={{ textAlign: "right" }}>
@@ -53,10 +53,12 @@ export function Equipe() {
 
 function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional>; aoFechar: () => void; aoSalvar: () => void }) {
   const [f, setF] = useState<Record<string, string | boolean>>({
-    nome: p.nome ?? "", email: p.email ?? "", funcao: p.funcao ?? "recepcao", conselho: p.conselho ?? "", numero_conselho: p.numero_conselho ?? "",
+    nome: p.nome ?? "", email: p.usuario ? "" : p.email ?? "", usuario: p.usuario ?? "", funcao: p.funcao ?? "recepcao", conselho: p.conselho ?? "", numero_conselho: p.numero_conselho ?? "",
     uf_conselho: p.uf_conselho ?? "", especialidade: p.especialidade ?? "", rqe: p.rqe ?? "", cbo: (p as { cbo?: string | null }).cbo ?? "", ativo: p.ativo ?? true,
     orientacao_cirurgica: p.orientacao_cirurgica ?? false,
   });
+  // Médicos e funcionários entram com usuário; a administração com e-mail (decisão da dona, 16/11)
+  const [modo, setModo] = useState<"usuario" | "email">(p.usuario ? "usuario" : p.email ? "email" : p.funcao === "admin" ? "email" : "usuario");
   const [erro, setErro] = useState("");
   // CPF e nascimento do médico (Memed) ficam em tabela separada: só a administração e o próprio veem
   const [dp, setDp] = useState({ cpf: "", data_nascimento: "", sexo: "" });
@@ -71,9 +73,15 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
     const cpf = dp.cpf.replace(/\D/g, "");
     if (cpf && !cpfValido(cpf)) return setErro("CPF inválido.");
     const email = String(f.email ?? "").trim().toLowerCase();
+    const usuario = String(f.usuario ?? "").trim().toLowerCase();
     if (!String(f.nome).trim()) return setErro("Informe o nome.");
-    if (f.ativo && !email.includes("@")) return setErro("Quem está ativo precisa de e-mail (é o login no sistema).");
-    const v: Record<string, unknown> = { ...f, email: email || null, nome: String(f.nome).trim() };
+    if (modo === "usuario") {
+      if (usuario && !USUARIO_VALIDO.test(usuario)) return setErro("Usuário: de 3 a 40 letras minúsculas sem acento, números, ponto, hífen ou _ (sem espaço). Ex.: gelson.brasil");
+      if (f.ativo && !usuario) return setErro("Quem está ativo precisa de um usuário (é o login no sistema).");
+    } else if (f.ativo && !email.includes("@")) return setErro("Quem está ativo precisa de e-mail (é o login no sistema).");
+    const v: Record<string, unknown> = { ...f, nome: String(f.nome).trim() };
+    if (modo === "usuario") { v.usuario = usuario || null; delete v.email; if (!usuario) v.email = null; }
+    else { v.usuario = null; v.email = email || null; }
     for (const k of ["conselho", "numero_conselho", "uf_conselho", "especialidade", "rqe", "cbo"]) v[k] = String(v[k] ?? "").trim() || null;
     if (f.funcao === "medico" && !v.cbo) v.cbo = "225265";
     if (v.uf_conselho) v.uf_conselho = String(v.uf_conselho).toUpperCase().slice(0, 2);
@@ -95,7 +103,28 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
       <Aviso>{erro}</Aviso>
       <div className="grade g2">
         <Campo rotulo="Nome completo" className="inteiro"><input value={f.nome as string} onChange={set("nome")} /></Campo>
-        <Campo rotulo="E-mail (será o login)"><input type="email" value={f.email as string} onChange={set("email")} /></Campo>
+        <Campo rotulo="Entra no sistema com">
+          <select value={modo} onChange={(e) => {
+            const m = e.target.value as "usuario" | "email";
+            setModo(m);
+            if (m === "usuario" && !f.usuario) setF({ ...f, usuario: sugerirUsuario(String(f.nome)) });
+          }}>
+            <option value="usuario">Usuário e senha</option>
+            <option value="email">E-mail e senha (administração)</option>
+          </select>
+        </Campo>
+        {modo === "usuario" ? (
+          <Campo rotulo="Usuário (login)">
+            <input value={f.usuario as string} autoCapitalize="none" spellCheck={false} placeholder="ex.: gelson.brasil"
+              onFocus={() => { if (!f.usuario && f.nome) setF({ ...f, usuario: sugerirUsuario(String(f.nome)) }); }}
+              onChange={(e) => setF({ ...f, usuario: e.target.value.toLowerCase().replace(/\s/g, "") })} />
+          </Campo>
+        ) : (
+          <Campo rotulo="E-mail (será o login)"><input type="email" value={f.email as string} onChange={set("email")} /></Campo>
+        )}
+        {p.id && p.usuario && modo === "usuario" && f.usuario !== p.usuario && (
+          <div className="inteiro"><Aviso tipo="info">Ao trocar o usuário, crie de novo a senha de acesso (botão 🔑) — o login antigo deixa de valer.</Aviso></div>
+        )}
         <Campo rotulo="Função">
           <select value={f.funcao as string} onChange={set("funcao")}>
             {(Object.keys(FUNCOES) as Funcao[]).map((k) => <option key={k} value={k}>{FUNCOES[k]}</option>)}
@@ -150,14 +179,14 @@ function SenhaAcesso({ p, aoFechar }: { p: Profissional; aoFechar: () => void })
       <Aviso>{erro}</Aviso>
       {!feito ? (
         <>
-          <p>Isto cria o acesso de <b>{p.email}</b> (ou troca a senha, se ela esqueceu) com a senha temporária abaixo.</p>
+          <p>Isto cria o acesso de <b>{loginExibicao(p.email)}</b> (ou troca a senha, se ela esqueceu) com a senha temporária abaixo.</p>
           <p style={{ fontSize: "1.6rem", fontFamily: "monospace", letterSpacing: 2, textAlign: "center", background: "#f3f5f7", padding: 12, borderRadius: 8 }}>{senha}</p>
           <p className="muted pequeno">Entregue a senha pessoalmente ou por telefone. No primeiro acesso a pessoa é obrigada a criar a própria senha.</p>
           <button className="primario" onClick={criar} disabled={enviando}>{enviando ? "Criando…" : "Criar / redefinir acesso"}</button>
         </>
       ) : (
         <Aviso tipo="ok">
-          {feito} Login: <b>{p.email}</b> · Senha temporária: <b style={{ fontFamily: "monospace" }}>{senha}</b>
+          {feito} {p.usuario ? "Usuário" : "Login"}: <b>{loginExibicao(p.email)}</b> · Senha temporária: <b style={{ fontFamily: "monospace" }}>{senha}</b>
         </Aviso>
       )}
     </Modal>

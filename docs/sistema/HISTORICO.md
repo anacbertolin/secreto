@@ -770,6 +770,139 @@ Api4Com, Nvoip e Twilio, escolheu **testar com a Api4Com** (PABX em nuvem brasil
 
 ---
 
+## 16/11/2026 — Repasse médico v1 (área do Luciano) — migração 0060
+### Pedido da dona
+O Luciano (administrador da clínica) calcula à mão quanto cada médico recebe por cirurgia. A dona levantou as regras
+na aba "financeiro do Luciano" e pediu a 1ª versão no sistema ("versão mais simples", cirurgia particular — ex.: Dra. Gisele).
+Convênios, lente/material e regras por médico ficam para depois.
+### Regras (confirmadas pela dona em 16/11)
+1. **Imposto** = 15% do **valor total** da cirurgia.
+2. **Centro cirúrgico** = 20% do que sobra (total − imposto).
+3. **Taxa interna** = só no **crédito parcelado (2x a 12x)**: taxa do cartão + antecipação (tabela abaixo) sobre o valor
+   que **entrou** em cada parcela, **cortando os centavos**. É regra interna escolhida (a clínica não antecipa; a taxa forma
+   caixa) — **não questionar de novo**. Dinheiro, PIX, débito e crédito 1x: sem taxa interna.
+4. **Médico** = o que realmente entrou − imposto − centro cirúrgico − taxa interna. No débito/crédito a taxa da maquininha
+   fica com o médico (dona: "opção B").
+- Imposto e centro cirúrgico divididos igualmente entre as parcelas (sobra de centavos na **última** — sugestão, a confirmar).
+  O médico recebe **conforme cada parcela entra**. "2 dias úteis" da tabela da maquininha: desconsiderar.
+- Tabela (cartão + antecipação = total): 2x 2,34+1,61=3,95 · 3x 4,50 · 4x 5,05 · 5x 5,60 · 6x 2,34+3,81=6,15 ·
+  7x 2,61+4,36=6,97 · 8x 7,52 · 9x 8,07 · 10x 8,62 · 11x 9,17 · 12x 2,61+7,11=9,72.
+### O que entrou
+- **Migração 0060 `repasse_medico`** (aplicada; numerada 0060 porque a 0052 é de outra sessão): `repasse_config` (15%, 20%,
+  cortar/arredondar centavos), `repasse_taxas_cartao` (2x–12x, editável), `repasses` (um por cirurgia; guarda **cópia** das
+  porcentagens usadas — mudar a tabela não altera repasse já lançado; ligação opcional a uma conta **particular**) e
+  `repasse_parcelas` (criadas pelo banco; o Luciano só digita o valor que entrou e marca "pago ao médico").
+  Todo o cálculo é feito no banco (gatilhos); a tela só mostra prévia. Travas: valor/forma/parcelas/médico não mudam depois de
+  lançados (cancelar com motivo e lançar de novo); parcela paga ao médico não muda o valor; repasse com parcela paga não
+  cancela; cancelado não reabre; médico negativo é recusado; ninguém apaga. Acesso: só **faturamento e admin** (médico,
+  recepção, enfermagem e anônimo não veem). Auditoria em tudo.
+- **Telas:** menu **💰 Repasse médico** (`app/src/pages/Repasse.tsx`, cálculo da prévia em `app/src/lib/repasse.ts`):
+  Lançamentos (lista + "Novo repasse" com prévia do cálculo), detalhe com parcelas (digitar o que entrou, previsão das
+  próximas, "Marcar pago hoje"), **Relatório por médico** (período por data de entrada; já pago / a pagar; planilha e
+  impressão) e **Regras e taxas** (porcentagens e tabela editáveis). Na conta particular paga do Faturamento, botão
+  **"💰 Calcular repasse ao médico"** (puxa médico, paciente, valor, forma e parcelas).
+### Testes
+- Banco local (Postgres 16 + Supabase simulado): PIX R$ 4.820 → 723,00 / 819,40 / **3.277,60** ✔; débito entrou 4.770 →
+  **3.227,60** ✔; 12x R$ 5.220 → 65,25 / 73,95 por parcela, parcelas 2–12 (entrou 423,74) → taxa 41,18 → **243,36** ✔
+  (igual ao Luciano); 7x divide com sobra na última; todas as travas e acessos acima.
+- Banco real: mesmo exemplo de 12x dentro de transação desfeita (nada gravado) — mesmo resultado. Advisors: nada novo
+  (só "índice não usado" das tabelas novas, vazias).
+- Telas no navegador com dados simulados (sem login real): lançamento, prévia, parcelas, relatório, regras, celular; sem erros.
+### Pendências (perguntar à dona/Luciano)
+- **1ª parcela do exemplo:** entrou 423,66 → 9,72% = 41,1797 → cortando dá **41,17** → médica **243,29**. A aba DÚVIDAS
+  esperava 243,28 (taxa 41,18). Nenhuma regra única dá 41,18 nas duas parcelas (arredondando, a 1ª dá 41,18 mas as outras
+  dariam 41,19 → 243,35). Confirmar com o Luciano quanto ele pagou na 1ª parcela.
+- Sobra de centavos na última parcela? Cortar sempre os centavos da taxa? (a tela já permite trocar para arredondar)
+- 15%/20% mudam por médico ou procedimento? Lente/material na catarata? Refrativa AO = 1 ou 2 cirurgias? Convênios.
+- O Luciano precisa de login com a função **Faturamento** (tela Equipe). Rodar em **paralelo** com o cálculo à mão por
+  2–3 meses; mostrar as regras de imposto ao contador.
+
+### 16/11 (noite) — Repasse: taxa interna no débito e no crédito 1x (migração 0061)
+- **Decisão da dona:** débito e crédito à vista (1x) passam a descontar **2,34%** (só a taxa do cartão, sem antecipação).
+  Mesma forma do parcelado: sobre o valor que **entrou**, centavos cortados. Dinheiro e PIX continuam sem taxa interna.
+- `repasse_taxas_cartao` ganhou a coluna `forma` (crédito/débito), aceita 1 parcela (débito só 1x); linhas novas
+  crédito 1x e débito 1x = 2,34 + 0. `interno.tg_repasse_regras` busca a taxa por forma + parcelas.
+- Exemplo: débito R$ 4.820,00, entrou R$ 4.770,00 → imposto 723,00, centro 819,40, taxa 2,34% de 4.770 = 111,618 → 111,61
+  → médico **3.115,99** (antes da mudança: 3.227,60). Testado no banco local e no real (transação desfeita).
+- O repasse nº 2 já lançado (12x, 9,72%) não muda. Tela "Regras e taxas" mostra Débito e Crédito 1x na tabela.
+
+### 16/11 (noite) — Repasse: decisões e próximos passos combinados com a dona
+- **A regra atual vale só para cirurgia REFRATIVA**, que não é feita na clínica (o paciente paga a taxa de sala direto ao
+  centro cirúrgico de fora). Os "20%" não são de centro cirúrgico: são a parte da **clínica (empresa) sobre os honorários**;
+  os 80% restantes são os **honorários do médico**.
+- **Demais cirurgias (feitas na clínica):** vão precisar de **taxa de sala por procedimento** e de **insumos** (ex.: lente
+  intraocular). A dona vai juntar esses dados. Ainda não implementar.
+- **Regra alternativa avaliada e aprovada na lógica, mas NÃO aplicar por enquanto (decisão da dona):** imposto (15%) e taxa do
+  cartão (cartão + antecipação; 1x/débito só cartão) ambos sobre o **valor total**; o que sobra: 20% clínica, 80% médico.
+  Evita cobrar a taxa da maquininha duas vezes do médico. Exemplo 12x R$ 5.220: imposto 783,00, taxa 507,38, sobra 3.929,62,
+  clínica 785,92, médico 3.143,70 (≈ R$ 261,97/mês) — hoje 2.920,24. Débito/1x R$ 4.820: médico 3.187,38 (hoje 3.115,99).
+- Confirmado: no parcelado o médico recebe **conforme cada parcela cai**; continuar **cortando os centavos**. O que importa no
+  fim é **quanto se transfere ao médico a cada mês**.
+- O repasse nº 2 (12x de R$ 5.220) no banco é **de teste**.
+
+### 16/11 (noite) — Repasse: REGRA NOVA aplicada (migração 0062) + nome "Clínica"
+- **Dona autorizou a regra alternativa.** Vale para a **refrativa**: imposto (15%) e taxa do cartão (tabela; débito/1x 2,34%;
+  parcelado cartão + antecipação) **sobre o valor total da venda**, centavos da taxa cortados. Sobra = **honorários**:
+  **clínica 20%** (arredondado), **médico o restante**. Cada parte é dividida igualmente pelas parcelas (sobra de centavos
+  na última); o médico recebe quando a parcela **entra** ("Entrou hoje"); o valor depositado pela maquininha não entra mais
+  no cálculo (coluna `valor_recebido` só informativa).
+- Banco: `repasses.taxa_interna_total`, `repasses.medico_total`, `repasse_parcelas.valor`; gatilhos refeitos; todas as partes
+  da parcela são fixas desde o lançamento; "pago ao médico" exige "entrou". As colunas `centro_cirurgico_*` continuam com esse
+  nome, mas significam **parte da clínica sobre os honorários**; na tela aparecem como **"Clínica (20% dos honorários)"**.
+- Conferido (local e real, transação desfeita): PIX 4.820 → médico 3.277,60; débito 4.820 → taxa 112,78, clínica 796,84,
+  médico 3.187,38; 12x 5.220 → imposto 783,00, taxa 507,38, clínica 785,92, médico 3.143,70 (261,97/mês; última 262,03).
+- Repasse de teste nº 2 **cancelado** a pedido da dona (motivo registrado).
+
+### 16/11 (noite) — Repasse: correção e próximos assuntos
+- **Correção (PR #45):** a lista do Repasse dava erro "more than one relationship… 'repasses' and 'profissionais'"
+  (`profissional_id` e `criado_por` apontam para `profissionais`). As consultas usam
+  `profissionais!repasses_profissional_id_fkey(nome)`. Confirmado pela dona: a tela abriu sem erro.
+  Lição: o teste com dados simulados não pega esse tipo de erro; ao embutir `profissionais`, sempre indicar a ligação.
+- **Lentes intraoculares (futuro):** vendidas como particular (PIX ou cartão até 12x), com repasse ao médico que operou.
+  A dona vai mandar o cadastro de tipos e valores. A clínica já emite NF-e de mercadoria; hoje o Luciano emite a nota e
+  lança no **Invistto** (sistema de gestão de ótica) para o estoque. Ideia: botão "Emitir nota" integrado, pela API do
+  Invistto (se existir; perguntar ao suporte) ou por um serviço de NF-e próprio. A dona vai levantar como o Luciano faz hoje.
+- Melhoria oferecida e ainda sem resposta: no relatório por médico, mostrar o **previsto para o mês** (parcelas que vão cair).
+
+### 16/11 (noite) — Médicos da clínica cadastrados na Equipe (pedido da dona)
+- Os 7 médicos da página **Equipe** do site (conferida também no site original no ar) foram cadastrados em `profissionais`
+  (função médico, CRM-RJ, especialidade resumida, CBO 225265): Gelson Moura Brasil (52.86360-2), Gisele Moura Brasil
+  (52.87379-9), Max Oliveira Guimarães (52.86386-6), Luiza Morone Pereira (52.91775-3), Matheus de Souza Cerveira Pereira
+  (52.0127737-5), Renato Sztern Queiroz (52.92743-0), Pedro Boni Gonçalves (52.86698-9). Nome sem "Dr./Dra." (padrão da tabela).
+- Ficaram **inativos** porque o site não tem e-mail e a regra do banco exige e-mail para quem está ativo (é o login).
+  Para ligar cada um: tela Equipe → editar → pôr o e-mail → marcar "Ativo". Só então aparece na Agenda.
+- Faltam (não estão no site): e-mails, RQE e demais documentos. Funcionários não médicos não aparecem no site.
+
+### 16/11 (noite) — Login por nome de usuário (migração 0063, decisão da dona)
+- **Médicos e funcionários entram com USUÁRIO e senha; a administração (dona) continua com e-mail.**
+- Como funciona: coluna `profissionais.usuario` (minúsculas, sem acento, 3–40 caracteres; letras, números, `.`, `-`, `_`).
+  O gatilho `profissional_usuario` grava em `email` o e-mail interno `<usuario>@equipe.consumedolhos.com.br`
+  (subdomínio sem caixa de correio; nada é enviado — a função `equipe-acesso` cria a conta já confirmada).
+  Por isso RLS, `somente_equipe`, `equipe-acesso` e `auth.tsx` continuam sem mudança.
+- Tela de entrada: campo "Usuário (ou e-mail da administração)"; sem "@" o sistema completa o e-mail interno.
+- Tela Equipe: "Entra no sistema com: Usuário e senha / E-mail e senha"; sugere o usuário (primeiro nome + último
+  sobrenome); coluna "Login" mostra 👤 usuário. Trocar o usuário de quem já tem acesso exige criar a senha de novo (🔑).
+- Sem e-mail não há "esqueci minha senha" sozinho: a admin gera nova senha temporária (já era o fluxo).
+- Os 7 médicos foram **ativados** com usuário: gelson.brasil, gisele.brasil, max.guimaraes, luiza.pereira,
+  matheus.pereira, renato.queiroz, pedro.goncalves. As senhas ainda não foram criadas (a dona cria pelo botão 🔑).
+
+### 16/11 (noite) — Cadastros de teste apagados (pedido da dona)
+- Apagados os 4 perfis "TESTE … (apagar)" da Equipe (médico, enfermagem, recepção, faturamento) e seus 3 logins,
+  os 3 pacientes "TESTE Paciente Silva (apagar)" e tudo ligado a eles: 2 agendamentos, 1 atendimento (com triagem,
+  receitas, exame, diagnóstico, óculos, desenho, 3 pedidos de exame), 2 contas, seguimento, link do portal, documento
+  verificável e os repasses de teste nº 2 e nº 7 (22 parcelas). Feito numa só transação, com conferência de que não
+  sobrou ligação quebrada. Mantidos: o exame "Teste ortóptico" (exame real) e o "Ramal 1000 (Ana – teste)" (ramal real da Api4Com).
+
+### 17/11 — Dados oficiais dos médicos e CNPJ (planilha "Corpo clínico atualizado" enviada pela dona)
+- Os 7 médicos receberam **RQE**, **CPF** e **data de nascimento** (CPF e nascimento em `profissionais_dados_pessoais`,
+  que só a administração e o próprio médico veem). Nomes completos corrigidos: **Gelson Ribeiro Moura Brasil** e
+  **Gisele Ribeiro Moura Brasil**. Um CPF veio na planilha sem o zero inicial (10 dígitos); gravado com o zero
+  (dígitos verificadores conferem). Todos os CPFs validados. Sexo (usado pela Memed) não veio na planilha: ficou em branco.
+- Clínica: **CNPJ 05.894.660/0001-87**, razão social **CONSUMED CONSULTÓRIOS MÉDICOS LTDA** em `app/src/lib/marca.ts`
+  (o CNPJ passa a sair nos documentos impressos e nas guias de faturamento).
+
+---
+
 ## 16/11/2026 — WhatsApp da Orientação Cirúrgica (segundo número oficial)
 ### Pedido da dona
 A orientação cirúrgica (Alessandra) usa há anos um número próprio de WhatsApp, fora da API oficial, para pacientes
