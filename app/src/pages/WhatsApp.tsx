@@ -5,7 +5,8 @@ import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Modal, Campo, Etiqueta, BuscaPaciente } from "../components/ui";
 import { STATUS_AGENDA, TIPOS_AGENDA, fmtData, fmtDataHora, fmtHora, idade, isoDia, nomeExibicao, somaDias } from "../lib/util";
 import {
-  SELECT_CONVERSA, baixarMidia, fmtNumeroWA, janelaAberta, whatsapp, tocarAviso, type Conversa, type Mensagem, type ModeloWA,
+  SELECT_CONVERSA, baixarMidia, fmtNumeroWA, janelaAberta, whatsapp, tocarAviso, podeResponderSetor,
+  type Conversa, type Mensagem, type ModeloWA, type SetorWA,
 } from "../lib/whatsapp";
 import { BotaoLigar } from "../components/Telefone";
 
@@ -20,8 +21,24 @@ function nomeConversa(c: Conversa): string {
   return c.nome_contato || fmtNumeroWA(c.telefone);
 }
 
-export default function WhatsApp() {
+/** Textos que mudam entre o número da clínica e o da Orientação Cirúrgica */
+const SETORES: Record<SetorWA, { titulo: string; sub: string; quemResponde: string }> = {
+  clinica: {
+    titulo: "WhatsApp",
+    sub: "Mensagens do número oficial da clínica",
+    quemResponde: "Só a recepção responde pelo WhatsApp. Se precisar falar com este paciente, peça à recepção.",
+  },
+  orientacao: {
+    titulo: "Orientação cirúrgica",
+    sub: "WhatsApp da orientação cirúrgica: dúvidas e complicações depois da cirurgia",
+    quemResponde: "Só a orientação cirúrgica responde por este número. Você pode acompanhar a conversa.",
+  },
+};
+
+export default function WhatsApp({ setor = "clinica" }: { setor?: SetorWA }) {
   const { pode, eu } = useAuth();
+  const podeResponder = podeResponderSetor(eu, setor);
+  const textos = SETORES[setor];
   const [params, setParams] = useSearchParams();
   const [quem, setQuem] = useState<"todas" | "minhas" | "livres">("todas");
   const [abertaId, setAbertaId] = useState<string | null>(params.get("conversa"));
@@ -29,14 +46,17 @@ export default function WhatsApp() {
   const [arquivadas, setArquivadas] = useState(false);
   const [lembretes, setLembretes] = useState(false);
   const [modelos, setModelos] = useState(false);
+  const [pesquisar, setPesquisar] = useState(false);
+  const [ausencia, setAusencia] = useState(false);
+  const [destaque, setDestaque] = useState<string | null>(params.get("mensagem"));
   const [erro, setErro] = useState("");
 
   const equipe = useCarregar(async () => ok(await supabase.from("profissionais").select("id, nome")) as { id: string; nome: string }[], []);
-  const estado = useCarregar(() => whatsapp<{ configurado: boolean; recebimento: boolean }>("estado"), []);
+  const estado = useCarregar(() => whatsapp<{ configurado: boolean; orientacao_configurado?: boolean; recebimento: boolean }>("estado"), []);
   const lista = useCarregar(async () => {
-    return ok(await supabase.from("whatsapp_conversas").select(SELECT_CONVERSA).eq("arquivada", arquivadas)
+    return ok(await supabase.from("whatsapp_conversas").select(SELECT_CONVERSA).eq("setor", setor).eq("arquivada", arquivadas)
       .order("ultima_mensagem_em", { ascending: false, nullsFirst: false }).limit(300)) as Conversa[];
-  }, [arquivadas]);
+  }, [arquivadas, setor]);
 
   // Atualiza ao vivo (Realtime) e, por garantia, a cada 10 segundos
   useEffect(() => {
@@ -46,7 +66,7 @@ export default function WhatsApp() {
       espera = window.setTimeout(() => lista.recarregar(), 300);
     };
     const canal = supabase
-      .channel("wa-lista")
+      .channel("wa-lista-" + setor)
       .on("postgres_changes", { event: "*", schema: "public", table: "whatsapp_conversas" }, agendar)
       .subscribe();
     const t = setInterval(() => lista.recarregar(), 10000);
@@ -56,20 +76,20 @@ export default function WhatsApp() {
       supabase.removeChannel(canal);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [arquivadas]);
+  }, [arquivadas, setor]);
 
   // Vindo da ficha do paciente (?paciente=...): abre a conversa dele ou oferece começar uma
   const pacienteParam = params.get("paciente");
   const [semConversa, setSemConversa] = useState<string | null>(null);
   useEffect(() => {
     if (!pacienteParam) return;
-    supabase.from("whatsapp_conversas").select("id").eq("paciente_id", pacienteParam)
+    supabase.from("whatsapp_conversas").select("id").eq("setor", setor).eq("paciente_id", pacienteParam)
       .order("ultima_mensagem_em", { ascending: false, nullsFirst: false }).limit(1)
       .then(({ data }) => {
         if (data?.[0]) setAbertaId(data[0].id);
         else setSemConversa(pacienteParam);
       });
-  }, [pacienteParam]);
+  }, [pacienteParam, setor]);
 
   const todas = lista.dados ?? [];
   const f = filtro.trim().toLowerCase();
@@ -84,8 +104,9 @@ export default function WhatsApp() {
   };
   const aberta = todas.find((c) => c.id === abertaId) ?? null;
 
-  function abrir(id: string) {
+  function abrir(id: string, mensagemId: string | null = null) {
     setAbertaId(id);
+    setDestaque(mensagemId);
     setSemConversa(null);
     setParams({}, { replace: true });
   }
@@ -93,7 +114,7 @@ export default function WhatsApp() {
   async function comecarComPaciente(pacienteId: string) {
     setErro("");
     try {
-      const r = await whatsapp<{ conversa_id: string }>("retomar", { paciente_id: pacienteId });
+      const r = await whatsapp<{ conversa_id: string }>("retomar", { paciente_id: pacienteId, setor });
       lista.recarregar();
       abrir(r.conversa_id);
     } catch (e) {
@@ -101,35 +122,39 @@ export default function WhatsApp() {
     }
   }
 
-  const configurado = estado.dados?.configurado;
+  const configurado = setor === "orientacao" ? estado.dados?.orientacao_configurado : estado.dados?.configurado;
   return (
     <div>
       <div className="cabecalho">
         <div>
-          <h1>WhatsApp</h1>
-          <p className="sub" style={{ margin: 0 }}>Mensagens do número oficial da clínica</p>
+          <h1>{textos.titulo}</h1>
+          <p className="sub" style={{ margin: 0 }}>{textos.sub}</p>
         </div>
         <div className="linha">
           <AvisosComputador />
-          {pode("recepcao", "admin") && <button className="primario" onClick={() => setLembretes(true)}>📨 Lembretes de consulta</button>}
+          <button onClick={() => setPesquisar(true)}>🔎 Pesquisar mensagens</button>
+          {(podeResponder || pode("admin")) && <button onClick={() => setAusencia(true)}>🌙 Fora do horário</button>}
+          {setor === "clinica" && pode("recepcao", "admin") && <button className="primario" onClick={() => setLembretes(true)}>📨 Lembretes de consulta</button>}
           <button onClick={() => setModelos(true)}>📝 Modelos</button>
         </div>
       </div>
       <Aviso>{erro || lista.erro}</Aviso>
       {estado.dados && !configurado && (
         <Aviso tipo="alerta">
-          O WhatsApp ainda não está ligado. Falta cadastrar os dados da conta da Meta (token e número) no Supabase.
-          Enquanto isso, esta tela fica vazia e nada é enviado.
+          {setor === "orientacao"
+            ? "O número da orientação cirúrgica ainda não está ligado. Falta passar o número para a conta oficial da Meta e cadastrar a identificação dele no Supabase."
+            : "O WhatsApp ainda não está ligado. Falta cadastrar os dados da conta da Meta (token e número) no Supabase."}
+          {" "}Enquanto isso, esta tela fica vazia e nada é enviado.
         </Aviso>
       )}
       {estado.dados && configurado && !estado.dados.recebimento && (
         <Aviso tipo="alerta">O envio está ligado, mas o recebimento ainda não: falta a chave secreta do aplicativo da Meta.</Aviso>
       )}
-      {semConversa && pode("recepcao", "admin") && (
+      {semConversa && podeResponder && (
         <Aviso tipo="info">
           Este paciente ainda não tem conversa pelo WhatsApp.{" "}
           <button className="mini primario" onClick={() => comecarComPaciente(semConversa)}>Enviar a primeira mensagem</button>{" "}
-          <span className="pequeno">(usa o modelo “retomar conversa”, aprovado pela Meta)</span>
+          <span className="pequeno">(usa o modelo “{setor === "orientacao" ? "retomar orientação" : "retomar conversa"}”, aprovado pela Meta)</span>
         </Aviso>
       )}
 
@@ -166,7 +191,8 @@ export default function WhatsApp() {
         </div>
         <div className="wa-chat painel">
           {aberta ? (
-            <Chat key={aberta.id} conversa={aberta} aoMudar={lista.recarregar} aoVoltar={() => setAbertaId(null)} />
+            <Chat key={aberta.id} conversa={aberta} podeResponder={podeResponder} quemResponde={textos.quemResponde} destaque={destaque}
+              aoMudar={lista.recarregar} aoVoltar={() => setAbertaId(null)} />
           ) : (
             <div className="vazio">Escolha uma conversa ao lado.</div>
           )}
@@ -175,7 +201,16 @@ export default function WhatsApp() {
       </div>
 
       {lembretes && <Lembretes aoFechar={() => setLembretes(false)} aoEnviar={lista.recarregar} />}
-      {modelos && <Modelos aoFechar={() => setModelos(false)} />}
+      {modelos && <Modelos setor={setor} aoFechar={() => setModelos(false)} />}
+      {pesquisar && (
+        <Pesquisa setor={setor} aoFechar={() => setPesquisar(false)}
+          aoEscolher={(conversaId, mensagemId) => {
+            setPesquisar(false);
+            if (!todas.some((c) => c.id === conversaId) && !arquivadas) setArquivadas(true);
+            abrir(conversaId, mensagemId);
+          }} />
+      )}
+      {ausencia && <ForaDoHorario setor={setor} aoFechar={() => setAusencia(false)} />}
     </div>
   );
 }
@@ -202,11 +237,15 @@ function quandoCurto(d: string): string {
 }
 
 // ---------------------------------------------------------------------------
-function Chat(props: { conversa: Conversa; aoMudar: () => void; aoVoltar: () => void }) {
+function Chat(props: {
+  conversa: Conversa; podeResponder: boolean; quemResponde: string; destaque?: string | null;
+  aoMudar: () => void; aoVoltar: () => void;
+}) {
   const c = props.conversa;
-  const { eu, pode } = useAuth();
-  // Decisão da dona (15/11): todos da equipe veem as conversas; só a recepção e a administração respondem.
-  const podeResponder = pode("recepcao", "admin");
+  const { eu } = useAuth();
+  // Clínica (decisão da dona, 15/11): todos veem; só recepção e administração respondem.
+  // Orientação cirúrgica (16/11): Alessandra, médicos e administração veem; só a orientação responde.
+  const podeResponder = props.podeResponder;
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
@@ -242,8 +281,12 @@ function Chat(props: { conversa: Conversa; aoMudar: () => void; aoVoltar: () => 
 
   const qtd = msgs.dados?.length ?? 0;
   useEffect(() => {
-    fim.current?.scrollIntoView({ block: "end" });
-  }, [qtd]);
+    // Vindo da pesquisa: rola até a mensagem encontrada; senão, até o fim
+    const alvo = props.destaque ? document.getElementById("msg-" + props.destaque) : null;
+    if (alvo) alvo.scrollIntoView({ block: "center" });
+    else fim.current?.scrollIntoView({ block: "end" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qtd, props.destaque]);
 
   const aberta = janelaAberta(c);
 
@@ -324,14 +367,14 @@ function Chat(props: { conversa: Conversa; aoMudar: () => void; aoVoltar: () => 
         {(msgs.dados ?? []).map((m) => {
           const dia = fmtData(m.quando);
           const sep = dia !== diaAnterior ? ((diaAnterior = dia), <div key={"d" + m.id} className="wa-dia">{dia}</div>) : null;
-          return [sep, <Balao key={m.id} m={m} quem={nomeEquipe(m.enviado_por)} />];
+          return [sep, <Balao key={m.id} m={m} quem={nomeEquipe(m.enviado_por)} podeTranscrever={podeResponder} destacada={m.id === props.destaque} />];
         })}
         <div ref={fim} />
       </div>
 
       <Aviso>{erro}</Aviso>
       {!podeResponder ? (
-        <div className="aviso info">Só a recepção responde pelo WhatsApp. Se precisar falar com este paciente, peça à recepção.</div>
+        <div className="aviso info">{props.quemResponde}</div>
       ) : aberta ? (
         <div className="wa-escrever">
           <textarea
@@ -437,8 +480,7 @@ function FichaPaciente({ conversa: c }: { conversa: Conversa }) {
 }
 
 /** Texto do áudio (Whisper) e botão para pedir a transcrição */
-function Transcricao({ m }: { m: Mensagem }) {
-  const { pode } = useAuth();
+function Transcricao({ m, podePedir }: { m: Mensagem; podePedir: boolean }) {
   const [texto, setTexto] = useState<string | null>(m.transcricao ?? null);
   const [pedindo, setPedindo] = useState(false);
   const [erro, setErro] = useState("");
@@ -462,7 +504,7 @@ function Transcricao({ m }: { m: Mensagem }) {
     <div className="pequeno muted">
       {m.transcricao_situacao === "pendente" && !pedindo && "📝 transcrevendo… "}
       {m.transcricao_situacao === "falhou" && !pedindo && "📝 não foi possível transcrever. "}
-      {pode("recepcao", "admin") && m.transcricao_situacao !== "pendente" && (
+      {podePedir && m.transcricao_situacao !== "pendente" && (
         <button className="mini sutil" disabled={pedindo} onClick={pedir}>{pedindo ? "transcrevendo…" : "📝 Transcrever"}</button>
       )}
       {erro && <div style={{ color: "var(--perigo)" }}>{erro}</div>}
@@ -470,7 +512,7 @@ function Transcricao({ m }: { m: Mensagem }) {
   );
 }
 
-function Balao({ m, quem }: { m: Mensagem; quem?: string }) {
+function Balao({ m, quem, podeTranscrever, destacada }: { m: Mensagem; quem?: string; podeTranscrever: boolean; destacada?: boolean }) {
   const [url, setUrl] = useState<string | null>(null);
   const [erro, setErro] = useState("");
   const [abrindo, setAbrindo] = useState(false);
@@ -490,7 +532,7 @@ function Balao({ m, quem }: { m: Mensagem; quem?: string }) {
 
   const enviada = m.direcao === "enviada";
   return (
-    <div className={"wa-balao " + (enviada ? "enviada" : "recebida") + (m.situacao === "falhou" ? " falhou" : "")}>
+    <div id={"msg-" + m.id} className={"wa-balao " + (enviada ? "enviada" : "recebida") + (m.situacao === "falhou" ? " falhou" : "") + (destacada ? " destacada" : "")}>
       {m.tipo === "modelo" && <div className="wa-rotulo">Mensagem-modelo{m.agendamento_id ? " · lembrete" : ""}</div>}
       {m.tipo === "botao" && <div className="wa-rotulo">Tocou no botão</div>}
       {m.midia_id && (
@@ -508,10 +550,11 @@ function Balao({ m, quem }: { m: Mensagem; quem?: string }) {
         </div>
       )}
       {!m.midia_id && ICONE_TIPO[m.tipo] && <div className="wa-rotulo">{ICONE_TIPO[m.tipo]}</div>}
-      <Transcricao m={m} />
+      <Transcricao m={m} podePedir={podeTranscrever} />
       {m.texto && <div className="wa-texto">{m.texto}</div>}
       <div className="wa-rodape">
         {enviada && quem && <span>{quem} · </span>}
+        {enviada && !m.enviado_por && m.tipo === "texto" && <span>Resposta automática · </span>}
         {fmtHora(m.quando)}
         {enviada && <span className={"wa-sit " + m.situacao} title={m.situacao}> {ICONE_SITUACAO[m.situacao] ?? ""}</span>}
       </div>
@@ -599,13 +642,19 @@ function Lembretes(props: { aoFechar: () => void; aoEnviar: () => void }) {
 const FINALIDADES: Record<string, string> = {
   lembrete_consulta: "Lembrete de consulta (com botões Confirmar / Preciso remarcar)",
   retomar_conversa: "Retomar conversa (para escrever depois de 24 h)",
+  retomar_orientacao: "Retomar conversa da orientação cirúrgica (para escrever depois de 24 h)",
+};
+const MODELOS_DO_SETOR: Record<SetorWA, string[]> = {
+  clinica: ["lembrete_consulta", "retomar_conversa"],
+  orientacao: ["retomar_orientacao"],
 };
 const PARAMETROS: Record<string, string> = { paciente: "primeiro nome do paciente", data: "dia da semana e data", hora: "horário", medico: "nome do médico", dia_semana: "dia da semana" };
 
-function Modelos(props: { aoFechar: () => void }) {
+function Modelos(props: { setor: SetorWA; aoFechar: () => void }) {
   const { pode } = useAuth();
   const admin = pode("admin");
-  const lista = useCarregar(async () => ok(await supabase.from("whatsapp_modelos").select("*").order("finalidade")) as ModeloWA[], []);
+  const lista = useCarregar(async () => ok(await supabase.from("whatsapp_modelos").select("*")
+    .in("finalidade", MODELOS_DO_SETOR[props.setor]).order("finalidade")) as ModeloWA[], [props.setor]);
   const [erro, setErro] = useState("");
 
   async function salvar(m: ModeloWA, dados: Partial<ModeloWA>) {
@@ -618,7 +667,7 @@ function Modelos(props: { aoFechar: () => void }) {
   return (
     <Modal largo titulo="Mensagens-modelo (aprovadas pela Meta)" aoFechar={props.aoFechar} rodape={<button onClick={props.aoFechar}>Fechar</button>}>
       <p className="muted pequeno" style={{ marginTop: 0 }}>
-        Para a clínica <b>começar</b> uma conversa (ou escrever depois de 24 h), a Meta exige uma mensagem-modelo aprovada.
+        Para {props.setor === "orientacao" ? "a orientação cirúrgica" : "a clínica"} <b>começar</b> uma conversa (ou escrever depois de 24 h), a Meta exige uma mensagem-modelo aprovada.
         Cadastre cada texto abaixo no WhatsApp Manager da Meta (categoria <b>Utilidade</b>, idioma Português (BR)), com o
         <b> mesmo nome</b>. Quando a Meta aprovar, {admin ? "ligue o modelo aqui" : "peça à administração para ligar o modelo aqui"}.
       </p>
@@ -649,6 +698,172 @@ function Modelos(props: { aoFechar: () => void }) {
           )}
         </div>
       ))}
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+interface Achado {
+  mensagem_id: string; conversa_id: string; quando: string; direcao: "recebida" | "enviada"; tipo: string;
+  texto: string | null; transcricao: string | null; enviado_por: string | null; telefone: string;
+  nome: string | null; numero_prontuario: number | null;
+}
+
+/** Trecho do texto em volta da palavra pesquisada, com a palavra marcada */
+function Trecho({ texto, termo }: { texto: string; termo: string }) {
+  const tira = (x: string) => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const i = tira(texto).indexOf(tira(termo));
+  if (i < 0) return <>{texto.length > 220 ? texto.slice(0, 220) + "…" : texto}</>;
+  const ini = Math.max(0, i - 90);
+  const fim = Math.min(texto.length, i + termo.length + 110);
+  return (
+    <>
+      {ini > 0 && "…"}{texto.slice(ini, i)}<mark>{texto.slice(i, i + termo.length)}</mark>{texto.slice(i + termo.length, fim)}{fim < texto.length && "…"}
+    </>
+  );
+}
+
+/** Pesquisa no texto das mensagens e no texto dos áudios (transcrição) */
+function Pesquisa(props: { setor: SetorWA; aoFechar: () => void; aoEscolher: (conversaId: string, mensagemId: string) => void }) {
+  const [termo, setTermo] = useState("");
+  const [de, setDe] = useState("");
+  const [ate, setAte] = useState("");
+  const [achados, setAchados] = useState<Achado[] | null>(null);
+  const [buscando, setBuscando] = useState(false);
+  const [erro, setErro] = useState("");
+  const equipe = useCarregar(async () => ok(await supabase.from("profissionais").select("id, nome")) as { id: string; nome: string }[], []);
+
+  async function buscar(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (termo.trim().length < 2) return setErro("Digite pelo menos 2 letras.");
+    setErro("");
+    setBuscando(true);
+    const { data, error } = await supabase.rpc("whatsapp_buscar", {
+      p_setor: props.setor, p_termo: termo.trim(), p_de: de || null, p_ate: ate || null, p_limite: 200,
+    });
+    setBuscando(false);
+    if (error) return setErro(msgErro(error));
+    setAchados(data as Achado[]);
+  }
+
+  const quemFalou = (a: Achado) => a.direcao === "recebida" ? "Paciente"
+    : a.enviado_por ? (equipe.dados?.find((x) => x.id === a.enviado_por)?.nome.split(" ")[0] ?? "Equipe") : "Automática";
+
+  return (
+    <Modal largo titulo="Pesquisar nas mensagens" aoFechar={props.aoFechar} rodape={<button onClick={props.aoFechar}>Fechar</button>}>
+      <p className="muted pequeno" style={{ marginTop: 0 }}>
+        Procura no texto das mensagens e no texto dos áudios (transcrição automática). Não diferencia acentos nem maiúsculas.
+        Clique num resultado para abrir a conversa naquele ponto.
+      </p>
+      <form onSubmit={buscar} className="grade g2">
+        <Campo rotulo="Palavra ou frase" className="inteiro">
+          <input autoFocus value={termo} onChange={(e) => setTermo(e.target.value)} placeholder="Ex.: colírio, curativo, tirar o tampão" />
+        </Campo>
+        <Campo rotulo="De (opcional)"><input type="date" value={de} onChange={(e) => setDe(e.target.value)} /></Campo>
+        <Campo rotulo="Até (opcional)"><input type="date" value={ate} onChange={(e) => setAte(e.target.value)} /></Campo>
+        <div className="inteiro"><button className="primario" disabled={buscando}>{buscando ? "Pesquisando…" : "🔎 Pesquisar"}</button></div>
+      </form>
+      <Aviso>{erro}</Aviso>
+      {achados && (
+        <div style={{ marginTop: 14 }}>
+          <div className="muted pequeno" style={{ marginBottom: 6 }}>
+            {achados.length === 0 ? "Nada encontrado." : `${achados.length} mensage${achados.length === 1 ? "m" : "ns"} encontrada${achados.length === 1 ? "" : "s"}${achados.length >= 200 ? " (mostrando as 200 mais recentes)" : ""}.`}
+          </div>
+          {achados.map((a) => (
+            <button key={a.mensagem_id} className="wa-achado" onClick={() => props.aoEscolher(a.conversa_id, a.mensagem_id)}>
+              <div className="linha entre" style={{ flexWrap: "nowrap" }}>
+                <b>{a.nome || fmtNumeroWA(a.telefone)}{a.numero_prontuario ? <span className="muted"> · pront. {a.numero_prontuario}</span> : null}</b>
+                <span className="muted pequeno">{fmtDataHora(a.quando)}</span>
+              </div>
+              <div className="pequeno">
+                <Etiqueta cor={a.direcao === "recebida" ? "cinza" : "verde"}>{quemFalou(a)}</Etiqueta>{" "}
+                {a.tipo === "audio" && "🎤 "}
+                <Trecho texto={[a.texto, a.transcricao].filter(Boolean).join(" · ")} termo={termo.trim()} />
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+const DIAS_SEMANA: [string, string][] = [["1", "Segunda"], ["2", "Terça"], ["3", "Quarta"], ["4", "Quinta"], ["5", "Sexta"], ["6", "Sábado"], ["7", "Domingo"]];
+interface Ausencia { setor: SetorWA; ligado: boolean; texto: string; horarios: Record<string, [string, string]> }
+
+/** Resposta automática quando o paciente escreve fora do horário */
+function ForaDoHorario(props: { setor: SetorWA; aoFechar: () => void }) {
+  const { eu } = useAuth();
+  const dados = useCarregar(async () =>
+    ok(await supabase.from("whatsapp_ausencia").select("setor, ligado, texto, horarios").eq("setor", props.setor).maybeSingle()) as Ausencia | null,
+  [props.setor]);
+  const [f, setF] = useState<Ausencia | null>(null);
+  const [erro, setErro] = useState("");
+  const [salvo, setSalvo] = useState(false);
+  useEffect(() => { if (dados.dados) setF(dados.dados); }, [dados.dados]);
+
+  function dia(k: string, aberto: boolean, ini?: string, fim?: string) {
+    if (!f) return;
+    const h = { ...f.horarios };
+    if (!aberto) delete h[k];
+    else h[k] = [ini ?? h[k]?.[0] ?? "08:00", fim ?? h[k]?.[1] ?? "17:00"];
+    setF({ ...f, horarios: h });
+    setSalvo(false);
+  }
+
+  async function salvar() {
+    if (!f) return;
+    setErro("");
+    if (f.texto.trim().length < 10) return setErro("Escreva a mensagem (pelo menos 10 letras).");
+    for (const [k, [a, b]] of Object.entries(f.horarios)) {
+      if (!a || !b || a >= b) return setErro(`Confira o horário de ${DIAS_SEMANA.find((d) => d[0] === k)?.[1]}: o início precisa ser antes do fim.`);
+    }
+    const { error } = await supabase.from("whatsapp_ausencia")
+      .update({ ligado: f.ligado, texto: f.texto.trim(), horarios: f.horarios, atualizado_por: eu?.id ?? null })
+      .eq("setor", props.setor);
+    if (error) return setErro(msgErro(error));
+    setSalvo(true);
+  }
+
+  return (
+    <Modal titulo="Resposta automática fora do horário" aoFechar={props.aoFechar}
+      rodape={<><button onClick={props.aoFechar}>Fechar</button><button className="primario" onClick={salvar}>Salvar</button></>}>
+      <p className="muted pequeno" style={{ marginTop: 0 }}>
+        Quando um paciente escrever fora do horário abaixo, ele recebe esta mensagem na hora (no máximo uma vez a cada 8 horas
+        por paciente). A mensagem fica registrada na conversa como “Resposta automática”. Feriados não são considerados.
+      </p>
+      <Aviso>{erro || dados.erro}</Aviso>
+      {salvo && <Aviso tipo="ok">Salvo.</Aviso>}
+      {!f ? <Carregando /> : (
+        <>
+          <label className="check" style={{ marginBottom: 10 }}>
+            <input type="checkbox" checked={f.ligado} onChange={(e) => { setF({ ...f, ligado: e.target.checked }); setSalvo(false); }} />
+            <b>Ligar a resposta automática</b>
+          </label>
+          <Campo rotulo="Mensagem">
+            <textarea rows={5} value={f.texto} onChange={(e) => { setF({ ...f, texto: e.target.value }); setSalvo(false); }} />
+          </Campo>
+          <h4 style={{ margin: "14px 0 6px" }}>Horário de atendimento</h4>
+          {DIAS_SEMANA.map(([k, nome]) => {
+            const h = f.horarios[k];
+            return (
+              <div key={k} className="linha" style={{ gap: 8, marginBottom: 6, flexWrap: "nowrap" }}>
+                <label className="check" style={{ width: 110 }}>
+                  <input type="checkbox" checked={!!h} onChange={(e) => dia(k, e.target.checked)} /> {nome}
+                </label>
+                {h ? (
+                  <>
+                    <input type="time" value={h[0]} onChange={(e) => dia(k, true, e.target.value, h[1])} style={{ width: 130 }} />
+                    <span>às</span>
+                    <input type="time" value={h[1]} onChange={(e) => dia(k, true, h[0], e.target.value)} style={{ width: 130 }} />
+                  </>
+                ) : <span className="muted pequeno">fechado</span>}
+              </div>
+            );
+          })}
+        </>
+      )}
     </Modal>
   );
 }

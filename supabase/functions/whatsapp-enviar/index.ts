@@ -1,17 +1,23 @@
 // Envia mensagens de WhatsApp em nome da equipe (pela API oficial da Meta).
-// Toda a equipe ativa pode ver (estado, mídia); só recepção e admin ENVIAM (decisão da dona, 15/11/2026).
+// Dois números na mesma conta da Meta (setor da conversa):
+//   clinica    → número da clínica. Toda a equipe vê; só recepção e admin ENVIAM (decisão da dona, 15/11/2026).
+//   orientacao → número da Orientação Cirúrgica (16/11/2026). Veem: quem atende a orientação
+//                (profissionais.orientacao_cirurgica), médicos e admin. ENVIA só quem atende a orientação.
 //
 // Ações (POST, corpo JSON com "acao"):
 //   estado     → o WhatsApp já está configurado? (sem segredos na resposta)
 //   texto      → { conversa_id, texto }  resposta livre (só até 24 h depois da última mensagem do paciente)
-//   retomar    → { conversa_id } ou { paciente_id }  envia o modelo "retomar_conversa" (fora das 24 h)
+//   retomar    → { conversa_id } ou { paciente_id, setor? }  envia o modelo "retomar_conversa"
+//                (ou "retomar_orientacao" no número da orientação) — fora das 24 h
 //   lembretes  → { data: "AAAA-MM-DD", simular?: true }  lembrete com botões para os agendamentos do dia
 //                (só recepção e admin; "simular" só conta, não envia)
-//   midia      → { mensagem_id }  baixa a foto/áudio/documento que o paciente mandou
+//   midia      → { mensagem_id }  abre a foto/áudio/documento que o paciente mandou (cópia guardada no
+//                Storage, bucket "whatsapp-midia"; se ainda não houver, busca na Meta e guarda)
 //
 // Segredos (Supabase → Edge Functions → Secrets):
 //   WHATSAPP_TOKEN            token permanente (usuário do sistema na Meta)
 //   WHATSAPP_PHONE_NUMBER_ID  "Identificação do número de telefone" (Meta → WhatsApp → Configuração da API)
+//   WHATSAPP_ORIENTACAO_PHONE_NUMBER_ID  o mesmo, do número da Orientação Cirúrgica
 //   WHATSAPP_API_VERSION      opcional (padrão v24.0)
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.45.4";
 
@@ -31,13 +37,16 @@ function resposta(corpo: unknown, status = 200) {
 }
 
 const TOKEN = () => Deno.env.get("WHATSAPP_TOKEN") ?? "";
-const NUMERO = () => Deno.env.get("WHATSAPP_PHONE_NUMBER_ID") ?? "";
+type Setor = "clinica" | "orientacao";
+const NUMERO = (setor: Setor = "clinica") =>
+  Deno.env.get(setor === "orientacao" ? "WHATSAPP_ORIENTACAO_PHONE_NUMBER_ID" : "WHATSAPP_PHONE_NUMBER_ID") ?? "";
+const NOME_SETOR: Record<Setor, string> = { clinica: "WhatsApp da clínica", orientacao: "WhatsApp da Orientação Cirúrgica" };
 const GRAPH = () => `https://graph.facebook.com/${Deno.env.get("WHATSAPP_API_VERSION") ?? "v24.0"}`;
 
 /** Chama a API da Meta para enviar. Devolve o id da mensagem ou o erro em português simples. */
-async function enviarMeta(corpo: Json): Promise<{ wa_id?: string; erro?: string }> {
+async function enviarMeta(corpo: Json, setor: Setor): Promise<{ wa_id?: string; erro?: string }> {
   try {
-    const r = await fetch(`${GRAPH()}/${NUMERO()}/messages`, {
+    const r = await fetch(`${GRAPH()}/${NUMERO(setor)}/messages`, {
       method: "POST",
       headers: { Authorization: `Bearer ${TOKEN()}`, "Content-Type": "application/json" },
       body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", ...corpo }),
@@ -132,10 +141,25 @@ Deno.serve(async (req) => {
   const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
   const { data: u, error: eu } = await db.auth.getUser(jwt);
   if (eu || !u?.user?.email) return resposta({ erro: "Sessão inválida. Entre novamente." }, 401);
-  const { data: eu_prof } = await db.from("profissionais").select("id, funcao, ativo")
+  const { data: eu_prof } = await db.from("profissionais").select("id, funcao, ativo, orientacao_cirurgica")
     .eq("email", u.user.email.toLowerCase()).maybeSingle();
   if (!eu_prof?.ativo) return resposta({ erro: "Você não tem acesso ao WhatsApp da clínica." }, 403);
-  const atende = ["recepcao", "admin"].includes(eu_prof.funcao);
+  // Mesmas regras do banco (migração 0052): quem vê e quem responde cada número
+  const ve = (setor: Setor) => setor === "orientacao"
+    ? eu_prof.orientacao_cirurgica === true || ["medico", "admin"].includes(eu_prof.funcao)
+    : ["medico", "enfermagem", "recepcao", "admin", "faturamento"].includes(eu_prof.funcao);
+  const atende = (setor: Setor) => setor === "orientacao"
+    ? eu_prof.orientacao_cirurgica === true
+    : ["recepcao", "admin"].includes(eu_prof.funcao);
+  const semPermissao = (setor: Setor) => resposta({
+    erro: setor === "orientacao"
+      ? "Quem responde a Orientação Cirúrgica é a pessoa da orientação. Você pode acompanhar as conversas, mas não enviar."
+      : "Quem responde o WhatsApp é a recepção. Você pode acompanhar as conversas, mas não enviar.",
+  }, 403);
+  const naoLigado = (setor: Setor) => resposta({
+    erro: `O ${NOME_SETOR[setor]} ainda não foi ligado: faltam os dados da conta da Meta (token e número).`,
+  }, 503);
+  const ligado = (setor: Setor) => !!(TOKEN() && NUMERO(setor));
 
   let corpo: Json;
   try {
@@ -144,18 +168,12 @@ Deno.serve(async (req) => {
     return resposta({ erro: "Dados inválidos" }, 400);
   }
 
-  const configurado = !!(TOKEN() && NUMERO());
   if (corpo.acao === "estado") {
     return resposta({
-      configurado,
+      configurado: ligado("clinica"),
+      orientacao_configurado: ligado("orientacao"),
       recebimento: !!(Deno.env.get("WHATSAPP_APP_SECRET") && Deno.env.get("WHATSAPP_VERIFY_TOKEN")),
     });
-  }
-  if (["texto", "retomar", "lembretes"].includes(corpo.acao) && !atende) {
-    return resposta({ erro: "Quem responde o WhatsApp é a recepção. Você pode acompanhar as conversas, mas não enviar." }, 403);
-  }
-  if (!configurado) {
-    return resposta({ erro: "O WhatsApp ainda não foi ligado: faltam os dados da conta da Meta (token e número)." }, 503);
   }
 
   // ---------- Resposta livre ----------
@@ -164,45 +182,64 @@ Deno.serve(async (req) => {
     if (!texto) return resposta({ erro: "Escreva a mensagem." }, 400);
     if (texto.length > 4000) return resposta({ erro: "Mensagem muito longa (máximo 4.000 letras)." }, 400);
     const { data: c } = await db.from("whatsapp_conversas").select("*").eq("id", corpo.conversa_id).maybeSingle();
-    if (!c) return resposta({ erro: "Conversa não encontrada." }, 404);
+    if (!c || !ve(c.setor)) return resposta({ erro: "Conversa não encontrada." }, 404);
+    if (!atende(c.setor)) return semPermissao(c.setor);
+    if (!ligado(c.setor)) return naoLigado(c.setor);
     if (!c.ultima_recebida_em || Date.now() - new Date(c.ultima_recebida_em).getTime() > JANELA_MS) {
       return resposta({ erro: "Passaram mais de 24 h desde a última mensagem do paciente. Pela regra da Meta, use “Chamar o paciente de novo”." }, 409);
     }
-    const r = await enviarMeta({ to: c.telefone, type: "text", text: { body: texto, preview_url: true } });
+    const r = await enviarMeta({ to: c.telefone, type: "text", text: { body: texto, preview_url: true } }, c.setor);
     const msg = await gravarEnviada(db, { conversa_id: c.id, tipo: "texto", texto, enviado_por: eu_prof.id, ...r });
     return r.erro ? resposta({ erro: r.erro, mensagem: msg }, 502) : resposta({ ok: true, mensagem: msg });
   }
 
   // ---------- Chamar o paciente de novo (modelo) ----------
   if (corpo.acao === "retomar") {
-    const modelo = await lerModelo(db, "retomar_conversa");
-    if (!modelo?.ativo) return resposta({ erro: "O modelo “retomar conversa” ainda não foi aprovado/ligado (WhatsApp → Modelos)." }, 409);
-
     let conversaId: string | null = corpo.conversa_id ?? null;
     const pacienteId: string | null = corpo.paciente_id ?? null;
+    // Setor: o da conversa; para conversa nova, o pedido (padrão: clínica)
+    let setor: Setor = corpo.setor === "orientacao" ? "orientacao" : "clinica";
+    if (conversaId) {
+      const { data: c0 } = await db.from("whatsapp_conversas").select("setor").eq("id", conversaId).maybeSingle();
+      if (!c0 || !ve(c0.setor)) return resposta({ erro: "Conversa não encontrada." }, 404);
+      setor = c0.setor;
+    }
+    if (!atende(setor)) return semPermissao(setor);
+    if (!ligado(setor)) return naoLigado(setor);
+    // Na orientação, a recusa de mensagens ("SAIR") do número da clínica não impede o acompanhamento da cirurgia
+    const respeitaRecusa = setor === "clinica";
+
+    const finalidade = setor === "orientacao" ? "retomar_orientacao" : "retomar_conversa";
+    const modelo = await lerModelo(db, finalidade);
+    if (!modelo?.ativo) {
+      return resposta({ erro: `O modelo “${finalidade.replace("_", " ")}” ainda não foi aprovado/ligado (botão Modelos).` }, 409);
+    }
+
     if (!conversaId && pacienteId) {
       const { data: p } = await db.from("pacientes").select("telefone, whatsapp_autorizado").eq("id", pacienteId).maybeSingle();
       if (!p) return resposta({ erro: "Paciente não encontrado." }, 404);
-      if (p.whatsapp_autorizado === false) return resposta({ erro: "Este paciente não autorizou mensagens pelo WhatsApp." }, 409);
+      if (respeitaRecusa && p.whatsapp_autorizado === false) return resposta({ erro: "Este paciente não autorizou mensagens pelo WhatsApp." }, 409);
       const { data: numero } = await db.rpc("telefone_whatsapp", { p: p.telefone });
       if (!numero) return resposta({ erro: "O telefone do cadastro não é um celular válido." }, 400);
-      const { data: id, error } = await db.rpc("whatsapp_conversa", { p_telefone: numero, p_paciente: pacienteId });
+      const { data: id, error } = await db.rpc("whatsapp_conversa", { p_telefone: numero, p_paciente: pacienteId, p_setor: setor });
       if (error) return resposta({ erro: error.message }, 500);
       conversaId = id;
     }
     const { data: c } = await db.from("whatsapp_conversas").select("*, pacientes(nome, nome_social, whatsapp_autorizado)")
       .eq("id", conversaId).maybeSingle();
     if (!c) return resposta({ erro: "Conversa não encontrada." }, 404);
-    if (c.pacientes?.whatsapp_autorizado === false) return resposta({ erro: "Este paciente pediu para não receber mensagens." }, 409);
+    if (respeitaRecusa && c.pacientes?.whatsapp_autorizado === false) return resposta({ erro: "Este paciente pediu para não receber mensagens." }, 409);
     const nome = c.pacientes ? primeiroNome(c.pacientes) : (c.nome_contato?.split(" ")[0] ?? "tudo bem");
     const m = montarModelo(modelo, { paciente: nome });
-    const r = await enviarMeta({ to: c.telefone, ...m.corpo });
+    const r = await enviarMeta({ to: c.telefone, ...m.corpo }, setor);
     const msg = await gravarEnviada(db, { conversa_id: c.id, tipo: "modelo", texto: m.texto, modelo: modelo.nome, enviado_por: eu_prof.id, ...r });
     return r.erro ? resposta({ erro: r.erro, mensagem: msg }, 502) : resposta({ ok: true, conversa_id: c.id, mensagem: msg });
   }
 
   // ---------- Lembretes do dia ----------
   if (corpo.acao === "lembretes") {
+    if (!atende("clinica")) return semPermissao("clinica");
+    if (!ligado("clinica")) return naoLigado("clinica");
     const dia = String(corpo.data ?? "");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return resposta({ erro: "Data inválida." }, 400);
     const modelo = await lerModelo(db, "lembrete_consulta");
@@ -246,7 +283,7 @@ Deno.serve(async (req) => {
         }, a.id);
         const { data: conversaId, error: ec } = await db.rpc("whatsapp_conversa", { p_telefone: numero, p_paciente: p.id });
         if (ec) { res.falhas.push(`${p.nome}: ${ec.message}`); return; }
-        const r = await enviarMeta({ to: numero, ...m.corpo });
+        const r = await enviarMeta({ to: numero, ...m.corpo }, "clinica");
         await gravarEnviada(db, {
           conversa_id: conversaId, tipo: "modelo", texto: m.texto, modelo: modelo.nome, agendamento_id: a.id,
           enviado_por: eu_prof.id, ...r,
@@ -258,23 +295,38 @@ Deno.serve(async (req) => {
     return resposta(res);
   }
 
-  // ---------- Baixar mídia recebida ----------
+  // ---------- Abrir foto/áudio/documento ----------
+  // Primeiro a cópia guardada no Storage (para sempre); se ainda não houver, busca na Meta (~30 dias) e guarda.
   if (corpo.acao === "midia") {
-    const { data: m } = await db.from("whatsapp_mensagens").select("midia_id, midia_tipo, midia_nome")
+    const { data: m } = await db.from("whatsapp_mensagens")
+      .select("id, midia_id, midia_tipo, midia_nome, midia_caminho, whatsapp_conversas(setor)")
       .eq("id", corpo.mensagem_id).maybeSingle();
-    if (!m?.midia_id) return resposta({ erro: "Arquivo não encontrado." }, 404);
+    // deno-lint-ignore no-explicit-any
+    const setor: Setor = (m as any)?.whatsapp_conversas?.setor ?? "clinica";
+    if (!m?.midia_id || !ve(setor)) return resposta({ erro: "Arquivo não encontrado." }, 404);
+    const entregar = (corpoArq: BodyInit, tipo: string) => new Response(corpoArq, {
+      headers: { ...cors, "Content-Type": tipo, "Cache-Control": "private, no-store" },
+    });
+
+    if (m.midia_caminho) {
+      const { data: arq, error } = await db.storage.from("whatsapp-midia").download(m.midia_caminho);
+      if (!error && arq) return entregar(arq, m.midia_tipo ?? arq.type ?? "application/octet-stream");
+      console.error("midia: cópia guardada não abriu", m.id, error?.message);
+    }
+
+    if (!TOKEN()) return naoLigado("clinica");
     const info = await fetch(`${GRAPH()}/${m.midia_id}`, { headers: { Authorization: `Bearer ${TOKEN()}` } });
     const j = await info.json().catch(() => ({}));
-    if (!info.ok || !j.url) return resposta({ erro: "A Meta não tem mais este arquivo (eles ficam disponíveis por cerca de 30 dias)." }, 410);
+    if (!info.ok || !j.url) return resposta({ erro: "Este arquivo não foi guardado a tempo e a Meta já apagou (ela guarda cerca de 30 dias)." }, 410);
     const arq = await fetch(j.url, { headers: { Authorization: `Bearer ${TOKEN()}` } });
     if (!arq.ok) return resposta({ erro: "Não foi possível baixar o arquivo." }, 502);
-    return new Response(arq.body, {
-      headers: {
-        ...cors,
-        "Content-Type": m.midia_tipo ?? j.mime_type ?? "application/octet-stream",
-        "Cache-Control": "private, no-store",
-      },
-    });
+    const tipo = m.midia_tipo ?? j.mime_type ?? "application/octet-stream";
+    const bytes = await arq.arrayBuffer();
+    const caminho = `${setor}/${new Date().toISOString().slice(0, 7)}/${m.id}`;
+    const { error: eUp } = await db.storage.from("whatsapp-midia").upload(caminho, bytes, { contentType: tipo, upsert: true });
+    if (!eUp) await db.from("whatsapp_mensagens").update({ midia_caminho: caminho }).eq("id", m.id);
+    else console.error("midia: não guardou", m.id, eUp.message);
+    return entregar(bytes, tipo);
   }
 
   return resposta({ erro: "Ação desconhecida." }, 400);

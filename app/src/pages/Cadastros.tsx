@@ -31,7 +31,7 @@ export function Equipe() {
                 <tr key={p.id} style={{ opacity: p.ativo ? 1 : 0.5 }}>
                   <td><b>{p.nome}</b>{!p.ativo && <> <Etiqueta cor="cinza">inativo</Etiqueta></>}{p.especialidade && <div className="muted pequeno">{p.especialidade}</div>}</td>
                   <td>{p.usuario ? <>👤 {p.usuario}</> : p.email ?? <span className="muted">— (sem login)</span>}</td>
-                  <td>{FUNCOES[p.funcao]}</td>
+                  <td>{FUNCOES[p.funcao]}{p.orientacao_cirurgica && <div><Etiqueta cor="azul">Orientação cirúrgica</Etiqueta></div>}</td>
                   <td>{p.conselho && `${p.conselho} ${p.numero_conselho ?? ""}/${p.uf_conselho ?? ""}`}</td>
                   <td style={{ textAlign: "right" }}>
                     <div className="linha" style={{ justifyContent: "flex-end" }}>
@@ -55,6 +55,7 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
   const [f, setF] = useState<Record<string, string | boolean>>({
     nome: p.nome ?? "", email: p.usuario ? "" : p.email ?? "", usuario: p.usuario ?? "", funcao: p.funcao ?? "recepcao", conselho: p.conselho ?? "", numero_conselho: p.numero_conselho ?? "",
     uf_conselho: p.uf_conselho ?? "", especialidade: p.especialidade ?? "", rqe: p.rqe ?? "", cbo: (p as { cbo?: string | null }).cbo ?? "", ativo: p.ativo ?? true,
+    orientacao_cirurgica: p.orientacao_cirurgica ?? false,
   });
   // Médicos e funcionários entram com usuário; a administração com e-mail (decisão da dona, 16/11)
   const [modo, setModo] = useState<"usuario" | "email">(p.usuario ? "usuario" : p.email ? "email" : p.funcao === "admin" ? "email" : "usuario");
@@ -147,6 +148,10 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
             )}
           </>
         )}
+        <label className="check inteiro">
+          <input type="checkbox" checked={f.orientacao_cirurgica as boolean} onChange={(e) => setF({ ...f, orientacao_cirurgica: e.target.checked })} />
+          Atende a <b>&nbsp;Orientação cirúrgica&nbsp;</b> (vê e responde o WhatsApp da orientação)
+        </label>
         {p.id && <label className="check inteiro"><input type="checkbox" checked={f.ativo as boolean} onChange={(e) => setF({ ...f, ativo: e.target.checked })} /> Ativo (desmarque quando a pessoa sair da clínica: ela perde o acesso)</label>}
       </div>
     </Modal>

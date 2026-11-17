@@ -33,9 +33,14 @@ import Ligacoes from "./pages/Ligacoes";
 import ConfigTelefone from "./pages/ConfigTelefone";
 import Telefone from "./components/Telefone";
 import { TelefoneProvider } from "./lib/telefone";
-import { useNaoLidas } from "./lib/whatsapp";
+import { useNaoLidas, podeVerSetor } from "./lib/whatsapp";
+import type { Profissional } from "./lib/auth";
 
-interface ItemMenu { para: string; rotulo: string; icone: string; funcoes?: Funcao[]; grupo?: string }
+interface ItemMenu {
+  para: string; rotulo: string; icone: string; funcoes?: Funcao[]; grupo?: string;
+  /** Regra própria de quem vê o item (no lugar de "funcoes") */
+  ve?: (eu: Profissional | null) => boolean;
+}
 
 const MENU: ItemMenu[] = [
   { para: "/", rotulo: "Início", icone: "🏠" },
@@ -43,6 +48,7 @@ const MENU: ItemMenu[] = [
   { para: "/recepcao", rotulo: "Recepção", icone: "🛎️", funcoes: ["medico", "enfermagem", "recepcao", "admin"] },
   { para: "/pacientes", rotulo: "Pacientes", icone: "👤" },
   { para: "/whatsapp", rotulo: "WhatsApp", icone: "💬", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
+  { para: "/orientacao-cirurgica", rotulo: "Orientação cirúrgica", icone: "🩹", ve: (eu) => podeVerSetor(eu, "orientacao") },
   { para: "/ligacoes", rotulo: "Ligações", icone: "☎️", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
   { para: "/whatsapp/assistente", rotulo: "Assistente do WhatsApp", icone: "🤖", funcoes: ["recepcao", "admin"] },
   { para: "/consultorio", rotulo: "Consultório", icone: "🩺", funcoes: ["medico", "enfermagem"] },
@@ -78,9 +84,12 @@ export default function App() {
   const loc = useLocation();
   // Mensagens do WhatsApp não lidas: menu e título da aba, com som (só para quem responde: recepção e administração)
   const naoLidas = useNaoLidas(pode("recepcao", "admin"));
+  // Orientação cirúrgica: contador e som só para quem atende esse número (Alessandra)
+  const naoLidasOrientacao = useNaoLidas(eu?.orientacao_cirurgica === true, "orientacao");
   useEffect(() => {
-    document.title = (naoLidas ? `(${naoLidas}) ` : "") + "Consumed · Sistema da Clínica";
-  }, [naoLidas]);
+    const total = naoLidas + naoLidasOrientacao;
+    document.title = (total ? `(${total}) ` : "") + "Consumed · Sistema da Clínica";
+  }, [naoLidas, naoLidasOrientacao]);
 
   // Conferência pública de documentos (QR): não precisa de login
   // Portal do paciente: link + data de nascimento, sem login
@@ -137,13 +146,14 @@ export default function App() {
           <span>SISTEMA DA CLÍNICA</span>
         </div>
         <nav>
-          {MENU.filter((m) => !m.funcoes || pode(...m.funcoes)).map((m) => {
+          {MENU.filter((m) => (m.ve ? m.ve(eu) : !m.funcoes || pode(...m.funcoes))).map((m) => {
             const cab = m.grupo && m.grupo !== grupoAtual ? ((grupoAtual = m.grupo), <div className="grupo" key={"g" + m.grupo}>{m.grupo}</div>) : null;
             return [
               cab,
               <NavLink key={m.para} to={m.para} end={m.para === "/" || m.para === "/whatsapp" || m.para === "/exames"}>
                 <span aria-hidden>{m.icone}</span> {m.rotulo}
                 {m.para === "/whatsapp" && naoLidas > 0 && <span className="wa-badge" style={{ marginLeft: "auto" }}>{naoLidas}</span>}
+                {m.para === "/orientacao-cirurgica" && naoLidasOrientacao > 0 && <span className="wa-badge" style={{ marginLeft: "auto" }}>{naoLidasOrientacao}</span>}
               </NavLink>,
             ];
           })}
@@ -179,7 +189,10 @@ export default function App() {
           <Route path="/repasse" element={<Protegida funcoes={["faturamento", "admin"]}><RepasseMedico /></Protegida>} />
           <Route path="/repasse/:id" element={<Protegida funcoes={["faturamento", "admin"]}><RepasseDetalhe /></Protegida>} />
           <Route path="/relatorios" element={<Relatorios />} />
-          <Route path="/whatsapp" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><WhatsApp /></Protegida>} />
+          <Route path="/whatsapp" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><WhatsApp key="clinica" /></Protegida>} />
+          <Route path="/orientacao-cirurgica" element={
+            podeVerSetor(eu, "orientacao") ? <WhatsApp key="orientacao" setor="orientacao" /> : <div className="painel vazio">Você não tem acesso a esta área.</div>
+          } />
           <Route path="/whatsapp/assistente" element={<Protegida funcoes={["recepcao", "admin"]}><AssistenteWhatsApp /></Protegida>} />
           <Route path="/cadastros/procedimentos" element={<Protegida funcoes={["faturamento", "admin"]}><Procedimentos /></Protegida>} />
           <Route path="/cadastros/equipe" element={<Protegida funcoes={["admin"]}><Equipe /></Protegida>} />

@@ -76,6 +76,9 @@ export default function PacienteFicha() {
           {p.whatsapp_autorizado !== false && (
             <Link className="botao" to={`/whatsapp?paciente=${id}`}>💬 WhatsApp</Link>
           )}
+          {eu?.orientacao_cirurgica && (
+            <Link className="botao" to={`/orientacao-cirurgica?paciente=${id}`}>🩹 Orientação cirúrgica</Link>
+          )}
           <BotaoLigar numero={p.telefone as string | null} pacienteId={id} className="" />
           {eu?.funcao === "medico" && <button onClick={novoAtendimentoSemAgenda}>🩺 Atender sem agendamento</button>}
           {clinico && <BotaoResumoIA pacienteId={id!} />}
