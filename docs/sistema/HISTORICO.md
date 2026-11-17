@@ -892,3 +892,11 @@ Convênios, lente/material e regras por médico ficam para depois.
   receitas, exame, diagnóstico, óculos, desenho, 3 pedidos de exame), 2 contas, seguimento, link do portal, documento
   verificável e os repasses de teste nº 2 e nº 7 (22 parcelas). Feito numa só transação, com conferência de que não
   sobrou ligação quebrada. Mantidos: o exame "Teste ortóptico" (exame real) e o "Ramal 1000 (Ana – teste)" (ramal real da Api4Com).
+
+### 17/11 — Dados oficiais dos médicos e CNPJ (planilha "Corpo clínico atualizado" enviada pela dona)
+- Os 7 médicos receberam **RQE**, **CPF** e **data de nascimento** (CPF e nascimento em `profissionais_dados_pessoais`,
+  que só a administração e o próprio médico veem). Nomes completos corrigidos: **Gelson Ribeiro Moura Brasil** e
+  **Gisele Ribeiro Moura Brasil**. Um CPF veio na planilha sem o zero inicial (10 dígitos); gravado com o zero
+  (dígitos verificadores conferem). Todos os CPFs validados. Sexo (usado pela Memed) não veio na planilha: ficou em branco.
+- Clínica: **CNPJ 05.894.660/0001-87**, razão social **CONSUMED CONSULTÓRIOS MÉDICOS LTDA** em `app/src/lib/marca.ts`
+  (o CNPJ passa a sair nos documentos impressos e nas guias de faturamento).
