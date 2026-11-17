@@ -11,7 +11,60 @@
 //   WHATSAPP_PHONE_NUMBER_ID             número da clínica          → conversas do setor "clinica"
 //   WHATSAPP_ORIENTACAO_PHONE_NUMBER_ID  número da Orientação Cirúrgica → conversas do setor "orientacao"
 // Os dois números ficam na mesma conta da Meta, então chegam pelo mesmo endereço (e mesma assinatura).
-import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+//   WHATSAPP_TOKEN  usado para copiar fotos/áudios para o Storage e mandar a resposta automática
+//
+// Depois de gravar cada mensagem (em segundo plano, para responder rápido à Meta):
+//   * foto/áudio/vídeo/documento → copiado para o bucket privado "whatsapp-midia" (a Meta apaga em ~30 dias);
+//   * fora do horário configurado → resposta automática (whatsapp_ausencia; no máximo 1 vez a cada 8 h).
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.45.4";
+
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined;
+const GRAPH = () => `https://graph.facebook.com/${Deno.env.get("WHATSAPP_API_VERSION") ?? "v24.0"}`;
+const TOKEN = () => Deno.env.get("WHATSAPP_TOKEN") ?? "";
+
+/** Copia o arquivo da Meta para o Storage e anota o caminho na mensagem. */
+async function guardarMidia(db: SupabaseClient, mensagemId: string, midiaId: string, setor: string) {
+  try {
+    if (!TOKEN()) return;
+    const info = await fetch(`${GRAPH()}/${midiaId}`, { headers: { Authorization: `Bearer ${TOKEN()}` } });
+    const j = await info.json().catch(() => ({}));
+    if (!info.ok || !j.url) throw new Error(`Meta não devolveu o arquivo (HTTP ${info.status})`);
+    const arq = await fetch(j.url, { headers: { Authorization: `Bearer ${TOKEN()}` } });
+    if (!arq.ok) throw new Error(`Download falhou (HTTP ${arq.status})`);
+    const tipo = (j.mime_type ?? arq.headers.get("content-type") ?? "application/octet-stream").split(";")[0].trim();
+    const mes = new Date().toISOString().slice(0, 7);
+    const caminho = `${setor}/${mes}/${mensagemId}`;
+    const { error } = await db.storage.from("whatsapp-midia").upload(caminho, await arq.arrayBuffer(), { contentType: tipo, upsert: true });
+    if (error) throw new Error(error.message);
+    await db.from("whatsapp_mensagens").update({ midia_caminho: caminho }).eq("id", mensagemId);
+  } catch (e) {
+    // Fica para a ação "midia" da whatsapp-enviar tentar de novo quando alguém abrir
+    console.error("guardarMidia", mensagemId, (e as Error).message);
+  }
+}
+
+/** Fora do horário: manda a resposta automática configurada (se ligada) e grava no histórico. */
+async function respostaAusencia(db: SupabaseClient, conversaId: string, telefone: string, numeroId: string) {
+  try {
+    const { data: texto } = await db.rpc("whatsapp_ausencia_texto", { p_conversa: conversaId });
+    if (!texto || !TOKEN() || !numeroId) return;
+    const r = await fetch(`${GRAPH()}/${numeroId}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${TOKEN()}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: telefone, type: "text", text: { body: texto } }),
+    });
+    const j = await r.json().catch(() => ({}));
+    const waId = r.ok ? j.messages?.[0]?.id : null;
+    const agora = new Date().toISOString();
+    await db.from("whatsapp_mensagens").insert({
+      conversa_id: conversaId, direcao: "enviada", tipo: "texto", texto, enviado_por: null,
+      wa_id: waId, situacao: waId ? "enviada" : "falhou", erro: waId ? null : (j.error?.message ?? `HTTP ${r.status}`), quando: agora,
+    });
+    if (waId) await db.from("whatsapp_conversas").update({ ultima_mensagem_em: agora }).eq("id", conversaId);
+  } catch (e) {
+    console.error("respostaAusencia", conversaId, (e as Error).message);
+  }
+}
 
 const TIPOS: Record<string, string> = {
   text: "texto", button: "botao", interactive: "botao", image: "imagem", audio: "audio", video: "video",
@@ -131,6 +184,7 @@ Deno.serve(async (req) => {
   const numeroClinica = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID") ?? "";
   const numeroOrientacao = Deno.env.get("WHATSAPP_ORIENTACAO_PHONE_NUMBER_ID") ?? "";
   let falhou = false;
+  const depois: Promise<unknown>[] = [];
 
   for (const entrada of dados.entry ?? []) {
     for (const mudanca of entrada.changes ?? []) {
@@ -148,10 +202,13 @@ Deno.serve(async (req) => {
 
       for (const m of v.messages ?? []) {
         const args = lerMensagem(m);
-        const { error } = await db.rpc("whatsapp_receber", { ...args, p_nome: nomes.get(args.p_telefone) ?? null, p_setor: setor });
+        const { data: r, error } = await db.rpc("whatsapp_receber", { ...args, p_nome: nomes.get(args.p_telefone) ?? null, p_setor: setor });
         if (error) {
           console.error("Erro ao gravar mensagem recebida", m.id, error.message);
           falhou = true;
+        } else if (r?.mensagem_id) {
+          if (args.p_midia_id) depois.push(guardarMidia(db, r.mensagem_id, args.p_midia_id, setor));
+          if (args.p_tipo !== "reacao") depois.push(respostaAusencia(db, r.conversa_id, args.p_telefone, idNumero));
         }
       }
 
@@ -167,6 +224,13 @@ Deno.serve(async (req) => {
         }
       }
     }
+  }
+
+  // Trabalho que não precisa segurar a resposta à Meta
+  if (depois.length) {
+    const tudo = Promise.allSettled(depois);
+    if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(tudo);
+    else await tudo;
   }
 
   // Se algo não gravou, responde erro para a Meta tentar de novo (não duplica: o wa_id é único)

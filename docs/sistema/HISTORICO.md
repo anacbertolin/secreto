@@ -945,3 +945,34 @@ com complicação ou dúvida depois da cirurgia. Pedido: atender esse número pe
 ### Pendências / ideias
 - Mostrar na ficha ao lado da conversa a última cirurgia do paciente (data, olho, procedimento).
 - Respostas prontas para as dúvidas mais comuns do pós-operatório.
+
+---
+
+## 17/11/2026 — WhatsApp: arquivos guardados, pesquisa nas mensagens e resposta fora do horário
+### Pedido da dona
+Decisão: número da Alessandra pela **opção 1 (direto com a Meta, sem parceira, só pelo sistema)**. Foram descartadas a
+ligação não oficial (QR Code / Evolution API) e a parceira paga (ex.: 360dialog, ~€ 49/mês). Exigências: tudo guardado,
+áudios para ouvir, e **pesquisar o que foi dito** ("o paciente fala uma coisa com a Alessandra e outra na sala do
+médico"). Horário da Alessandra: seg–sex 8h–17h, sáb 8h–12h.
+### O que entrou
+- **Migração 0053 `whatsapp_arquivo_busca_ausencia`** (aplicada) + **0054** (correção: resposta automática uma vez só):
+  - `whatsapp_mensagens.midia_caminho` + bucket privado **`whatsapp-midia`** (100 MB/arquivo, sem acesso direto da equipe).
+  - `whatsapp_buscar(setor, termo, de, ate, limite)`: procura no texto e na transcrição dos áudios, sem acento/maiúscula
+    (extensão `unaccent`), respeitando o RLS das conversas (security invoker).
+  - `whatsapp_ausencia` (uma linha por número; **desligada**; texto e horários editáveis; auditada) +
+    `whatsapp_conversas.ausencia_enviada_em` + `whatsapp_ausencia_texto(conversa)` (só chave de serviço; no máximo 1 a cada 8 h).
+- **whatsapp-webhook v4:** depois de gravar, em segundo plano (`EdgeRuntime.waitUntil`), copia foto/áudio/vídeo/documento
+  para o Storage e manda a resposta automática fora do horário (gravada como enviada, `enviado_por` nulo).
+- **whatsapp-enviar v5:** ação `midia` entrega a cópia guardada; se não houver, busca na Meta e guarda.
+- **Tela (clínica e orientação):** botões **🔎 Pesquisar mensagens** (resultado com trecho marcado; clicar abre a conversa
+  e destaca a mensagem) e **🌙 Fora do horário** (quem atende o número ou admin). Balão "Resposta automática".
+### Testes
+- Banco real, transação desfeita: pesquisa acha texto e transcrição sem acento ("tampao" → "tampão"); médicos e admin
+  acham, faturamento não; resposta fora do horário sai 1 vez e não repete; número da clínica (desligado) não responde.
+- `deno check`, `npm run build`, telas no navegador com dados simulados. Ainda sem Meta de verdade.
+### Observações
+- Mensagens e arquivos **não são apagados** pelo sistema (prontuário/LGPD: guarda longa).
+- A transcrição automática dos áudios depende da chave da OpenAI (`OPENAI_API_KEY`) já prevista em 15/11.
+- "Ouvir a ligação" (telefone): pergunta em aberto para a dona — ligação pelo ramal do sistema (Api4Com) pode ser gravada
+  pela central; ligação de voz pelo WhatsApp oficial não é gravada pela Meta.
+- Texto da resposta automática nasce como sugestão; a dona/Alessandra aprovam e ligam na tela.

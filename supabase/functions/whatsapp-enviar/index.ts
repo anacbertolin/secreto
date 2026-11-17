@@ -11,7 +11,8 @@
 //                (ou "retomar_orientacao" no número da orientação) — fora das 24 h
 //   lembretes  → { data: "AAAA-MM-DD", simular?: true }  lembrete com botões para os agendamentos do dia
 //                (só recepção e admin; "simular" só conta, não envia)
-//   midia      → { mensagem_id }  baixa a foto/áudio/documento que o paciente mandou
+//   midia      → { mensagem_id }  abre a foto/áudio/documento que o paciente mandou (cópia guardada no
+//                Storage, bucket "whatsapp-midia"; se ainda não houver, busca na Meta e guarda)
 //
 // Segredos (Supabase → Edge Functions → Secrets):
 //   WHATSAPP_TOKEN            token permanente (usuário do sistema na Meta)
@@ -294,25 +295,38 @@ Deno.serve(async (req) => {
     return resposta(res);
   }
 
-  // ---------- Baixar mídia recebida ----------
+  // ---------- Abrir foto/áudio/documento ----------
+  // Primeiro a cópia guardada no Storage (para sempre); se ainda não houver, busca na Meta (~30 dias) e guarda.
   if (corpo.acao === "midia") {
-    const { data: m } = await db.from("whatsapp_mensagens").select("midia_id, midia_tipo, midia_nome, whatsapp_conversas(setor)")
+    const { data: m } = await db.from("whatsapp_mensagens")
+      .select("id, midia_id, midia_tipo, midia_nome, midia_caminho, whatsapp_conversas(setor)")
       .eq("id", corpo.mensagem_id).maybeSingle();
     // deno-lint-ignore no-explicit-any
-    if (!m?.midia_id || !ve((m as any).whatsapp_conversas?.setor ?? "clinica")) return resposta({ erro: "Arquivo não encontrado." }, 404);
+    const setor: Setor = (m as any)?.whatsapp_conversas?.setor ?? "clinica";
+    if (!m?.midia_id || !ve(setor)) return resposta({ erro: "Arquivo não encontrado." }, 404);
+    const entregar = (corpoArq: BodyInit, tipo: string) => new Response(corpoArq, {
+      headers: { ...cors, "Content-Type": tipo, "Cache-Control": "private, no-store" },
+    });
+
+    if (m.midia_caminho) {
+      const { data: arq, error } = await db.storage.from("whatsapp-midia").download(m.midia_caminho);
+      if (!error && arq) return entregar(arq, m.midia_tipo ?? arq.type ?? "application/octet-stream");
+      console.error("midia: cópia guardada não abriu", m.id, error?.message);
+    }
+
     if (!TOKEN()) return naoLigado("clinica");
     const info = await fetch(`${GRAPH()}/${m.midia_id}`, { headers: { Authorization: `Bearer ${TOKEN()}` } });
     const j = await info.json().catch(() => ({}));
-    if (!info.ok || !j.url) return resposta({ erro: "A Meta não tem mais este arquivo (eles ficam disponíveis por cerca de 30 dias)." }, 410);
+    if (!info.ok || !j.url) return resposta({ erro: "Este arquivo não foi guardado a tempo e a Meta já apagou (ela guarda cerca de 30 dias)." }, 410);
     const arq = await fetch(j.url, { headers: { Authorization: `Bearer ${TOKEN()}` } });
     if (!arq.ok) return resposta({ erro: "Não foi possível baixar o arquivo." }, 502);
-    return new Response(arq.body, {
-      headers: {
-        ...cors,
-        "Content-Type": m.midia_tipo ?? j.mime_type ?? "application/octet-stream",
-        "Cache-Control": "private, no-store",
-      },
-    });
+    const tipo = m.midia_tipo ?? j.mime_type ?? "application/octet-stream";
+    const bytes = await arq.arrayBuffer();
+    const caminho = `${setor}/${new Date().toISOString().slice(0, 7)}/${m.id}`;
+    const { error: eUp } = await db.storage.from("whatsapp-midia").upload(caminho, bytes, { contentType: tipo, upsert: true });
+    if (!eUp) await db.from("whatsapp_mensagens").update({ midia_caminho: caminho }).eq("id", m.id);
+    else console.error("midia: não guardou", m.id, eUp.message);
+    return entregar(bytes, tipo);
   }
 
   return resposta({ erro: "Ação desconhecida." }, 400);

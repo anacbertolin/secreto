@@ -394,3 +394,9 @@ table.tabela { width: 100%; border-collapse: collapse; }
 @media print { .tel { display: none; } }
 .tel-fechado-caixa { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .tel-erro-solto { max-width: 300px; box-shadow: 0 4px 14px rgba(16, 24, 40, 0.18); cursor: pointer; }
+
+/* WhatsApp: pesquisa nas mensagens */
+.wa-achado { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid #e6eaee; border-radius: 0; padding: 10px 4px; cursor: pointer; }
+.wa-achado:hover { background: #f5f8fb; }
+.wa-achado mark, .wa-balao mark { background: #ffe58a; padding: 0 1px; border-radius: 2px; }
+.wa-balao.destacada { outline: 3px solid #f5b400; outline-offset: 2px; }
