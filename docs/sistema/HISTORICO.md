@@ -976,3 +976,31 @@ médico"). Horário da Alessandra: seg–sex 8h–17h, sáb 8h–12h.
 - "Ouvir a ligação" (telefone): pergunta em aberto para a dona — ligação pelo ramal do sistema (Api4Com) pode ser gravada
   pela central; ligação de voz pelo WhatsApp oficial não é gravada pela Meta.
 - Texto da resposta automática nasce como sugestão; a dona/Alessandra aprovam e ligam na tela.
+
+---
+
+## 18/11/2026 — Importar conversas antigas do WhatsApp do celular
+### Por quê
+Para levar o número atual da clínica para a API oficial da Meta, a conta do WhatsApp do celular precisa ser
+apagada, e as conversas somem do aparelho. A dona pediu para salvar esse histórico no sistema.
+### O que entrou
+- **Migração 0064 `whatsapp_importar_conversas`** (aplicada): `whatsapp_mensagens.importada`; função
+  `whatsapp_importar(setor, telefone, nome, paciente, mensagens jsonb)` (SECURITY DEFINER, confere a permissão logo
+  no início: admin; recepção no número da clínica; quem atende a Orientação Cirúrgica no dela); até 2.000 mensagens
+  por chamada; não duplica (`wa_id = 'importado:' + código`); não mexe em não lidas nem na janela de 24 h; avança o
+  "lido até" do **Assistente** (ele não marca consultas de conversas antigas, só usa como contexto); anexos marcados
+  `midia_id = 'importado'` depois da gravação (a transcrição automática não dispara); uma linha `IMPORTACAO` na
+  auditoria. Política de Storage: envio só para `whatsapp-midia/<setor>/importado/` de quem pode importar.
+- **Tela `/whatsapp/importar`** (botão "📥 Importar conversas antigas" no WhatsApp): lê o .zip (iPhone, ou Android
+  com mídia) ou o .txt + anexos soltos (Android), em português ou inglês (`app/src/lib/whatsappExport.ts`); descobre
+  sozinha qual nome é a clínica (aparece em todas as conversas); pede o número do paciente (ou pega da ficha ao
+  ligar a conversa a um paciente); envia os anexos e grava em lotes de 1.000.
+- **Conversa:** passa a carregar as **500 mensagens mais recentes** (antes eram as 500 mais antigas; com histórico
+  importado, as novas ficariam escondidas). Mensagem importada aparece com "📥 Do celular" e data completa.
+- Passo a passo da Meta (doc da dona) ganhou a seção "Antes de apagar o WhatsApp do celular: salve as conversas".
+### Testes
+- Banco real numa transação desfeita: 3 de 4 mensagens entram (a 4ª, com anexo apontando para o outro número, é
+  recusada), reimportar não duplica, áudio sem transcrição, não lidas 0, Assistente com "lido até" atualizado, auditoria.
+- Leitor de arquivos com exemplos Android e iPhone (várias linhas, anexos, mídia oculta, avisos de criptografia).
+- Tela no navegador com o banco simulado: 2 conversas (zip do iPhone + txt e áudio do Android), escolha da clínica,
+  ligação a paciente, envio dos anexos e gravação conferidos. Sem teste com login real.

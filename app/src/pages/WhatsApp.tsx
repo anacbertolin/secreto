@@ -134,6 +134,7 @@ export default function WhatsApp({ setor = "clinica" }: { setor?: SetorWA }) {
           <AvisosComputador />
           <button onClick={() => setPesquisar(true)}>🔎 Pesquisar mensagens</button>
           {(podeResponder || pode("admin")) && <button onClick={() => setAusencia(true)}>🌙 Fora do horário</button>}
+          {(podeResponder || pode("admin")) && <Link className="botao" to={`/whatsapp/importar?setor=${setor}`}>📥 Importar conversas antigas</Link>}
           {setor === "clinica" && pode("recepcao", "admin") && <button className="primario" onClick={() => setLembretes(true)}>📨 Lembretes de consulta</button>}
           <button onClick={() => setModelos(true)}>📝 Modelos</button>
         </div>
@@ -252,8 +253,9 @@ function Chat(props: {
   const [ligar, setLigar] = useState(false);
   const fim = useRef<HTMLDivElement>(null);
 
+  // As 500 mais recentes (com histórico importado do celular a conversa pode ter milhares)
   const msgs = useCarregar(async () =>
-    ok(await supabase.from("whatsapp_mensagens").select("*").eq("conversa_id", c.id).order("quando").limit(500)) as Mensagem[],
+    (ok(await supabase.from("whatsapp_mensagens").select("*").eq("conversa_id", c.id).order("quando", { ascending: false }).limit(500)) as Mensagem[]).reverse(),
   [c.id]);
   const equipe = useCarregar(async () => ok(await supabase.from("profissionais").select("id, nome")) as { id: string; nome: string }[], []);
 
@@ -550,12 +552,13 @@ function Balao({ m, quem, podeTranscrever, destacada }: { m: Mensagem; quem?: st
         </div>
       )}
       {!m.midia_id && ICONE_TIPO[m.tipo] && <div className="wa-rotulo">{ICONE_TIPO[m.tipo]}</div>}
-      <Transcricao m={m} podePedir={podeTranscrever} />
+      {m.importada && <div className="wa-rotulo" title="Mensagem antiga, importada do WhatsApp do celular">📥 Do celular</div>}
+      <Transcricao m={m} podePedir={podeTranscrever && !m.importada} />
       {m.texto && <div className="wa-texto">{m.texto}</div>}
       <div className="wa-rodape">
         {enviada && quem && <span>{quem} · </span>}
-        {enviada && !m.enviado_por && m.tipo === "texto" && <span>Resposta automática · </span>}
-        {fmtHora(m.quando)}
+        {enviada && !m.enviado_por && m.tipo === "texto" && !m.importada && <span>Resposta automática · </span>}
+        {m.importada ? fmtDataHora(m.quando) : fmtHora(m.quando)}
         {enviada && <span className={"wa-sit " + m.situacao} title={m.situacao}> {ICONE_SITUACAO[m.situacao] ?? ""}</span>}
       </div>
       {m.situacao === "falhou" && m.erro && <div className="pequeno" style={{ color: "var(--perigo)" }}>Não enviada: {m.erro}</div>}
