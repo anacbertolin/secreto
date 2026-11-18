@@ -37,6 +37,7 @@ export interface Mensagem {
   transcricao_erro?: string | null;
   enviado_por: string | null;
   quando: string;
+  importada?: boolean;   // mensagem antiga importada do WhatsApp do celular
 }
 
 export interface ModeloWA {

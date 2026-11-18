@@ -19,6 +19,7 @@ import Procedimentos from "./pages/Procedimentos";
 import RepasseMedico, { RepasseDetalhe } from "./pages/Repasse";
 import Relatorios from "./pages/Relatorios";
 import WhatsApp from "./pages/WhatsApp";
+import ImportarWhatsApp from "./pages/ImportarWhatsApp";
 import AssistenteWhatsApp from "./pages/AssistenteWhatsApp";
 import PainelTV from "./pages/PainelTV";
 import BuscaAtiva from "./pages/BuscaAtiva";
@@ -193,6 +194,7 @@ export default function App() {
           <Route path="/orientacao-cirurgica" element={
             podeVerSetor(eu, "orientacao") ? <WhatsApp key="orientacao" setor="orientacao" /> : <div className="painel vazio">Você não tem acesso a esta área.</div>
           } />
+          <Route path="/whatsapp/importar" element={<ImportarWhatsApp />} />
           <Route path="/whatsapp/assistente" element={<Protegida funcoes={["recepcao", "admin"]}><AssistenteWhatsApp /></Protegida>} />
           <Route path="/cadastros/procedimentos" element={<Protegida funcoes={["faturamento", "admin"]}><Procedimentos /></Protegida>} />
           <Route path="/cadastros/equipe" element={<Protegida funcoes={["admin"]}><Equipe /></Protegida>} />
