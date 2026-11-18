@@ -26,6 +26,7 @@ import BuscaAtiva from "./pages/BuscaAtiva";
 import Cirurgias, { CirurgiaDetalhe } from "./pages/Cirurgias";
 import Estoque from "./pages/Estoque";
 import Verificar from "./pages/Verificar";
+import Privacidade from "./pages/Privacidade";
 import ConfigIA from "./pages/ConfigIA";
 import Portal from "./pages/Portal";
 import ImportarExames from "./pages/ImportarExames";
@@ -96,6 +97,10 @@ export default function App() {
   // Portal do paciente: link + data de nascimento, sem login
   if (loc.pathname.startsWith("/portal/")) {
     return <Routes><Route path="/portal/:token" element={<Portal />} /></Routes>;
+  }
+  // Política de Privacidade (LGPD): pública, exigida pela Meta para o WhatsApp oficial
+  if (loc.pathname === "/privacidade") {
+    return <Routes><Route path="/privacidade" element={<Privacidade />} /></Routes>;
   }
   if (loc.pathname === "/verificar" || loc.pathname.startsWith("/verificar/")) {
     return (

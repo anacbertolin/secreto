@@ -1004,3 +1004,21 @@ apagada, e as conversas somem do aparelho. A dona pediu para salvar esse histór
 - Leitor de arquivos com exemplos Android e iPhone (várias linhas, anexos, mídia oculta, avisos de criptografia).
 - Tela no navegador com o banco simulado: 2 conversas (zip do iPhone + txt e áudio do Android), escolha da clínica,
   ligação a paciente, envio dos anexos e gravação conferidos. Sem teste com login real.
+
+---
+
+## 18/11/2026 — WhatsApp da Orientação Cirúrgica: conta nova na Meta e Política de Privacidade
+- **Meta (feito pela dona com o Claude no Chrome):** Facebook novo da dona; portfólio NOVO "Consumed Clínica de Olhos"
+  (separado do da Micrologos/Talklogos); app "Orientação Cirúrgica Consumed" (ID 1112162168353372, ainda NÃO publicado);
+  usuário do sistema "sistema-consumed" com token permanente; webhook verificado e campo `messages` assinado.
+  A Meta criou uma "Test WhatsApp Account" com número de teste (ignorado pelo sistema — webhook v5).
+- **Segredos no Supabase (dona):** `WHATSAPP_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` (conferido: a função
+  recusa aviso sem assinatura e a Meta validou o endereço). Falta `WHATSAPP_ORIENTACAO_PHONE_NUMBER_ID` (depois do número).
+  Obs.: a ferramenta `create_edge_function_secret` está pausada pelo Supabase; segredos só pelo painel.
+- **Login da Alessandra:** `profissionais` Alessandra Galter, usuário `alessandra.galter`, função recepção, marcada
+  "atende a orientação". A senha temporária é gerada pela dona em Cadastros → Equipe.
+- **Política de Privacidade** pública em `/privacidade` (sem login; `app/src/pages/Privacidade.tsx`), exigida pela Meta
+  para publicar o app. Texto preparado pelo Claude, **aguardando revisão da dona**. Falta definir o e-mail do canal de dados
+  (constante `CANAL.email`).
+- Pendente: número da Claro (apagar WhatsApp Business do celular da Alessandra → adicionar na Meta → ID no Supabase),
+  publicar o app (política + ícone + categoria), modelo `retomar_orientacao` na Meta.
