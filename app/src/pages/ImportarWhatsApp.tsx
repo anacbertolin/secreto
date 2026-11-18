@@ -190,14 +190,15 @@ export default function ImportarWhatsApp() {
       </div>
 
       <details className="painel" open={itens.length === 0}>
-        <summary style={{ cursor: "pointer" }}><b>Como exportar uma conversa no celular</b></summary>
+        <summary style={{ cursor: "pointer" }}><b>Como fazer, tudo pelo celular da clínica</b></summary>
         <ol style={{ lineHeight: 1.7 }}>
-          <li>No WhatsApp do celular da clínica, abra a conversa.</li>
-          <li><b>Android:</b> toque nos três pontinhos → <b>Mais</b> → <b>Exportar conversa</b>. <b>iPhone:</b> toque no nome do contato → <b>Exportar conversa</b>.</li>
-          <li>Escolha <b>Incluir mídia</b> (traz fotos e áudios) ou <b>Sem mídia</b> (só o texto, arquivo bem menor).</li>
-          <li>Salve no Google Drive ou no e-mail da clínica e baixe no computador.</li>
-          <li>Aqui, clique em <b>Escolher arquivos</b> e selecione os arquivos (o .zip, ou o .txt junto com as fotos e áudios). Dá para escolher várias conversas de uma vez.</li>
+          <li>No WhatsApp do celular, abra a conversa. <b>Android:</b> três pontinhos → <b>Mais</b> → <b>Exportar conversa</b>. <b>iPhone:</b> toque no nome do contato → <b>Exportar conversa</b>.</li>
+          <li>Escolha <b>Sem mídia</b> (mais rápido) ou <b>Incluir mídia</b> (leva fotos e áudios).</li>
+          <li>Na lista que aparece, toque em <b>Salvar em Arquivos</b> (iPhone) ou <b>Salvar no dispositivo</b> / <b>Arquivos</b> (Android). Não precisa de Google Drive nem de e-mail.</li>
+          <li>Abra o sistema no navegador do mesmo celular, entre aqui e toque em <b>Escolher arquivos</b>. Escolha o arquivo que acabou de salvar.</li>
+          <li>Confira o número do paciente e toque em <b>Importar</b>. Pronto: repita para a próxima conversa.</li>
         </ol>
+        <p className="muted pequeno">Também funciona no computador, se preferir passar os arquivos para ele.</p>
         <p className="muted pequeno">O assistente de IA não vai marcar consultas a partir dessas conversas antigas. Importar o mesmo arquivo de novo não duplica as mensagens.</p>
       </details>
 
@@ -251,7 +252,7 @@ export default function ImportarWhatsApp() {
             </div>
             {it.resultado && <Aviso tipo={it.situacao === "erro" ? "erro" : "ok"}>{it.resultado}</Aviso>}
             {!travado && (
-              <div className="grade g2">
+              <div className="grade" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
                 <Campo rotulo="Paciente (opcional: liga a conversa à ficha)">
                   {it.paciente ? (
                     <div className="linha entre secao" style={{ margin: 0 }}>
