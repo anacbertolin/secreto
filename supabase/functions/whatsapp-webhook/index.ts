@@ -190,11 +190,12 @@ Deno.serve(async (req) => {
     for (const mudanca of entrada.changes ?? []) {
       if (mudanca.field !== "messages") continue;
       const v = mudanca.value ?? {};
-      // Qual número recebeu? Número desconhecido (outro número da conta) é ignorado.
+      // Qual número recebeu? Número desconhecido (outro número da conta, ex.: número de teste da Meta) é ignorado.
+      // Sem o número da clínica configurado, só o da orientação é aceito.
       const idNumero = v.metadata?.phone_number_id ?? "";
       let setor: string | null = null;
       if (numeroOrientacao && idNumero === numeroOrientacao) setor = "orientacao";
-      else if (!numeroClinica || !idNumero || idNumero === numeroClinica) setor = "clinica";
+      else if (numeroClinica ? idNumero === numeroClinica : !numeroOrientacao) setor = "clinica";
       if (!setor) continue;
 
       const nomes = new Map<string, string>();
