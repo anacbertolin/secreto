@@ -1031,3 +1031,13 @@ apagada, e as conversas somem do aparelho. A dona pediu para salvar esse histór
   de tela; serve só para receber o SMS/ligação de verificação da Meta. (O número antigo da Alessandra fica de fora.)
 - Pendente: adicionar o número na Meta → `WHATSAPP_ORIENTACAO_PHONE_NUMBER_ID` no Supabase → publicar o app
   (URL da política: https://sistema-production-addc59db.up.railway.app/privacidade) → teste real.
+- **19/11 (tarde) — LIGADO:** conta do WhatsApp nova "Consumed Orientação Cirúrgica" (WABA 1459910998987910, separada da
+  "Test Messaging Account", que não deixa trocar o número de teste), número **+55 21 96724-7984** (phone number ID
+  1545263548660010, nome de exibição "Consumed Clínica de Olhos", status Conectado), `sistema-consumed` com controle total,
+  app inscrito nos webhooks da conta, app **Publicado** (categoria "Negócio e Páginas", ícone transparente, política em
+  /privacidade). Segredo `WHATSAPP_ORIENTACAO_PHONE_NUMBER_ID` salvo pela dona. Detalhes da empresa preenchidos no
+  portfólio (exigência da Meta, erro #2655102).
+- **Teste real OK:** chegou a mensagem automática da Meta e o "Oi" da dona, na aba Orientação cirúrgica (ligada sozinha
+  ao paciente pelo telefone).
+- Pendentes da dona: PIN de verificação em duas etapas do número; forma de pagamento (só para modelos fora das 24 h);
+  confirmar o e-mail do portfólio; testar a resposta pelo login da Alessandra; cadastrar o modelo `retomar_orientacao`.
