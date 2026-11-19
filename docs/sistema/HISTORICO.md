@@ -1022,3 +1022,12 @@ apagada, e as conversas somem do aparelho. A dona pediu para salvar esse histór
   (constante `CANAL.email`).
 - Pendente: número da Claro (apagar WhatsApp Business do celular da Alessandra → adicionar na Meta → ID no Supabase),
   publicar o app (política + ícone + categoria), modelo `retomar_orientacao` na Meta.
+
+### 19/11/2026 — Política de Privacidade aprovada; chip novo da Orientação Cirúrgica
+- Dona **aprovou** o texto de `/privacidade` sem mudanças (sem e-mail de contato e sem encarregado nomeado por ora;
+  canal = telefone e recepção).
+- Número da Orientação Cirúrgica: **chip novo da Vivo** (plano Easy Lite mensal, ~R$ 30/mês a partir do 2º mês — manter
+  ativo enquanto o número for usado) num iPhone antigo da dona, apagado, sem ID Apple, sem WhatsApp instalado, com senha
+  de tela; serve só para receber o SMS/ligação de verificação da Meta. (O número antigo da Alessandra fica de fora.)
+- Pendente: adicionar o número na Meta → `WHATSAPP_ORIENTACAO_PHONE_NUMBER_ID` no Supabase → publicar o app
+  (URL da política: https://sistema-production-addc59db.up.railway.app/privacidade) → teste real.

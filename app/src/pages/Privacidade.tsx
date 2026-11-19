@@ -1,6 +1,6 @@
 // Página pública (sem login): Política de Privacidade da clínica (LGPD).
 // Exigida pela Meta para publicar o aplicativo do WhatsApp oficial (17–18/11/2026).
-// Texto preparado pelo Claude e aprovado pela dona antes de valer — mudanças de conteúdo só com ela.
+// Texto preparado pelo Claude e APROVADO pela dona em 19/11/2026 — mudanças de conteúdo só com ela.
 import type { ReactNode } from "react";
 import { CLINICA } from "../lib/marca";
 
