@@ -5,10 +5,11 @@ import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Modal, Campo, Etiqueta, BuscaPaciente } from "../components/ui";
 import { STATUS_AGENDA, TIPOS_AGENDA, fmtData, fmtDataHora, fmtHora, idade, isoDia, nomeExibicao, somaDias } from "../lib/util";
 import {
-  SELECT_CONVERSA, baixarMidia, fmtNumeroWA, janelaAberta, whatsapp, tocarAviso, podeResponderSetor,
+  SELECT_CONVERSA, baixarMidia, enviarArquivo, fmtNumeroWA, janelaAberta, whatsapp, tocarAviso, podeResponderSetor,
   type Conversa, type Mensagem, type ModeloWA, type SetorWA,
 } from "../lib/whatsapp";
 import { BotaoLigar } from "../components/Telefone";
+import { gravarAudio, type Gravacao } from "../lib/gravador";
 
 const ICONE_SITUACAO: Record<string, string> = { enviada: "✓", entregue: "✓✓", lida: "✓✓", falhou: "⚠️" };
 const ICONE_TIPO: Record<string, string> = {
@@ -294,12 +295,18 @@ function Chat(props: {
 
   async function enviar() {
     const t = texto.trim();
-    if (!t) return;
+    if (!t && !anexo) return;
     setEnviando(true);
     setErro("");
     try {
-      await whatsapp("texto", { conversa_id: c.id, texto: t });
-      setTexto("");
+      if (anexo) {
+        await enviarArquivo(c.id, anexo, anexo.type.startsWith("audio/") ? "" : t, comoDoc);
+        if (!anexo.type.startsWith("audio/")) setTexto("");
+        limparAnexo();
+      } else {
+        await whatsapp("texto", { conversa_id: c.id, texto: t });
+        setTexto("");
+      }
       if (!c.responsavel_id && eu) mudar({ responsavel_id: eu.id }); // quem responde assume a conversa
     } catch (e) {
       setErro(msgErro(e));
@@ -308,6 +315,70 @@ function Chat(props: {
     msgs.recarregar();
     props.aoMudar();
   }
+
+  // ---------- Anexos (foto, documento, áudio gravado) ----------
+  const [anexo, setAnexo] = useState<File | null>(null);
+  const [anexoUrl, setAnexoUrl] = useState<string | null>(null);
+  const [comoDoc, setComoDoc] = useState(false);
+  const [gravacao, setGravacao] = useState<Gravacao | null>(null);
+  const [segundos, setSegundos] = useState(0);
+  const [preparando, setPreparando] = useState(false);
+  const seletor = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!gravacao) return;
+    setSegundos(0);
+    const t = window.setInterval(() => setSegundos((x) => x + 1), 1000);
+    return () => window.clearInterval(t);
+  }, [gravacao]);
+  useEffect(() => () => { if (anexoUrl) URL.revokeObjectURL(anexoUrl); }, [anexoUrl]);
+  // Saiu da conversa no meio da gravação: desliga o microfone
+  const gravacaoAtual = useRef<Gravacao | null>(null);
+  gravacaoAtual.current = gravacao;
+  useEffect(() => () => gravacaoAtual.current?.cancelar(), []);
+
+  function limparAnexo() {
+    setAnexo(null);
+    setAnexoUrl(null);
+    setComoDoc(false);
+  }
+  function escolherArquivo(f: File | null | undefined) {
+    if (!f) return;
+    setErro("");
+    const MB = 1024 * 1024;
+    if (f.size > 100 * MB) return setErro("Arquivo grande demais: o WhatsApp aceita até 100 MB.");
+    const foto = f.type.startsWith("image/");
+    // Foto acima de 5 MB ou em formato que o WhatsApp não mostra como foto (HEIC, WEBP…) vai como documento
+    const forcaDoc = foto && (f.size > 5 * MB || !["image/jpeg", "image/png"].includes(f.type));
+    setAnexo(f);
+    setAnexoUrl(URL.createObjectURL(f));
+    setComoDoc(forcaDoc || (!foto && !f.type.startsWith("audio/") && !f.type.startsWith("video/")));
+  }
+  async function comecarGravacao() {
+    setErro("");
+    limparAnexo();
+    try {
+      setGravacao(await gravarAudio());
+    } catch (e) {
+      setErro(msgErro(e));
+    }
+  }
+  async function pararGravacao() {
+    if (!gravacao) return;
+    const g = gravacao;
+    setGravacao(null);
+    setPreparando(true);
+    try {
+      escolherArquivo(await g.parar());
+    } catch (e) {
+      setErro(msgErro(e));
+    }
+    setPreparando(false);
+  }
+  const fmtTempo = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const anexoFoto = !!anexo && anexo.type.startsWith("image/");
+  const anexoAudio = !!anexo && anexo.type.startsWith("audio/");
+  const fotoSoDoc = anexoFoto && (anexo!.size > 5 * 1024 * 1024 || !["image/jpeg", "image/png"].includes(anexo!.type));
 
   async function retomar() {
     if (!confirm("Enviar ao paciente a mensagem-modelo pedindo para ele responder? (A Meta cobra alguns centavos por ela.)")) return;
@@ -378,20 +449,64 @@ function Chat(props: {
       {!podeResponder ? (
         <div className="aviso info">{props.quemResponde}</div>
       ) : aberta ? (
-        <div className="wa-escrever">
-          <textarea
-            value={texto}
-            placeholder="Escreva a resposta… (Enter envia, Shift+Enter pula linha)"
-            onChange={(e) => setTexto(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                enviar();
-              }
-            }}
-          />
-          <button className="primario" disabled={enviando || !texto.trim()} onClick={enviar}>{enviando ? "Enviando…" : "Enviar"}</button>
-        </div>
+        <>
+          {anexo && anexoUrl && (
+            <div className="wa-anexo">
+              <div className="linha entre" style={{ flexWrap: "nowrap", alignItems: "flex-start" }}>
+                <div style={{ minWidth: 0 }}>
+                  {anexoFoto ? <img src={anexoUrl} alt="Pré-visualização" className="wa-midia" />
+                    : anexoAudio ? <audio controls src={anexoUrl} />
+                    : <div>📄 <b>{anexo.name}</b></div>}
+                  <div className="muted pequeno">{anexo.name} · {(anexo.size / 1024 / 1024).toFixed(1).replace(".", ",")} MB</div>
+                </div>
+                <button className="mini sutil" onClick={limparAnexo} title="Tirar o anexo">✕</button>
+              </div>
+              {anexoFoto && (
+                <label className="check pequeno" style={{ marginTop: 6 }}>
+                  <input type="checkbox" checked={comoDoc} disabled={fotoSoDoc} onChange={(e) => setComoDoc(e.target.checked)} />
+                  Enviar como documento (qualidade original — use para exames, receitas e fotos com letras pequenas)
+                </label>
+              )}
+              {fotoSoDoc && <div className="muted pequeno">Esta foto vai como documento (maior que 5 MB ou em formato que o WhatsApp não mostra como foto).</div>}
+              {!anexoAudio && <div className="muted pequeno">O texto escrito abaixo vai junto como legenda.</div>}
+            </div>
+          )}
+          {gravacao ? (
+            <div className="wa-escrever wa-gravando">
+              <span>🔴 Gravando… <b>{fmtTempo(segundos)}</b></span>
+              <button className="mini" onClick={() => { gravacao.cancelar(); setGravacao(null); }}>Cancelar</button>
+              <button className="primario" onClick={pararGravacao}>⏹ Parar</button>
+            </div>
+          ) : (
+            <div className="wa-escrever">
+              <input ref={seletor} type="file" hidden
+                accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,audio/*,video/mp4,video/3gpp"
+                onChange={(e) => { escolherArquivo(e.target.files?.[0]); e.target.value = ""; }} />
+              <div className="wa-botoes-anexo">
+                <button className="mini" title="Anexar foto ou documento" disabled={enviando || preparando} onClick={() => seletor.current?.click()}>📎</button>
+                <button className="mini" title="Gravar áudio" disabled={enviando || preparando} onClick={comecarGravacao}>🎤</button>
+              </div>
+              <textarea
+                value={texto}
+                placeholder={preparando ? "Preparando o áudio…" : anexo && !anexoAudio ? "Legenda (opcional)…" : "Escreva a resposta… (Enter envia, Shift+Enter pula linha)"}
+                onChange={(e) => setTexto(e.target.value)}
+                onPaste={(e) => {
+                  const f = Array.from(e.clipboardData.files)[0];
+                  if (f) { e.preventDefault(); escolherArquivo(f); }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    enviar();
+                  }
+                }}
+              />
+              <button className="primario" disabled={enviando || preparando || (!texto.trim() && !anexo)} onClick={enviar}>
+                {enviando ? "Enviando…" : anexoAudio ? "Enviar áudio" : "Enviar"}
+              </button>
+            </div>
+          )}
+        </>
       ) : (
         <div className="aviso alerta">
           Passaram mais de 24 horas desde a última mensagem do paciente. Pela regra da Meta, agora só dá para mandar
@@ -486,7 +601,7 @@ function Transcricao({ m, podePedir }: { m: Mensagem; podePedir: boolean }) {
   const [texto, setTexto] = useState<string | null>(m.transcricao ?? null);
   const [pedindo, setPedindo] = useState(false);
   const [erro, setErro] = useState("");
-  if (m.tipo !== "audio" || m.direcao !== "recebida") return null;
+  if (m.tipo !== "audio") return null;
   async function pedir() {
     setPedindo(true);
     setErro("");
@@ -523,9 +638,7 @@ function Balao({ m, quem, podeTranscrever, destacada }: { m: Mensagem; quem?: st
     setAbrindo(true);
     setErro("");
     try {
-      const u = await baixarMidia(m.id);
-      if (m.midia_tipo?.startsWith("image/") || m.midia_tipo?.startsWith("audio/") || m.midia_tipo?.startsWith("video/")) setUrl(u);
-      else window.open(u, "_blank");
+      setUrl(await baixarMidia(m.id));
     } catch (e) {
       setErro(msgErro(e));
     }
@@ -540,9 +653,19 @@ function Balao({ m, quem, podeTranscrever, destacada }: { m: Mensagem; quem?: st
       {m.midia_id && (
         <div style={{ marginBottom: 4 }}>
           {url ? (
-            m.midia_tipo?.startsWith("image/") ? <img src={url} alt="Imagem enviada pelo paciente" className="wa-midia" />
-              : m.midia_tipo?.startsWith("audio/") ? <audio controls src={url} />
-              : <video controls src={url} className="wa-midia" />
+            <>
+              {m.midia_tipo?.startsWith("image/") ? (
+                <a href={url} target="_blank" rel="noreferrer" title="Abrir em tamanho real">
+                  <img src={url} alt={m.midia_nome ?? "Foto"} className="wa-midia" />
+                </a>
+              ) : m.midia_tipo?.startsWith("audio/") ? <audio controls src={url} />
+                : m.midia_tipo?.startsWith("video/") ? <video controls src={url} className="wa-midia" />
+                : <div>📄 <b>{m.midia_nome ?? "Documento"}</b></div>}
+              <div className="wa-midia-acoes">
+                {!m.midia_tipo?.startsWith("audio/") && <a href={url} target="_blank" rel="noreferrer">🔍 Abrir em tamanho real</a>}
+                <a href={url} download={m.midia_nome ?? `arquivo-${m.id.slice(0, 8)}`}>⬇ Baixar</a>
+              </div>
+            </>
           ) : (
             <button className="mini" disabled={abrindo} onClick={ver}>
               {ICONE_TIPO[m.tipo] ?? "Arquivo"}{m.midia_nome ? `: ${m.midia_nome}` : ""} — {abrindo ? "abrindo…" : "ver"}

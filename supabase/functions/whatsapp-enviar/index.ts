@@ -13,6 +13,10 @@
 //                (só recepção e admin; "simular" só conta, não envia)
 //   midia      → { mensagem_id }  abre a foto/áudio/documento que o paciente mandou (cópia guardada no
 //                Storage, bucket "whatsapp-midia"; se ainda não houver, busca na Meta e guarda)
+//   arquivo    → multipart/form-data: conversa_id, arquivo, legenda?, como_documento? ("1")
+//                envia foto, áudio, vídeo ou documento (só dentro das 24 h). O arquivo vai para a Meta sem
+//                compressão e a cópia original fica guardada no Storage. "como_documento" manda a foto como
+//                arquivo (qualidade original, melhor para exames e receitas).
 //
 // Segredos (Supabase → Edge Functions → Secrets):
 //   WHATSAPP_TOKEN            token permanente (usuário do sistema na Meta)
@@ -110,14 +114,18 @@ function montarModelo(m: Modelo, valores: Record<string, string>, agendamentoId?
 }
 
 async function gravarEnviada(db: SupabaseClient, dados: {
-  conversa_id: string; tipo: string; texto: string; modelo?: string; agendamento_id?: string;
+  conversa_id: string; tipo: string; texto: string | null; modelo?: string; agendamento_id?: string;
   enviado_por: string; wa_id?: string; erro?: string;
+  id?: string; midia_id?: string | null; midia_tipo?: string | null; midia_nome?: string | null; midia_caminho?: string | null;
 }) {
   const agora = new Date().toISOString();
   const { data, error } = await db.from("whatsapp_mensagens").insert({
+    ...(dados.id ? { id: dados.id } : {}),
     conversa_id: dados.conversa_id, direcao: "enviada", tipo: dados.tipo, texto: dados.texto,
     modelo: dados.modelo ?? null, agendamento_id: dados.agendamento_id ?? null, enviado_por: dados.enviado_por,
     wa_id: dados.wa_id ?? null, situacao: dados.wa_id ? "enviada" : "falhou", erro: dados.erro ?? null, quando: agora,
+    midia_id: dados.midia_id ?? null, midia_tipo: dados.midia_tipo ?? null, midia_nome: dados.midia_nome ?? null,
+    midia_caminho: dados.midia_caminho ?? null,
   }).select("*").single();
   if (error) console.error("Erro ao gravar mensagem enviada", error.message);
   if (dados.wa_id) await db.from("whatsapp_conversas").update({ ultima_mensagem_em: agora, arquivada: false }).eq("id", dados.conversa_id);
@@ -162,10 +170,21 @@ Deno.serve(async (req) => {
   const ligado = (setor: Setor) => !!(TOKEN() && NUMERO(setor));
 
   let corpo: Json;
+  let arquivoEnviado: File | null = null;
   try {
-    corpo = await req.json();
+    if ((req.headers.get("content-type") ?? "").startsWith("multipart/form-data")) {
+      const form = await req.formData();
+      corpo = {
+        acao: "arquivo", conversa_id: form.get("conversa_id"), legenda: form.get("legenda") ?? "",
+        como_documento: form.get("como_documento") === "1",
+      };
+      const f = form.get("arquivo");
+      arquivoEnviado = f instanceof File ? f : null;
+    } else {
+      corpo = await req.json();
+    }
   } catch {
-    return resposta({ erro: "Dados inválidos" }, 400);
+    return resposta({ erro: "Dados inválidos (o arquivo pode ser grande demais)." }, 400);
   }
 
   if (corpo.acao === "estado") {
@@ -190,6 +209,69 @@ Deno.serve(async (req) => {
     }
     const r = await enviarMeta({ to: c.telefone, type: "text", text: { body: texto, preview_url: true } }, c.setor);
     const msg = await gravarEnviada(db, { conversa_id: c.id, tipo: "texto", texto, enviado_por: eu_prof.id, ...r });
+    return r.erro ? resposta({ erro: r.erro, mensagem: msg }, 502) : resposta({ ok: true, mensagem: msg });
+  }
+
+  // ---------- Foto, áudio, vídeo ou documento ----------
+  if (corpo.acao === "arquivo") {
+    if (!arquivoEnviado || arquivoEnviado.size === 0) return resposta({ erro: "Escolha um arquivo." }, 400);
+    const { data: c } = await db.from("whatsapp_conversas").select("*").eq("id", corpo.conversa_id).maybeSingle();
+    if (!c || !ve(c.setor)) return resposta({ erro: "Conversa não encontrada." }, 404);
+    if (!atende(c.setor)) return semPermissao(c.setor);
+    if (!ligado(c.setor)) return naoLigado(c.setor);
+    if (!c.ultima_recebida_em || Date.now() - new Date(c.ultima_recebida_em).getTime() > JANELA_MS) {
+      return resposta({ erro: "Passaram mais de 24 h desde a última mensagem do paciente. Pela regra da Meta, use “Chamar o paciente de novo”." }, 409);
+    }
+
+    const MB = 1024 * 1024;
+    const mime = (arquivoEnviado.type || "application/octet-stream").split(";")[0].trim().toLowerCase();
+    const nome = (arquivoEnviado.name || "arquivo").slice(0, 200);
+    const legenda = String(corpo.legenda ?? "").trim().slice(0, 1024) || null;
+    // Tipo do WhatsApp (regras e limites da Meta)
+    let tipoMeta: "image" | "audio" | "video" | "document" = "document";
+    if (!corpo.como_documento) {
+      if (["image/jpeg", "image/png"].includes(mime) && arquivoEnviado.size <= 5 * MB) tipoMeta = "image";
+      else if (["audio/mpeg", "audio/mp4", "audio/aac", "audio/amr", "audio/ogg"].includes(mime) && arquivoEnviado.size <= 16 * MB) tipoMeta = "audio";
+      else if (["video/mp4", "video/3gpp"].includes(mime) && arquivoEnviado.size <= 16 * MB) tipoMeta = "video";
+    }
+    if (arquivoEnviado.size > 100 * MB) return resposta({ erro: "Arquivo grande demais (máximo de 100 MB pela Meta)." }, 400);
+    const TIPO_DB = { image: "imagem", audio: "audio", video: "video", document: "documento" } as const;
+
+    // 1) Guarda a cópia original no Storage
+    const id = crypto.randomUUID();
+    const bytes = await arquivoEnviado.arrayBuffer();
+    const caminho = `${c.setor}/${new Date().toISOString().slice(0, 7)}/enviado-${id}`;
+    const { error: eUp } = await db.storage.from("whatsapp-midia").upload(caminho, bytes, { contentType: mime, upsert: true });
+    if (eUp) console.error("arquivo: não guardou no Storage", eUp.message);
+
+    // 2) Sobe o arquivo para a Meta (sem compressão)
+    const fd = new FormData();
+    fd.append("messaging_product", "whatsapp");
+    fd.append("type", mime);
+    fd.append("file", new Blob([bytes], { type: mime }), nome);
+    let midiaId: string | null = null;
+    let erroUpload: string | null = null;
+    try {
+      const up = await fetch(`${GRAPH()}/${NUMERO(c.setor)}/media`, { method: "POST", headers: { Authorization: `Bearer ${TOKEN()}` }, body: fd });
+      const ju = await up.json().catch(() => ({}));
+      if (up.ok && ju.id) midiaId = String(ju.id);
+      else erroUpload = explicarErro(ju.error?.code, ju.error?.error_data?.details ?? ju.error?.message ?? `HTTP ${up.status}`);
+    } catch (e) {
+      erroUpload = `Sem conexão com a Meta: ${(e as Error).message}`;
+    }
+
+    // 3) Envia a mensagem
+    let r: { wa_id?: string; erro?: string } = { erro: erroUpload ?? "Falha ao enviar o arquivo para a Meta." };
+    if (midiaId) {
+      const conteudo: Json = { id: midiaId };
+      if (legenda && tipoMeta !== "audio") conteudo.caption = legenda;
+      if (tipoMeta === "document") conteudo.filename = nome;
+      r = await enviarMeta({ to: c.telefone, type: tipoMeta, [tipoMeta]: conteudo }, c.setor);
+    }
+    const msg = await gravarEnviada(db, {
+      id, conversa_id: c.id, tipo: TIPO_DB[tipoMeta], texto: legenda, enviado_por: eu_prof.id, ...r,
+      midia_id: midiaId, midia_tipo: mime, midia_nome: nome, midia_caminho: eUp ? null : caminho,
+    });
     return r.erro ? resposta({ erro: r.erro, mensagem: msg }, 502) : resposta({ ok: true, mensagem: msg });
   }
 

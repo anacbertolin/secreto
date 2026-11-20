@@ -4,6 +4,7 @@
 //   * o banco (gatilho ao chegar um áudio e o agendador a cada 10 min), com o cabeçalho x-extrator-chave:
 //       { acao: "transcrever", mensagem_id }   → um áudio
 //       { acao: "pendentes" }                  → até 10 áudios que ficaram pendentes
+//   (áudios recebidos e também os enviados pela equipe; usa a cópia guardada no Storage quando existe)
 //   * a tela do WhatsApp (recepção/admin logados; na Orientação Cirúrgica, quem atende a orientação):
 //       { acao: "transcrever", mensagem_id } (botão "Transcrever")
 //
@@ -101,19 +102,27 @@ Deno.serve(async (req) => {
 
 async function transcrever(db: SupabaseClient, id: string): Promise<{ ok: boolean; erro?: string; texto?: string }> {
   const { data: m } = await db.from("whatsapp_mensagens")
-    .select("id, tipo, midia_id, midia_tipo, transcricao_tentativas").eq("id", id).maybeSingle();
-  if (!m?.midia_id || m.tipo !== "audio") return { ok: false, erro: "Áudio não encontrado." };
+    .select("id, tipo, midia_id, midia_tipo, midia_caminho, transcricao_tentativas").eq("id", id).maybeSingle();
+  if ((!m?.midia_id && !m?.midia_caminho) || m.tipo !== "audio") return { ok: false, erro: "Áudio não encontrado." };
 
   try {
-    // 1. Baixa o áudio da Meta
-    const token = Deno.env.get("WHATSAPP_TOKEN")!;
-    const info = await fetch(`${GRAPH()}/${m.midia_id}`, { headers: { Authorization: `Bearer ${token}` } });
-    const j = await info.json().catch(() => ({}));
-    if (!info.ok || !j.url) throw new Error("A Meta não tem mais este áudio (eles ficam cerca de 30 dias).");
-    const arq = await fetch(j.url, { headers: { Authorization: `Bearer ${token}` } });
-    if (!arq.ok) throw new Error(`Não foi possível baixar o áudio da Meta (HTTP ${arq.status}).`);
-    const tipo = (m.midia_tipo ?? j.mime_type ?? "audio/ogg").split(";")[0].trim();
-    const audio = await arq.blob();
+    // 1. Pega o áudio: a cópia guardada no Storage ou, se ainda não houver, na Meta
+    let audio: Blob | null = null;
+    let tipo = (m.midia_tipo ?? "audio/ogg").split(";")[0].trim();
+    if (m.midia_caminho) {
+      const { data: arqGuardado } = await db.storage.from("whatsapp-midia").download(m.midia_caminho);
+      if (arqGuardado) audio = arqGuardado;
+    }
+    if (!audio) {
+      const token = Deno.env.get("WHATSAPP_TOKEN")!;
+      const info = await fetch(`${GRAPH()}/${m.midia_id}`, { headers: { Authorization: `Bearer ${token}` } });
+      const j = await info.json().catch(() => ({}));
+      if (!info.ok || !j.url) throw new Error("A Meta não tem mais este áudio (eles ficam cerca de 30 dias).");
+      const arq = await fetch(j.url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!arq.ok) throw new Error(`Não foi possível baixar o áudio da Meta (HTTP ${arq.status}).`);
+      tipo = (m.midia_tipo ?? j.mime_type ?? "audio/ogg").split(";")[0].trim();
+      audio = await arq.blob();
+    }
     if (audio.size > 25 * 1024 * 1024) throw new Error("Áudio maior que 25 MB (limite do Whisper).");
 
     // 2. Manda para o Whisper

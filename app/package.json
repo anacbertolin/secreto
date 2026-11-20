@@ -13,6 +13,7 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "@supabase/supabase-js": "^2.45.4",
     "jssip": "3.10.1",
     "jszip": "^3.10.1",

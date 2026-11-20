@@ -400,3 +400,12 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .wa-achado:hover { background: #f5f8fb; }
 .wa-achado mark, .wa-balao mark { background: #ffe58a; padding: 0 1px; border-radius: 2px; }
 .wa-balao.destacada { outline: 3px solid #f5b400; outline-offset: 2px; }
+
+/* WhatsApp: anexos, gravação de áudio e arquivos em tamanho real */
+.wa-anexo { border: 1px solid #dfe5ea; border-radius: 8px; padding: 8px 10px; margin-top: 10px; background: #fafcfd; }
+.wa-anexo .wa-midia { max-height: 160px; }
+.wa-botoes-anexo { display: flex; flex-direction: column; gap: 4px; }
+.wa-botoes-anexo button { font-size: 1.05rem; padding: 4px 8px; }
+.wa-gravando { align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid #f3c1c1; border-radius: 8px; background: #fff6f6; }
+.wa-midia-acoes { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.82rem; margin-top: 4px; }
+.wa-midia-acoes a { text-decoration: none; }
