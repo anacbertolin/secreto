@@ -1041,3 +1041,7 @@ apagada, e as conversas somem do aparelho. A dona pediu para salvar esse histór
   ao paciente pelo telefone).
 - Pendentes da dona: PIN de verificação em duas etapas do número; forma de pagamento (só para modelos fora das 24 h);
   confirmar o e-mail do portfólio; testar a resposta pelo login da Alessandra; cadastrar o modelo `retomar_orientacao`.
+- **20/11:** resposta pela Alessandra testada e OK. PIN de verificação em duas etapas definido pela dona (via Graph API
+  Explorer, `POST /1545263548660010 {pin}` → success; a opção sumiu do Gerenciador). E-mail do portfólio confirmado.
+  Forma de pagamento cadastrada (cartão, BRL, CNPJ). Modelo `retomar_orientacao` (Utilidade, pt_BR) enviado à Meta,
+  **em análise** — ao aprovar, ligar `whatsapp_modelos.ativo` (finalidade retomar_orientacao).
