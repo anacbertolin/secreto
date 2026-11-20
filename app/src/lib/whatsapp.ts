@@ -112,6 +112,25 @@ export async function baixarMidia(mensagemId: string): Promise<string> {
   return URL.createObjectURL(await r.blob());
 }
 
+/** Envia foto, áudio, vídeo ou documento numa conversa (arquivo original, sem compressão). */
+export async function enviarArquivo(conversaId: string, arquivo: File, legenda = "", comoDocumento = false): Promise<void> {
+  const { data: s } = await supabase.auth.getSession();
+  const fd = new FormData();
+  fd.append("conversa_id", conversaId);
+  fd.append("arquivo", arquivo, arquivo.name);
+  fd.append("legenda", legenda);
+  if (comoDocumento) fd.append("como_documento", "1");
+  const r = await fetch(`${SUPABASE_URL}/functions/v1/whatsapp-enviar`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${s.session?.access_token ?? ""}`, apikey: SUPABASE_CHAVE },
+    body: fd,
+  });
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    throw new Error(j.erro ?? (r.status === 413 ? "Arquivo grande demais." : "Não foi possível enviar o arquivo."));
+  }
+}
+
 // ---------- Aviso de mensagem nova (som + notificação do computador) ----------
 
 let audioCtx: AudioContext | null = null;

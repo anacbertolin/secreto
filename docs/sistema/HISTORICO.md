@@ -1045,3 +1045,17 @@ apagada, e as conversas somem do aparelho. A dona pediu para salvar esse histór
   Explorer, `POST /1545263548660010 {pin}` → success; a opção sumiu do Gerenciador). E-mail do portfólio confirmado.
   Forma de pagamento cadastrada (cartão, BRL, CNPJ). Modelo `retomar_orientacao` (Utilidade, pt_BR) enviado à Meta,
   **em análise** — ao aprovar, ligar `whatsapp_modelos.ativo` (finalidade retomar_orientacao).
+
+## 20/11/2026 — WhatsApp: enviar áudio, fotos e documentos (qualidade original)
+Pedido da dona: a Alessandra manda muitos áudios, fotos e documentos, e tudo precisa chegar e sair legível.
+- **Tela (os dois números):** botões 📎 (foto/PDF/Word/Excel/áudio/vídeo; também colar imagem com Ctrl+V) e 🎤 (gravar
+  áudio no navegador → convertido para **MP3** com `@breezystack/lamejs`, `app/src/lib/gravador.ts`; a Meta aceita
+  audio/mpeg). Foto pode ir **"como documento"** (qualidade original); foto > 5 MB ou HEIC/WEBP vai sempre como documento.
+  Legenda = texto da caixa. Arquivos recebidos/enviados: **"🔍 Abrir em tamanho real"** e **"⬇ Baixar"** (nome original).
+- **whatsapp-enviar v12:** ação `arquivo` (multipart): guarda o original no Storage (`<setor>/<mês>/enviado-<id>`), sobe
+  para a Meta (`/{phone_id}/media`, sem compressão) e envia `image|audio|video|document` (limites da Meta: foto 5 MB,
+  áudio/vídeo 16 MB, documento 100 MB). Só dentro das 24 h.
+- **whatsapp-transcrever v10:** usa a cópia do Storage quando existe. **Migração 0065:** áudios ENVIADOS pela equipe
+  também são transcritos (entram na pesquisa: "o que a Alessandra orientou").
+- Testado no navegador com microfone simulado (MP3 gerado e enviado em multipart) e `deno check`. Falta teste real com a Meta.
+- Obs.: os números de versão das funções sobem sozinhos quando se salvam segredos (não é publicação de outra sessão).
