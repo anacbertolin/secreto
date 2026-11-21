@@ -1059,3 +1059,40 @@ Pedido da dona: a Alessandra manda muitos áudios, fotos e documentos, e tudo pr
   também são transcritos (entram na pesquisa: "o que a Alessandra orientou").
 - Testado no navegador com microfone simulado (MP3 gerado e enviado em multipart) e `deno check`. Falta teste real com a Meta.
 - Obs.: os números de versão das funções sobem sozinhos quando se salvam segredos (não é publicação de outra sessão).
+
+---
+
+## 21/11/2026 — Repasse: REGRA GERAL com custos da cirurgia (migração 0070)
+### Decisão da dona (vale para TODOS os médicos e cirurgias)
+- **Valor bruto − imposto (15% do bruto) − taxa do cartão (% do bruto) − custos (sala, instrumentação, auxiliar,
+  insumos…) = honorários → 20% clínica, 80% médico.** A divisão vem SEMPRE depois de tudo descontado; se algum
+  documento mostrar outra ordem, corrigir para esta.
+- **Taxa de sala:** fica para a própria clínica, mas entra como **custo** (não nos 20%).
+- **Auxiliar (Dr. Matheus) e instrumentação:** o Luciano transfere para eles (custos "a pagar").
+- **Débito:** 2,34% (a taxa de 0,72% do PDF do Calázio não vale).
+### Fonte: 5 PDFs da Dra. Gisele (Sondagem, Calázio, Entrópio, Ectrópio, Blefaroplastia)
+- Entrópio e Blefaroplastia já seguiam a regra geral; Ectrópio, Sondagem e Calázio descontavam o cartão depois dos 20%
+  (só da médica) e foram refeitos. Resultados (médica): Blefaroplastia 12x 6.500 → 2.394,56; Entrópio 10x 8.500 →
+  3.833,84; Ectrópio 12x 8.500 → 3.759,04 (PDF dizia 3.593,80); Sondagem 3x 1.100 → 588,40 (PDF 578,50);
+  Calázio débito 1.750 → 917,24 (PDF 937,40, com 0,72%).
+### O que entrou
+- **Migração 0070 `repasse_custos_procedimentos`** (aplicada; o número 0063 já era de outra sessão): `repasse_procedimentos`
+  (tabela de procedimentos com valor sugerido e médico) + `repasse_procedimento_custos` (custos padrão: sala, instrumentação,
+  auxiliar, insumo, outro; quem recebe), `repasse_custos` (cópia dos custos de cada repasse, com `pago_em` para auxiliar e
+  instrumentação), `repasses.custos_total`, `repasses.procedimento_id`, `repasse_parcelas.custos`.
+  Lançamento agora só pela função **`repasse_lancar(p jsonb)`** (SECURITY DEFINER, confere faturamento/admin; aviso do
+  Supabase esperado); a inclusão direta em `repasses` foi fechada. Sala e insumo não têm favorecido.
+- Procedimentos iniciais: Refrativa (qualquer médico, sem custos); da Dra. Gisele: Sondagem (sala 100, instr. 50),
+  Calázio (200/100), Entrópio 1 olho e Ectrópio 1 olho (auxiliar Dr. Matheus 1.000, sala 500, instr. 200),
+  Blefaroplastia (auxiliar 1.000, sala 700, instr. 200). Instrumentação está com o nome genérico "Instrumentação"
+  (perguntar o nome de quem recebe).
+- **Telas:** no lançamento, escolher o procedimento preenche valor e custos (editáveis); prévia mostra cada custo.
+  Detalhe do repasse: custos e "A pagar: auxiliar e instrumentação" (Marcar pago hoje). Relatório por médico ganhou
+  "Auxiliares e instrumentação (cirurgias do período)". Regras e taxas ganhou "Procedimentos e custos padrão".
+### Testes
+- Banco local: os 5 PDFs + refrativa; lançamento direto bloqueado; custos maiores que o valor recusados; custo não muda
+  depois de lançado; sala não tem pagamento; repasse com custo pago não cancela; recepção não lança nem vê.
+- Banco real (transação desfeita): Blefaroplastia → médica 2.394,56. Tela com dados simulados: prévia igual ao PDF.
+### Em aberto
+- Quando o Luciano paga o auxiliar/instrumentação (de uma vez, no mês da cirurgia?); nome de quem faz a instrumentação.
+- Próximos médicos: Gelson, Max, Pedro e Luísa.
