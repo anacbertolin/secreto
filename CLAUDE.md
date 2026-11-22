@@ -161,3 +161,8 @@ Consulte essa pasta antes de projetar telas, tabelas ou importações:
 - `docs/micrologos/anexos/`: inventários brutos (menus, rotas, endpoints, campos, textos da interface), bons para `grep`
 - Marcadores nos documentos: ✅ confirmado · 🔶 inferido · ❓ a confirmar. Ao confirmar algo, atualize o documento.
 - O ambiente de nuvem **"secreto"** libera acesso aos sites `*.micrologos.com.br` (o ambiente Default não tem esse acesso).
+
+## Migração dos dados do Micrologos (sessão "Dados para migração")
+- **Comece por `migracao/PROXIMOS-PASSOS.md`** (estado atual e o que fazer). Roteiro técnico: `migracao/README.md` · Guia para a dona: `migracao/GUIA-PASSO-A-PASSO.md`.
+- Dados crus entram no schema privado `legacy_micrologos` (migração `0100_migracao_staging`); de-para em `legacy_micrologos.mapa_ids`.
+- **Nunca** commitar arquivos exportados (dados de pacientes). Ficam fora do repositório e no Storage `migracao-micrologos`.

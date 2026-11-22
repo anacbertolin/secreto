@@ -1,0 +1,31 @@
+# NUNCA versionar dados de pacientes. Os dados ficam fora do repositório
+# (ex.: /home/user/dados-micrologos) e no Supabase (Brasil).
+dados/
+exportacao/
+saida/
+*.csv
+*.tsv
+*.txt
+*.xls
+*.xlsx
+*.xlsm
+*.xml
+*.zip
+*.rar
+*.7z
+*.bak
+*.mdf
+*.ldf
+*.fdb
+*.gdb
+*.mdb
+*.accdb
+*.dump
+*.backup
+*.pdf
+*.dcm
+*.jpg
+*.jpeg
+*.png
+relatorio_*.md
+__pycache__/
