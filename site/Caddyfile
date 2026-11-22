@@ -1,0 +1,79 @@
+{
+	admin off
+	auto_https off
+}
+
+:{$PORT:8080} {
+	root * /srv
+	encode zstd gzip
+
+	# Endereços antigos de busca do WordPress (/?s=... e /page/2/?s=...) vão para a nova busca
+	@buscaAntiga {
+		path / /page/*
+		query s=*
+	}
+	redir @buscaAntiga /busca/?s={query.s} 302
+
+	# Script de cache do LiteSpeed (WordPress) espera uma resposta JSON
+	@lsVary path /wp-content/plugins/litespeed-cache/guest.vary.php
+	header @lsVary Content-Type application/json
+	respond @lsVary "{}" 200
+
+	# Páginas de rascunho do site antigo (removidas em 2026-11-15): manda para a página certa
+	redir /procedimentos2 /procedimentos/ 301
+	redir /procedimentos2/ /procedimentos/ 301
+	redir /exames2 /exames/ 301
+	redir /exames2/ /exames/ 301
+	@rascunhos path /link /link/ /homez /homez/ /pagina-exemplo /pagina-exemplo/ /video-background /video-background/
+	redir @rascunhos / 301
+	# Mapa do site antigo do WordPress -> mapa novo
+	@mapaAntigo path /wp-sitemap.xml /wp-sitemap*.xml /sitemap_index.xml
+	redir @mapaAntigo /sitemap.xml 301
+
+	# Endereços que só existiam no WordPress
+	@wp path /wp-admin* /wp-login.php /xmlrpc.php /wp-json* /wp-comments-post.php /feed* */feed/
+	respond @wp 404
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	# Imagens: se o navegador aceita WebP e existe "foto.jpg.webp" ao lado, entrega a versão leve.
+	# (criadas por ferramentas/otimizar_imagens.py; o endereço na página não muda)
+	@webp {
+		header Accept *image/webp*
+		path *.jpg *.jpeg *.png *.JPG *.JPEG *.PNG
+		file {path}.webp
+	}
+	rewrite @webp {path}.webp
+	@imagem path *.jpg *.jpeg *.png *.JPG *.JPEG *.PNG *.webp
+	header @imagem Vary Accept
+
+	header /wp-content/* Cache-Control "public, max-age=2592000"
+	header /wp-includes/* Cache-Control "public, max-age=2592000"
+
+	# CDN do Railway (ligado em 2026-11-15) NÃO separa versões pelo cabeçalho Accept.
+	# Imagens que têm versão WebP ao lado não podem ficar no CDN (senão um navegador antigo
+	# receberia WebP): "private" = só o navegador de cada visitante guarda.
+	@imgNegociada {
+		path *.jpg *.jpeg *.png *.JPG *.JPEG *.PNG
+		file {path}.webp
+	}
+	header @imgNegociada >Cache-Control "private, max-age=2592000"
+
+	# Páginas: o CDN guarda por até 1 h (o Railway limpa a cada publicação); o navegador sempre confere.
+	@paginas path / *.html */
+	header @paginas Cache-Control "public, max-age=0, s-maxage=3600"
+
+	file_server
+
+	handle_errors {
+		@naoEncontrado expression {err.status_code} == 404
+		handle @naoEncontrado {
+			rewrite * /404.html
+			file_server
+		}
+	}
+}
