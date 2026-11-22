@@ -31,7 +31,7 @@ cd app && npx -y tsx@4.19.2 scripts/tiss/testar.ts /tmp/tiss && scripts/tiss/val
 
 ## ⚠️ A confirmar com XML reais do Micrologos (anonimizados; ainda não recebidos)
 1. **XSD 4.01.00 e 4.02.00:** não estão mais no site da ANS. Pedir à dona os arquivos `.xsd` do computador do Micrologos.
-2. **Regra do hash:** MD5 do texto de todos os elementos, em ISO-8859-1, sem o epílogo. Conferir com `conferir_hash.py` num XML real.
+2. **Regra do hash:** ✅ **confirmada no Componente Organizacional (set/2026, item 148)**: "apenas a concatenação do conteúdo das tags, desprezando as tags", de forma literal, "o encoding a ser utilizado será sempre o ISO-8859-1", sem nomes de elementos ou atributos. É exatamente o que o gerador faz. Falta só conferir com um XML real.
 3. **valorTotal do item:** hoje é calculado como quantidade × valorUnitário × fator. Confirmar se o Micrologos já manda o unitário com o fator.
 4. **numeroLote:** dentro de `loteGuias`, está com 12 dígitos como o `sequencialTransacao`. Confirmar.
 5. **Formato do arquivo:** prefixo `ans:`, sem quebras de linha, extensão `.XML`, `xsi:schemaLocation`.
