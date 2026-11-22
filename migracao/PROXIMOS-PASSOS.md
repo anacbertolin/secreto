@@ -29,7 +29,7 @@
   - "Necessita autorização" é marcado por procedimento em cada tabela.
   - O código enviado na guia pode mudar por tabela (ex.: Klini 98901012).
   - Os valores de todas as tabelas estão na parte B2 do mapeamento, útil para conferir a carga.
-- **Empresa no Micrologos:** Consumed Consultórios Médicos Ltda, CNPJ 05.894.660/0001-87, CNES 3176479 (❓ confirmar se é o do Hospital de Olhos da Baixada). Há 14 "unidades", que são hospitais parceiros, com código na operadora e CNES por convênio.
+- **Empresa no Micrologos:** Consumed Consultórios Médicos Ltda, CNPJ 05.894.660/0001-87, CNES 3176479 (✅ confirmado pela dona em 22/11: é a empresa atual). Há 14 "unidades", que são hospitais parceiros, com código na operadora e CNES por convênio.
 - Os requisitos do sistema (TISS, pós-envio, PEP) foram enviados à sessão de desenvolvimento em 22/11/2026.
 
 ## 🔀 Levar este trabalho para o `main`
@@ -59,6 +59,7 @@
 | Data | Decisão |
 |---|---|
 | 14/11/2026 | Manter o **mesmo número de prontuário** do Micrologos (opção B). |
+| 22/11/2026 | **Empresa atual:** Consumed Consultórios Médicos Ltda, CNPJ 05.894.660/0001-87, CNES 3176479. Esse é o prestador em todos os XML e guias. "Hospital de Olhos da Baixada" é só uma ideia de nome fantasia para o futuro (previsto para 2027); não usar como prestador. |
 
 ## ⏳ Aguardando a dona
 - Pedido formal à Micrologos do **banco completo + dicionário de dados + anexos** (modelo no guia).

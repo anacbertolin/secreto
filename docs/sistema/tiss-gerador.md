@@ -52,6 +52,9 @@ cd app && npx -y tsx@4.19.2 scripts/tiss/testar.ts /tmp/tiss && scripts/tiss/val
     (o XSD só aceita AAAA-MM-DD).
 - ✅ Arquivo I recebido: é a Parte 15 do mapeamento completo. Os links de XSD 4.01/4.02 apontam para a página de histórico, que não tem os arquivos para baixar (conferido em 22/11). Continuam faltando.
 
+## Decisão da dona (22/11/2026)
+- Prestador em todas as guias e XML: **Consumed Consultórios Médicos Ltda**, CNPJ 05.894.660/0001-87, CNES 3176479. "Hospital de Olhos da Baixada" é só um nome fantasia para o futuro (2027).
+
 ## Próximos passos
 1. Teste de igualdade com 1 XML real de cada tipo: Honorários Bradesco, Honorários Amil, SP/SADT pacote Unimed,
    SP/SADT exames, Consulta Bradesco, Consulta Amil na SP/SADT.
