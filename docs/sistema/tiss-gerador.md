@@ -39,7 +39,7 @@ cd app && npx -y tsx@4.19.2 scripts/tiss/testar.ts /tmp/tiss && scripts/tiss/val
 7. **"Formato de data dd/mm/aaaa" da Geap:** o XSD só aceita AAAA-MM-DD. Provavelmente é uma configuração de outra coisa no Micrologos.
 
 ## Atualização do mapeamento (22/11/2026, tarde)
-- Novo RESUMÃO: `docs/micrologos/mapeamento-telas/99-RESUMAO-atualizado-2026-11-22.md`. Ele vale sobre a Parte 1 do arquivo completo.
+- Novo RESUMÃO: `docs/micrologos/mapeamento-telas/MAPEAMENTO-COMPLETO-2026-11-22.md` (versão atualizada, com a Parte 15 = configuração TISS de cada convênio).
 - **Regra de ouro da dona:** as configurações TISS atuais do Micrologos não geram glosa. Replicar exatamente, convênio por
   convênio, e conferir contra XML reais aceitos.
 - **Versões:** gerar 4.01.00, 4.02.00 ou 4.03.00, conforme o convênio, e estar pronto para migrar todos para a 4.03.00.
@@ -50,7 +50,7 @@ cd app && npx -y tsx@4.19.2 scripts/tiss/testar.ts /tmp/tiss && scripts/tiss/val
     original**, o que reforça a regra atual (valorTotal = quantidade × unitário × fator).
   - Geap, Hapvida, Porto, Portomed e Unimed Luciano mostram data dd/mm/aaaa no cadastro. Gerar igual aos XML reais aceitos
     (o XSD só aceita AAAA-MM-DD).
-- ❓ **Falta o arquivo I** (`I-config-tiss-por-convenio.md`), com as regras de cada um dos 19 convênios e os links oficiais dos XSD.
+- ✅ Arquivo I recebido: é a Parte 15 do mapeamento completo. Os links de XSD 4.01/4.02 apontam para a página de histórico, que não tem os arquivos para baixar (conferido em 22/11). Continuam faltando.
 
 ## Próximos passos
 1. Teste de igualdade com 1 XML real de cada tipo: Honorários Bradesco, Honorários Amil, SP/SADT pacote Unimed,
