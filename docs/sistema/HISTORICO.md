@@ -1096,3 +1096,10 @@ Pedido da dona: a Alessandra manda muitos áudios, fotos e documentos, e tudo pr
 ### Em aberto
 - Quando o Luciano paga o auxiliar/instrumentação (de uma vez, no mês da cirurgia?); nome de quem faz a instrumentação.
 - Próximos médicos: Gelson, Max, Pedro e Luísa.
+
+## 22/11/2026: Gerador de XML TISS (sessão "Dados para migração")
+- A dona escolheu que a sessão de migração construa o gerador de XML TISS, começando por cirurgias e injeções.
+- Entrou `app/src/lib/tiss/` (biblioteca, ainda sem tela e sem banco) e `app/scripts/tiss/` (testes com XSD oficial 4.03.00).
+- Detalhes, pendências e próximos passos em `docs/sistema/tiss-gerador.md`.
+- Mapeamento das telas do Micrologos: `docs/micrologos/mapeamento-telas/` (comece pelo RESUMÃO). Lacunas do sistema em
+  `docs/micrologos/mapeamento-telas/LACUNAS-sistema-novo.md`.
