@@ -58,3 +58,6 @@ Ordem = prioridade da dona (Parte 1 do mapeamento, §0).
 - Excluir os pacientes de teste do Micrologos: cód. 69489 e 108477.
 - As tabelas de preço e os convênios podem ser carregados do banco exportado. A parte B2 serve para conferir valores.
 - O Micrologos não exporta CSV pelas telas: depende do **backup do banco** (Ferramentas ▸ Backup). Investigar se o banco é local.
+
+## Decisões da dona
+- 22/11/2026: a empresa atual é a **Consumed Consultórios Médicos Ltda** (CNPJ 05.894.660/0001-87, CNES 3176479). "Hospital de Olhos da Baixada" é um nome fantasia para o futuro (2027). O prestador nas guias continua sendo a Consumed.
