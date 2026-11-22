@@ -12,10 +12,30 @@
 | Sistema (app) e migrações 0005–0008 | branch `claude/trusting-tesla-e5u50x` (sessão "Desenvolvimento do sistema", `session_01RxZddnY3mA77HY8MtevrQ7`) |
 | Banco | Supabase "secreto" `ogflxjolbwrzayjtxvhj` (sa-east-1) |
 
+## 🗺️ Mapeamento das telas do Micrologos (22/11/2026)
+- Feito pela dona com o Claude Desktop, só leitura e sem dados de pacientes: `docs/micrologos/mapeamento-telas/MAPEAMENTO-COMPLETO-2026-11-22.md`. Comece pela Parte 1 (RESUMÃO).
+- Versão do Micrologos: **ML Clinic Master ASP 13.13.30.00**. É um programa Windows, no computador DESKTOP-MCDT7V5.
+- **Não existe "exportar para Excel/CSV" nas telas.** As opções são Relatórios ▸ Planilhas, XML TISS e **Ferramentas ▸ Backup (banco de dados)**.
+  - ➜ Descobrir (só olhando, sem executar) se o banco é **local**: um SQL Server no próprio computador ou num servidor da clínica. Se for, o backup completo pode vir de lá, sem depender da Micrologos. Perguntar à dona/TI antes de rodar qualquer backup.
+- **Pacientes de teste a EXCLUIR da migração:** "Teste" (cód. 69489) e "Teste Micrologos" (cód. 108477). A conta de teste é a 270743.
+- **XML TISS históricos:** ficam em `C:\<convênio>\` nesse computador. Servem para comparar com os XML do sistema novo (1 lote de cada tipo, anonimizado e enviado por canal seguro).
+- **Convênios:**
+  - 14 ativos por XML.
+  - A Unimed é faturada **por médico** (cada cooperado é um "convênio"), mais a Unimed Consumed Cirurgia (PJ 1474).
+  - Sem XML: Cedae, Cisbaf e Siass-Geap.
+  - Inativos, a não migrar como ativos: Appai, Assist, Assim, Golden Cross, Notre Dame, Dort Prev e Medprev.
+- **Tabelas de preço:**
+  - 66 tabelas e 193 procedimentos.
+  - "Necessita autorização" é marcado por procedimento em cada tabela.
+  - O código enviado na guia pode mudar por tabela (ex.: Klini 98901012).
+  - Os valores de todas as tabelas estão na parte B2 do mapeamento, útil para conferir a carga.
+- **Empresa no Micrologos:** Consumed Consultórios Médicos Ltda, CNPJ 05.894.660/0001-87, CNES 3176479 (❓ confirmar se é o do Hospital de Olhos da Baixada). Há 14 "unidades", que são hospitais parceiros, com código na operadora e CNES por convênio.
+- Os requisitos do sistema (TISS, pós-envio, PEP) foram enviados à sessão de desenvolvimento em 22/11/2026.
+
 ## 🔀 Levar este trabalho para o `main`
 - A sessão de desenvolvimento avisou em 14/11/2026 que a dona definiu o `main` como versão oficial: toda mudança entra por PR.
 - O PR [anacbertolin/secreto#2](https://github.com/anacbertolin/secreto/pull/2) leva o sistema para o `main`.
-- **Pendente, com confirmação da dona:** abrir um PR da branch `claude/beautiful-meitner-8eu6jk` para o `main` **depois** que o PR #2 entrar. Antes, atualizar a branch com o `main` e resolver o conflito no CLAUDE.md, mantendo as duas seções.
+- Em 22/11/2026 a branch foi atualizada com o `main`; o conflito no CLAUDE.md foi resolvido mantendo as duas seções. **Pendente, com confirmação da dona:** abrir o PR desta branch para o `main`.
 
 ## ✅ Já feito
 1. **Banco (migração `migracao_staging`, aplicada):**
