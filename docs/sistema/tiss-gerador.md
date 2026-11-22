@@ -38,6 +38,20 @@ cd app && npx -y tsx@4.19.2 scripts/tiss/testar.ts /tmp/tiss && scripts/tiss/val
 6. **Na 4.01.00:** quando a Amil omite `atendimentoRN`/`caraterAtendimento` nos honorários. Por ora há a opção `omitirOpcionaisHonorarios`.
 7. **"Formato de data dd/mm/aaaa" da Geap:** o XSD só aceita AAAA-MM-DD. Provavelmente é uma configuração de outra coisa no Micrologos.
 
+## Atualização do mapeamento (22/11/2026, tarde)
+- Novo RESUMÃO: `docs/micrologos/mapeamento-telas/99-RESUMAO-atualizado-2026-11-22.md`. Ele vale sobre a Parte 1 do arquivo completo.
+- **Regra de ouro da dona:** as configurações TISS atuais do Micrologos não geram glosa. Replicar exatamente, convênio por
+  convênio, e conferir contra XML reais aceitos.
+- **Versões:** gerar 4.01.00, 4.02.00 ou 4.03.00, conforme o convênio, e estar pronto para migrar todos para a 4.03.00.
+- Destaques do arquivo I (a dona vai enviar o arquivo completo):
+  - Mediservice: no máximo **5** procedimentos por guia; Amil: 10.
+  - Unimed Gelson usa **8 dígitos** no código TISS (os demais, 10).
+  - Unimed Consumed: via de acesso "Única" no procedimento principal e "Mesma/Diversas" nos demais. O **valor unitário é o
+    original**, o que reforça a regra atual (valorTotal = quantidade × unitário × fator).
+  - Geap, Hapvida, Porto, Portomed e Unimed Luciano mostram data dd/mm/aaaa no cadastro. Gerar igual aos XML reais aceitos
+    (o XSD só aceita AAAA-MM-DD).
+- ❓ **Falta o arquivo I** (`I-config-tiss-por-convenio.md`), com as regras de cada um dos 19 convênios e os links oficiais dos XSD.
+
 ## Próximos passos
 1. Teste de igualdade com 1 XML real de cada tipo: Honorários Bradesco, Honorários Amil, SP/SADT pacote Unimed,
    SP/SADT exames, Consulta Bradesco, Consulta Amil na SP/SADT.

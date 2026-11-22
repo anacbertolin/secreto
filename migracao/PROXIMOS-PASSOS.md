@@ -35,7 +35,7 @@
 ## 🔀 Levar este trabalho para o `main`
 - A sessão de desenvolvimento avisou em 14/11/2026 que a dona definiu o `main` como versão oficial: toda mudança entra por PR.
 - O PR [anacbertolin/secreto#2](https://github.com/anacbertolin/secreto/pull/2) leva o sistema para o `main`.
-- Em 22/11/2026 a branch foi atualizada com o `main`; o conflito no CLAUDE.md foi resolvido mantendo as duas seções. **Pendente, com confirmação da dona:** abrir o PR desta branch para o `main`.
+- Em 22/11/2026 a branch foi atualizada com o `main`; o conflito no CLAUDE.md foi resolvido mantendo as duas seções. Levado ao `main` em 22/11/2026 pelo PR anacbertolin/secreto#61 (autorizado pela dona). Próximas mudanças: novo PR para o `main`.
 
 ## ✅ Já feito
 1. **Banco (migração `migracao_staging`, aplicada):**
