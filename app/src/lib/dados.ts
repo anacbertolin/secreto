@@ -20,11 +20,13 @@ export interface Agendamento {
   // fluxo dentro da clínica (migração 0020)
   etapa?: string | null; etapa_em?: string | null; dilatacao_inicio_em?: string | null; dilatacao_minutos?: number | null;
   dilatacao_colirio?: string | null; dilatacao_olho?: string | null; chamada_em?: string | null; chamada_local?: string | null;
-  pacientes?: { id: string; nome: string; nome_social: string | null; numero_prontuario: number; data_nascimento: string | null; telefone: string | null; convenio_id: string | null };
+  pacientes?: { id: string; nome: string; nome_social: string | null; numero_prontuario: number; data_nascimento: string | null; telefone: string | null; telefone_secundario?: string | null; convenio_id: string | null };
+  // quem incluiu / quem alterou por último (quadro de resumo da agenda; migração 0095)
+  criado_por?: string | null; criado_em?: string; atualizado_por?: string | null; atualizado_em?: string;
 }
 
 export const SELECT_AGENDA =
-  "*, pacientes(id, nome, nome_social, numero_prontuario, data_nascimento, telefone, convenio_id)";
+  "*, pacientes(id, nome, nome_social, numero_prontuario, data_nascimento, telefone, telefone_secundario, convenio_id)";
 
 export async function listaProfissionais(funcoes?: string[]): Promise<Profissional[]> {
   let q = supabase.from("profissionais").select("*").eq("ativo", true).order("nome");
