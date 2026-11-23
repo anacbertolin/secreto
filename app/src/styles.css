@@ -554,6 +554,13 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .agenda .col-cab .obs-dia { display: block; width: 100%; text-align: left; font-size: 0.75rem; font-weight: 400; margin-top: 4px; padding: 2px 6px; border: 1px dashed #d6dbe1; border-radius: 4px; background: #fffdf2; white-space: normal; }
 .ag-item.sel { outline: 2px solid #1f4fd1; outline-offset: 1px; }
 textarea.resumo-notas { width: 100%; min-height: 44px; font-size: 0.85rem; padding: 4px 6px; background: #fffbe6; border: 1px solid #efe2a8; border-radius: 4px; }
+/* Central dentro do sistema (com o menu do sistema ao lado, como as outras telas) */
+.conteudo.sem-margem { padding: 0; }
+.ct-menu-lateral { background: #f2f4f7; border-right: 1px solid var(--borda); }
+.ct-menu-lateral button, .ct-menu-lateral a { color: #344054; }
+.ct-menu-lateral button:hover, .ct-menu-lateral a:hover { background: #e4e7ec; color: var(--texto); }
+@media (max-width: 860px) { .ct, .ct.com-conversa { min-height: calc(100vh - 50px); } .ct-conversa { height: calc(100vh - 110px); } }
+@media (min-width: 861px) and (max-width: 1500px) { .ct.com-conversa { grid-template-columns: 76px 320px minmax(0, 1fr); } .ct .wa-ficha { display: none; } }
 
 /* Agenda: barra de botões rápidos, busca, lista e notas (23/11/2026) */
 .agenda-busca { max-width: 520px; margin: -4px 0 10px; }

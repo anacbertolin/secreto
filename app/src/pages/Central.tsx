@@ -164,8 +164,6 @@ export default function Central() {
           </button>
         )}
         {atende && <Link to={setor === "orientacao" ? "/orientacao-cirurgica" : "/whatsapp"} title="Lembretes de consulta, modelos, fora do horário, pesquisar e importar conversas"><span className="ct-icone">🧰</span>Ferramentas</Link>}
-        <span style={{ flex: 1 }} />
-        <Link to="/" title="Voltar para o sistema"><span className="ct-icone">↩</span>Sistema</Link>
       </nav>
 
       {/* ---------- Coluna do meio ---------- */}
