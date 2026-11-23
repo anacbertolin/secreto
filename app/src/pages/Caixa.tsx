@@ -49,11 +49,37 @@ export const STATUS_CAIXA: Record<CaixaRow["status"], { rotulo: string; cor: str
  *  (ex.: "Consulta (Retorno) + Exame (Tonometria, Mapeamento de retina)"). */
 const TIPOS_RECEBIMENTO = ["Consulta", "Exame", "Procedimento"] as const;
 type TipoRecebimento = (typeof TIPOS_RECEBIMENTO)[number];
+/** Usado só se a tabela de preços particular não carregar. */
 const DETALHES: Record<TipoRecebimento, string[]> = {
   Consulta: ["Primeira vez", "Retorno"],
   Exame: ["Mapeamento de retina", "Tonometria", "Campimetria", "OCT", "Topografia", "Biometria", "Paquimetria", "Retinografia", "Microscopia especular"],
   Procedimento: ["Cirurgia", "Injeção intravítrea", "Laser", "Terapia", "Lente de contato"],
 };
+/** Tipo do procedimento (cadastro) → botão do caixa */
+const GRUPO_CAIXA: Record<string, TipoRecebimento> = {
+  consulta: "Consulta", exame: "Exame", procedimento: "Procedimento", cirurgia: "Procedimento", terapia: "Procedimento",
+};
+interface ItemTabela { nome: string; grupo: TipoRecebimento; valor: number }
+const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/** Tabela de preços PARTICULAR (procedimentos com preço sem convênio — migração 0086). */
+function useTabelaParticular() {
+  const { dados } = useCarregar(async () => {
+    const hoje = new Date().toISOString().slice(0, 10);
+    const r = ok(await supabase.from("procedimentos").select("descricao, tipo, precos(valor, convenio_id, plano_id, ativo, vigente_de)").eq("ativo", true).order("descricao")) as
+      { descricao: string; tipo: string; precos: { valor: number; convenio_id: string | null; plano_id: string | null; ativo: boolean; vigente_de: string }[] }[];
+    const itens: ItemTabela[] = [];
+    for (const p of r) {
+      const grupo = GRUPO_CAIXA[p.tipo];
+      const pr = (p.precos ?? []).filter((x) => x.ativo && !x.convenio_id && !x.plano_id && x.vigente_de <= hoje)
+        .sort((a, b) => b.vigente_de.localeCompare(a.vigente_de))[0];
+      if (grupo && pr) itens.push({ nome: p.descricao, grupo, valor: Number(pr.valor) });
+    }
+    return itens;
+  }, []);
+  return dados ?? [];
+}
+
 const num = { textAlign: "right" as const, fontVariantNumeric: "tabular-nums" as const };
 const n2 = (v: number) => Math.round(v * 100) / 100;
 
@@ -480,9 +506,15 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
   const [tipos, setTipos] = useState<TipoRecebimento[]>(["Consulta"]);
   const [itens, setItens] = useState<string[]>(cortesia ? ["Retorno"] : []);
   const [outros, setOutros] = useState("");
+  const [filtro, setFiltro] = useState("");
+  const [valorManual, setValorManual] = useState(false);
+  const tabela = useTabelaParticular();
+  const precoDe = useMemo(() => new Map(tabela.map((i) => [i.nome, i.valor])), [tabela]);
+  const detalhes = (t: TipoRecebimento) => (tabela.length ? tabela.filter((i) => i.grupo === t).map((i) => i.nome) : DETALHES[t]);
+  const somaTabela = (lista: string[]) => n2(lista.reduce((s, i) => s + (precoDe.get(i) ?? 0), 0));
   const descricao = [
     ...TIPOS_RECEBIMENTO.filter((t) => tipos.includes(t)).map((t) => {
-      const marcados = DETALHES[t].filter((d) => itens.includes(d));
+      const marcados = detalhes(t).filter((d) => itens.includes(d));
       return marcados.length ? `${t} (${marcados.join(", ")})` : t;
     }),
     ...(outros.trim() ? [outros.trim()] : []),
@@ -491,10 +523,18 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
     if (tipos.includes(t)) {
       if (tipos.length === 1) return; // pelo menos um tipo
       setTipos(tipos.filter((x) => x !== t));
-      setItens(itens.filter((i) => !DETALHES[t].includes(i)));
+      trocaItens(itens.filter((i) => !detalhes(t).includes(i)));
     } else setTipos([...tipos, t]);
   }
-  const alternaItem = (i: string) => setItens(itens.includes(i) ? itens.filter((x) => x !== i) : [...itens, i]);
+  // marcar/desmarcar itens soma os preços da tabela particular no valor (enquanto ninguém digitou o valor à mão)
+  function trocaItens(novos: string[]) {
+    setItens(novos);
+    if (!cortesia && !valorManual && precoDe.size) {
+      const soma = somaTabela(novos);
+      mudaValor(soma ? soma.toFixed(2).replace(".", ",") : "");
+    }
+  }
+  const alternaItem = (i: string) => trocaItens(itens.includes(i) ? itens.filter((x) => x !== i) : [...itens, i]);
   const [linhas, setLinhas] = useState<LinhaPag[]>([linhaVazia()]);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -555,15 +595,18 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
           </div>
         </Campo>
         <div className="inteiro grade" style={{ gap: 8 }}>
+          {tabela.length > 0 && (
+            <input placeholder="🔎 Procurar na tabela (ex.: oct, blefaro, consulta cartão)" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
+          )}
           {TIPOS_RECEBIMENTO.filter((t) => tipos.includes(t)).map((t) => (
             <div key={t}>
               <div className="muted pequeno" style={{ marginBottom: 4 }}>
                 {t === "Consulta" ? "Qual consulta?" : t === "Exame" ? "Quais exames? (marque todos que o paciente fez)" : "Quais procedimentos?"}
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {DETALHES[t].map((d) => (
+                {detalhes(t).filter((d) => itens.includes(d) || !filtro.trim() || semAcento(d).includes(semAcento(filtro.trim()))).map((d) => (
                   <button key={d} type="button" className={"mini-l" + (itens.includes(d) ? " primario" : "")} onClick={() => alternaItem(d)}>
-                    {itens.includes(d) ? "✓ " : ""}{d}
+                    {itens.includes(d) ? "✓ " : ""}{d}{precoDe.has(d) && <span style={{ opacity: 0.75 }}> · {fmtMoeda(precoDe.get(d)!)}</span>}
                   </button>
                 ))}
               </div>
@@ -579,7 +622,17 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
           </>
         ) : (
           <>
-            <Campo rotulo="Valor do atendimento (R$)"><input inputMode="decimal" value={f.valor} onChange={(e) => mudaValor(e.target.value)} /></Campo>
+            <Campo rotulo="Valor do atendimento (R$)">
+              <input inputMode="decimal" value={f.valor} onChange={(e) => { setValorManual(true); mudaValor(e.target.value); }} />
+              {itens.some((i) => precoDe.has(i)) && (
+                <span className="muted pequeno">
+                  Tabela particular: {fmtMoeda(somaTabela(itens))}
+                  {valorManual && somaTabela(itens) !== valor && (
+                    <> · <a href="#" onClick={(e) => { e.preventDefault(); setValorManual(false); mudaValor(somaTabela(itens).toFixed(2).replace(".", ",")); }}>usar este valor</a></>
+                  )}
+                </span>
+              )}
+            </Campo>
             <LinhasPagamento linhas={linhas} setLinhas={setLinhas} />
             <div className="inteiro">
               Pago agora: <b>{fmtMoeda(pago)}</b>

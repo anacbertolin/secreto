@@ -5,9 +5,9 @@ import { listaConvenios, listaPlanos, nomePor, type Procedimento } from "../lib/
 import { fmtData, fmtMoeda, isoDia, numOuNulo } from "../lib/util";
 
 const TIPOS: Record<string, string> = {
-  consulta: "Consulta", exame: "Exame", procedimento: "Procedimento", cirurgia: "Cirurgia", taxa: "Taxa", material: "Material", medicamento: "Medicamento",
+  consulta: "Consulta", exame: "Exame", procedimento: "Procedimento", cirurgia: "Cirurgia", terapia: "Terapia", taxa: "Taxa", material: "Material", medicamento: "Medicamento",
 };
-const TABELAS: Record<string, string> = { "22": "22 · Procedimentos (TUSS)", "19": "19 · Materiais", "20": "20 · Medicamentos", "18": "18 · Taxas", "98": "98 · Pacotes", "00": "00 · Tabela própria" };
+const TABELAS: Record<string, string> = { "22": "22 · Procedimentos (TUSS)", "19": "19 · Materiais", "20": "20 · Medicamentos", "18": "18 · Taxas", "98": "98 · Pacotes", "00": "00 · Tabela própria (particular / Micrologos)" };
 
 interface Preco { id: string; procedimento_id: string; convenio_id: string | null; plano_id: string | null; valor: number; vigente_de: string; ativo: boolean }
 interface ExameCat { id: string; nome: string; procedimento_id: string | null }
@@ -34,7 +34,7 @@ export default function Procedimentos() {
   async function salvar() {
     setErro("");
     if (!edit?.descricao?.trim()) return setErro("Informe a descrição.");
-    const v = { codigo: edit.codigo?.trim() || null, tabela: edit.tabela ?? "22", descricao: edit.descricao.trim(), tipo: edit.tipo ?? "procedimento", padrao_consulta: !!edit.padrao_consulta, ativo: edit.ativo ?? true };
+    const v = { codigo: edit.codigo?.trim() || null, tabela: edit.tabela ?? "22", descricao: edit.descricao.trim(), tipo: edit.tipo ?? "procedimento", padrao_consulta: !!edit.padrao_consulta, ativo: edit.ativo ?? true, observacao: edit.observacao?.trim() || null };
     if (v.padrao_consulta) {
       // só um procedimento pode ser o "padrão da consulta"
       const outro = dados?.procs.find((p) => p.padrao_consulta && p.id !== edit.id);
@@ -77,7 +77,7 @@ export default function Procedimentos() {
                   return (
                     <tr key={p.id} style={{ opacity: p.ativo ? 1 : 0.5 }}>
                       <td>{p.codigo ?? "—"}<div className="muted pequeno">tab. {p.tabela}</div></td>
-                      <td><b>{p.descricao}</b>{p.padrao_consulta && <> <Etiqueta cor="azul">lançado na chegada da consulta</Etiqueta></>}</td>
+                      <td><b>{p.descricao}</b>{p.observacao && <div className="muted pequeno">{p.observacao}</div>}{p.padrao_consulta && <> <Etiqueta cor="azul">lançado na chegada da consulta</Etiqueta></>}</td>
                       <td>{TIPOS[p.tipo]}</td>
                       <td>{n === 0 ? <Etiqueta cor="amarelo">sem preço</Etiqueta> : `${n} tabela(s)`}</td>
                       <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
@@ -119,6 +119,7 @@ export default function Procedimentos() {
             <Campo rotulo="Código (TUSS ou próprio)"><input value={edit.codigo ?? ""} onChange={(e) => setEdit({ ...edit, codigo: e.target.value })} /></Campo>
             <Campo rotulo="Tabela"><select value={edit.tabela ?? "22"} onChange={(e) => setEdit({ ...edit, tabela: e.target.value })}>{Object.entries(TABELAS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Campo>
             <Campo rotulo="Descrição" className="inteiro"><input value={edit.descricao ?? ""} onChange={(e) => setEdit({ ...edit, descricao: e.target.value })} /></Campo>
+            <Campo rotulo="Observação" className="inteiro"><input value={edit.observacao ?? ""} onChange={(e) => setEdit({ ...edit, observacao: e.target.value })} placeholder="Ex.: preço para cartão" /></Campo>
             <Campo rotulo="Tipo"><select value={edit.tipo ?? "procedimento"} onChange={(e) => setEdit({ ...edit, tipo: e.target.value })}>{Object.entries(TIPOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Campo>
             <div className="grade" style={{ alignContent: "end" }}>
               <label className="check"><input type="checkbox" checked={!!edit.padrao_consulta} onChange={(e) => setEdit({ ...edit, padrao_consulta: e.target.checked })} /> Lançar sozinho na chegada de uma consulta</label>
