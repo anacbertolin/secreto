@@ -367,7 +367,7 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .zona-envio:hover, .zona-envio.ativa { border-color: var(--primaria); background: var(--primaria-clara); }
 
 /* ---------- Telefone do sistema (migração 0050) ---------- */
-.botao.mini-l { padding: 4px 9px; font-size: 0.82rem; }
+.botao.mini-l, button.mini-l { padding: 4px 9px; font-size: 0.82rem; }
 .tel { position: fixed; right: 18px; bottom: 18px; z-index: 900; font-size: 0.92rem; }
 .tel-fechado { display: flex; align-items: center; gap: 6px; border-radius: 99px; padding: 8px 14px; box-shadow: 0 4px 14px rgba(16, 24, 40, 0.18); background: white; }
 .tel-bolinha { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }

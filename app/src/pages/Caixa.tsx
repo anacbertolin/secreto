@@ -45,7 +45,8 @@ export const STATUS_CAIXA: Record<CaixaRow["status"], { rotulo: string; cor: str
   conferido: { rotulo: "Conferido · aguardando aprovação", cor: "roxo" },
   aprovado: { rotulo: "Aprovado", cor: "verde" },
 };
-/** O que foi recebido: tipo (botões) + detalhe opcional, gravados juntos em `descricao` ("Exame — OCT"). */
+/** O que foi recebido: um ou mais tipos + itens marcados, gravados juntos em `descricao`
+ *  (ex.: "Consulta (Retorno) + Exame (Tonometria, Mapeamento de retina)"). */
 const TIPOS_RECEBIMENTO = ["Consulta", "Exame", "Procedimento"] as const;
 type TipoRecebimento = (typeof TIPOS_RECEBIMENTO)[number];
 const DETALHES: Record<TipoRecebimento, string[]> = {
@@ -474,8 +475,26 @@ async function gravarPagamentos(caixaId: string, atendimentoId: string, pags: Re
 function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
   caixaId: string; medicos: { id: string; nome: string }[]; cortesia?: boolean; aoFechar: () => void; aoSalvar: () => void;
 }) {
-  const [f, setF] = useState({ paciente: "", medico: "", tipo: "Consulta" as TipoRecebimento, detalhe: cortesia ? "Retorno" : "", valor: "", motivo: cortesia ? "Retorno" : "", autorizou: "", obs: "" });
-  const descricao = f.detalhe.trim() ? `${f.tipo} — ${f.detalhe.trim()}` : f.tipo;
+  const [f, setF] = useState({ paciente: "", medico: "", valor: "", motivo: cortesia ? "Retorno" : "", autorizou: "", obs: "" });
+  // tipos e itens marcados (pode marcar vários: ex. tonometria + mapeamento + microscopia no mesmo paciente)
+  const [tipos, setTipos] = useState<TipoRecebimento[]>(["Consulta"]);
+  const [itens, setItens] = useState<string[]>(cortesia ? ["Retorno"] : []);
+  const [outros, setOutros] = useState("");
+  const descricao = [
+    ...TIPOS_RECEBIMENTO.filter((t) => tipos.includes(t)).map((t) => {
+      const marcados = DETALHES[t].filter((d) => itens.includes(d));
+      return marcados.length ? `${t} (${marcados.join(", ")})` : t;
+    }),
+    ...(outros.trim() ? [outros.trim()] : []),
+  ].join(" + ");
+  function alternaTipo(t: TipoRecebimento) {
+    if (tipos.includes(t)) {
+      if (tipos.length === 1) return; // pelo menos um tipo
+      setTipos(tipos.filter((x) => x !== t));
+      setItens(itens.filter((i) => !DETALHES[t].includes(i)));
+    } else setTipos([...tipos, t]);
+  }
+  const alternaItem = (i: string) => setItens(itens.includes(i) ? itens.filter((x) => x !== i) : [...itens, i]);
   const [linhas, setLinhas] = useState<LinhaPag[]>([linhaVazia()]);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -526,17 +545,33 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
         <Campo rotulo="Médico">
           <select value={f.medico} onChange={set("medico")}><option value="">—</option>{medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}</select>
         </Campo>
-        <Campo rotulo="O que foi feito">
+        <Campo rotulo="O que foi feito (pode marcar mais de um)">
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {TIPOS_RECEBIMENTO.map((t) => (
-              <button key={t} type="button" className={f.tipo === t ? "primario" : ""} onClick={() => setF({ ...f, tipo: t, detalhe: "" })}>{t}</button>
+              <button key={t} type="button" className={tipos.includes(t) ? "primario" : ""} onClick={() => alternaTipo(t)}>
+                {tipos.includes(t) ? "✓ " : ""}{t}
+              </button>
             ))}
           </div>
         </Campo>
-        <Campo rotulo={`Qual ${f.tipo === "Consulta" ? "consulta" : f.tipo === "Exame" ? "exame" : "procedimento"}? (opcional)`}>
-          <input list="caixa-detalhes" value={f.detalhe} onChange={set("detalhe")} placeholder={`Ex.: ${DETALHES[f.tipo][0]}`} />
-          <datalist id="caixa-detalhes">{DETALHES[f.tipo].map((d) => <option key={d} value={d} />)}</datalist>
-        </Campo>
+        <div className="inteiro grade" style={{ gap: 8 }}>
+          {TIPOS_RECEBIMENTO.filter((t) => tipos.includes(t)).map((t) => (
+            <div key={t}>
+              <div className="muted pequeno" style={{ marginBottom: 4 }}>
+                {t === "Consulta" ? "Qual consulta?" : t === "Exame" ? "Quais exames? (marque todos que o paciente fez)" : "Quais procedimentos?"}
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {DETALHES[t].map((d) => (
+                  <button key={d} type="button" className={"mini-l" + (itens.includes(d) ? " primario" : "")} onClick={() => alternaItem(d)}>
+                    {itens.includes(d) ? "✓ " : ""}{d}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <Campo rotulo="Outro (se não estiver na lista — opcional)"><input value={outros} onChange={(e) => setOutros(e.target.value)} placeholder="Ex.: Gonioscopia" /></Campo>
+          <div className="pequeno">Vai aparecer no caixa como: <b>{descricao}</b></div>
+        </div>
         {cortesia ? (
           <>
             <Campo rotulo="Motivo da cortesia"><input value={f.motivo} onChange={set("motivo")} placeholder="Ex.: retorno, funcionário, autorização do médico" /></Campo>
