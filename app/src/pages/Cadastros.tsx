@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase, msgErro } from "../lib/supabase";
 import { useAuth, type Profissional } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Modal, Campo, Etiqueta } from "../components/ui";
-import { listaProfissionais, listaLocais, nomePor, type Horario, type Bloqueio } from "../lib/dados";
+import { listaAgendas, nomeAgenda, listaLocais, nomePor, type Horario, type Bloqueio } from "../lib/dados";
 import { DIAS_SEMANA, FUNCOES, fmtDataHora, senhaAleatoria, cpfValido, loginExibicao, sugerirUsuario, USUARIO_VALIDO, type Funcao } from "../lib/util";
 
 // ====================================================================== Equipe
@@ -385,7 +385,7 @@ export const CatalogoExames = () => (
 // ====================================================================== Horários e bloqueios
 export function Horarios() {
   const base = useCarregar(async () => {
-    const [medicos, locais] = await Promise.all([listaProfissionais(["medico"]), listaLocais()]);
+    const [medicos, locais] = await Promise.all([listaAgendas(), listaLocais()]);
     return { medicos, locais };
   }, []);
   const [medico, setMedico] = useState("");
@@ -434,7 +434,7 @@ export function Horarios() {
       <div className="cabecalho">
         <div><h1>Horários e bloqueios</h1><p className="sub" style={{ margin: 0 }}>Quando cada médico atende — é isso que monta a grade da agenda</p></div>
         <select style={{ width: 260 }} value={med} onChange={(e) => setMedico(e.target.value)}>
-          {base.dados.medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+          {base.dados.medicos.map((m) => <option key={m.id} value={m.id}>{nomeAgenda(m)}</option>)}
         </select>
       </div>
       <Aviso>{erro || dados.erro || base.erro}</Aviso>

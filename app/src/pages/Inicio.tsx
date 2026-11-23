@@ -13,7 +13,8 @@ export default function Inicio() {
         .from("agendamentos")
         .select("status, profissional_id")
         .gte("inicio", hoje.toISOString())
-        .lt("inicio", somaDias(hoje, 1).toISOString()),
+        .lt("inicio", somaDias(hoje, 1).toISOString())
+        .neq("tipo", "orientacao"),
     ) as { status: string; profissional_id: string }[];
     let laudos = 0;
     let exames = 0;

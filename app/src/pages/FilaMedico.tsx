@@ -20,7 +20,7 @@ export default function FilaMedico() {
   const fila = useCarregar(async () => {
     let q = supabase.from("agendamentos").select(SELECT_AGENDA)
       .gte("inicio", hoje.toISOString()).lt("inicio", somaDias(hoje, 1).toISOString())
-      .not("status", "in", "(cancelado)").order("inicio");
+      .not("status", "in", "(cancelado)").neq("tipo", "orientacao").order("inicio");
     if (filtro !== "todos") q = q.eq("profissional_id", filtro);
     return ok(await q) as Agendamento[];
   }, [filtro]);

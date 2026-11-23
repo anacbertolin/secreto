@@ -26,6 +26,7 @@ export const TIPOS_AGENDA: Record<string, string> = {
   exame: "Exame",
   procedimento: "Procedimento",
   cirurgia: "Cirurgia",
+  orientacao: "Orientação",
 };
 
 export const STATUS_EXAME: Record<string, { rotulo: string; cor: string }> = {

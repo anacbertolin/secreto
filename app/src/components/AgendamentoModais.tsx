@@ -5,7 +5,7 @@ import { Modal, Campo, Aviso, BuscaPaciente, Etiqueta, type PacienteResumo } fro
 import { EscolhaConsultaParticular } from "./ConsultaParticular";
 import type { Profissional } from "../lib/auth";
 import type { Agendamento, Convenio, Local } from "../lib/dados";
-import { nomePor } from "../lib/dados";
+import { nomePor, nomeAgenda, ehAgendaOrientacao } from "../lib/dados";
 import {
   STATUS_AGENDA, TIPOS_AGENDA, fmtData, fmtHora, fmtTelefone, idade, isoDia, nomeExibicao, soNumeros, cpfValido,
 } from "../lib/util";
@@ -87,6 +87,8 @@ export function NovoAgendamento(props: {
   });
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
+  // Agenda da Orientação Cirúrgica: só registro (sem tipo, sala, 1ª consulta; Notas em destaque)
+  const orientacao = ehAgendaOrientacao(props.medicos.find((m) => m.id === f.profissional_id));
 
   useEffect(() => {
     if (paciente) setF((x) => ({ ...x, convenio_id: paciente.convenio_id ?? "" }));
@@ -104,7 +106,7 @@ export function NovoAgendamento(props: {
       profissional_id: f.profissional_id,
       inicio: inicio.toISOString(),
       fim: fim.toISOString(),
-      tipo: f.tipo,
+      tipo: orientacao ? "orientacao" : f.tipo,
       convenio_id: f.convenio_id || null,
       plano_id: f.convenio_id && f.convenio_id === paciente.convenio_id ? paciente.plano_id ?? null : null,
       local_id: f.local_id || null,
@@ -119,7 +121,7 @@ export function NovoAgendamento(props: {
 
   return (
     <Modal
-      titulo={f.encaixe ? "Encaixe" : "Novo agendamento"}
+      titulo={orientacao ? "Orientação Cirúrgica — registrar paciente" : f.encaixe ? "Encaixe" : "Novo agendamento"}
       aoFechar={props.aoFechar}
       rodape={<><button onClick={props.aoFechar}>Cancelar</button><button className="primario" onClick={salvar} disabled={salvando}>Agendar</button></>}
     >
@@ -151,14 +153,16 @@ export function NovoAgendamento(props: {
         <div className="grade g3">
           <Campo rotulo="Profissional" className="span2">
             <select value={f.profissional_id} onChange={(e) => setF({ ...f, profissional_id: e.target.value })}>
-              {props.medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+              {props.medicos.map((m) => <option key={m.id} value={m.id}>{nomeAgenda(m)}</option>)}
             </select>
           </Campo>
-          <Campo rotulo="Tipo">
-            <select value={f.tipo} onChange={(e) => setF({ ...f, tipo: e.target.value })}>
-              {Object.entries(TIPOS_AGENDA).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </Campo>
+          {!orientacao && (
+            <Campo rotulo="Tipo">
+              <select value={f.tipo} onChange={(e) => setF({ ...f, tipo: e.target.value })}>
+                {Object.entries(TIPOS_AGENDA).filter(([k]) => k !== "orientacao").map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </Campo>
+          )}
           <Campo rotulo="Data"><input type="date" value={f.data} onChange={(e) => setF({ ...f, data: e.target.value })} /></Campo>
           <Campo rotulo="Hora"><input type="time" step={300} value={f.hora} onChange={(e) => setF({ ...f, hora: e.target.value })} /></Campo>
           <Campo rotulo="Duração (min)">
@@ -172,19 +176,30 @@ export function NovoAgendamento(props: {
               {props.convenios.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </Campo>
-          <Campo rotulo="Sala / consultório">
-            <select value={f.local_id} onChange={(e) => setF({ ...f, local_id: e.target.value })}>
-              <option value="">—</option>
-              {props.locais.map((l) => <option key={l.id} value={l.id}>{l.nome}</option>)}
-            </select>
-          </Campo>
-          <div className="grade" style={{ alignContent: "end" }}>
-            <label className="check"><input type="checkbox" checked={f.primeira_vez} onChange={(e) => setF({ ...f, primeira_vez: e.target.checked })} /> Primeira consulta</label>
-            <label className="check"><input type="checkbox" checked={f.encaixe} onChange={(e) => setF({ ...f, encaixe: e.target.checked })} /> Encaixe</label>
-          </div>
-          <Campo rotulo="Observações" className="inteiro">
-            <input value={f.observacoes} onChange={(e) => setF({ ...f, observacoes: e.target.value })} placeholder="Ex.: trazer exames anteriores, dilatar pupila…" />
-          </Campo>
+          {!orientacao && (
+            <>
+              <Campo rotulo="Sala / consultório">
+                <select value={f.local_id} onChange={(e) => setF({ ...f, local_id: e.target.value })}>
+                  <option value="">—</option>
+                  {props.locais.map((l) => <option key={l.id} value={l.id}>{l.nome}</option>)}
+                </select>
+              </Campo>
+              <div className="grade" style={{ alignContent: "end" }}>
+                <label className="check"><input type="checkbox" checked={f.primeira_vez} onChange={(e) => setF({ ...f, primeira_vez: e.target.checked })} /> Primeira consulta</label>
+                <label className="check"><input type="checkbox" checked={f.encaixe} onChange={(e) => setF({ ...f, encaixe: e.target.checked })} /> Encaixe</label>
+              </div>
+            </>
+          )}
+          {orientacao ? (
+            <div className="inteiro">
+              <NotasOrientacao valor={f.observacoes} aoMudar={(v) => setF({ ...f, observacoes: v })} />
+              <p className="muted pequeno" style={{ margin: "4px 0 0" }}>Só registro: não gera conta de faturamento nem entra na recepção.</p>
+            </div>
+          ) : (
+            <Campo rotulo="Observações" className="inteiro">
+              <input value={f.observacoes} onChange={(e) => setF({ ...f, observacoes: e.target.value })} placeholder="Ex.: trazer exames anteriores, dilatar pupila…" />
+            </Campo>
+          )}
         </div>
       </div>
     </Modal>
@@ -233,8 +248,10 @@ export function DetalheAgendamento(props: {
   }
 
   const ativo = !["cancelado", "faltou", "atendido"].includes(a.status);
+  const orientacao = a.tipo === "orientacao";
+  const [notas, setNotas] = useState(a.observacoes ?? "");
   // consulta particular: na chegada pergunta cartão ou dinheiro/Pix (migração 0087)
-  const consultaParticular = !a.convenio_id && a.tipo === "consulta";
+  const consultaParticular = !a.convenio_id && a.tipo === "consulta" && !orientacao;
   const [consultaEscolhida, setConsultaEscolhida] = useState("");
   // excluir de vez (lançado por engano / desistência): antes da chegada; o banco confere as travas (migração 0084)
   const podeExcluir = ["agendado", "confirmado", "cancelado", "faltou"].includes(a.status);
@@ -256,16 +273,29 @@ export function DetalheAgendamento(props: {
       </div>
       <dl className="grade g2" style={{ margin: "16px 0" }}>
         <div><dt className="muted pequeno">Quando</dt><dd style={{ margin: 0 }}>{fmtData(a.inicio)} às {fmtHora(a.inicio)} ({dur} min)</dd></div>
-        <div><dt className="muted pequeno">Profissional</dt><dd style={{ margin: 0 }}>{nomePor(props.medicos, a.profissional_id)}</dd></div>
+        <div><dt className="muted pequeno">{orientacao ? "Agenda" : "Profissional"}</dt><dd style={{ margin: 0 }}>{orientacao ? `Orientação Cirúrgica (${nomePor(props.medicos, a.profissional_id).split(" ")[0]})` : nomePor(props.medicos, a.profissional_id)}</dd></div>
         <div><dt className="muted pequeno">Tipo</dt><dd style={{ margin: 0 }}>{TIPOS_AGENDA[a.tipo]}{a.primeira_vez && " · 1ª vez"}{a.encaixe && " · encaixe"}</dd></div>
         <div><dt className="muted pequeno">Convênio</dt><dd style={{ margin: 0 }}>{nomePor(props.convenios, a.convenio_id) || "Particular"}</dd></div>
         {a.local_id && <div><dt className="muted pequeno">Sala</dt><dd style={{ margin: 0 }}>{nomePor(props.locais, a.local_id)}</dd></div>}
         {a.confirmado_em && <div><dt className="muted pequeno">Confirmado</dt><dd style={{ margin: 0 }}>{fmtData(a.confirmado_em)} {fmtHora(a.confirmado_em)} {a.canal_confirmacao && `(${a.canal_confirmacao})`}</dd></div>}
         {a.chegada_em && <div><dt className="muted pequeno">Chegou às</dt><dd style={{ margin: 0 }}>{fmtHora(a.chegada_em)}</dd></div>}
-        {a.observacoes && <div className="inteiro"><dt className="muted pequeno">Observações</dt><dd style={{ margin: 0 }}>{a.observacoes}</dd></div>}
+        {!orientacao && a.observacoes && <div className="inteiro"><dt className="muted pequeno">Observações</dt><dd style={{ margin: 0 }}>{a.observacoes}</dd></div>}
         {a.motivo_cancelamento && <div className="inteiro"><dt className="muted pequeno">Motivo do cancelamento</dt><dd style={{ margin: 0 }}>{a.motivo_cancelamento}</dd></div>}
       </dl>
 
+      {orientacao && (
+        <div className="secao" style={{ marginBottom: 12 }}>
+          <NotasOrientacao valor={notas} aoMudar={setNotas} />
+          {notas !== (a.observacoes ?? "") && (
+            <button className="primario mini" style={{ marginTop: 6 }} onClick={() => atualizar({ observacoes: notas.trim() || null })}>Salvar notas</button>
+          )}
+        </div>
+      )}
+      {orientacao && a.status === "chegou" && modo === "" && (
+        <div className="linha" style={{ marginBottom: 8 }}>
+          <button className="primario" onClick={() => atualizar({ status: "atendido" })}>✅ Atendido</button>
+        </div>
+      )}
       {ativo && modo === "" && (
         <div className="linha">
           {a.status === "agendado" && <button onClick={() => setModo("confirmar")}>✅ Confirmar</button>}
@@ -336,7 +366,7 @@ export function DetalheAgendamento(props: {
         <div className="secao grade g2">
           <Campo rotulo="Profissional" className="inteiro">
             <select value={rem.profissional_id} onChange={(e) => setRem({ ...rem, profissional_id: e.target.value })}>
-              {props.medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+              {props.medicos.filter((m) => ehAgendaOrientacao(m) === orientacao).map((m) => <option key={m.id} value={m.id}>{nomeAgenda(m)}</option>)}
             </select>
           </Campo>
           <Campo rotulo="Nova data"><input type="date" value={rem.data} onChange={(e) => setRem({ ...rem, data: e.target.value })} /></Campo>
@@ -346,5 +376,25 @@ export function DetalheAgendamento(props: {
       )}
       <p style={{ marginTop: 18 }}><Link to={`/pacientes/${p.id}`}>Abrir ficha do paciente →</Link></p>
     </Modal>
+  );
+}
+
+/** Motivos mais comuns da Orientação Cirúrgica (botões rápidos que completam as Notas) */
+const MOTIVOS_ORIENTACAO = [
+  "Pagar cirurgia", "Orçamento", "Trazer risco cirúrgico", "Pegar documentação", "Orientação para a cirurgia",
+  "Retirar nota fiscal", "Encaminhamento", "Marcar cirurgia", "Acompanhante",
+];
+
+function NotasOrientacao({ valor, aoMudar }: { valor: string; aoMudar: (v: string) => void }) {
+  return (
+    <Campo rotulo="Notas — o que o paciente veio fazer">
+      <div className="linha" style={{ gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
+        {MOTIVOS_ORIENTACAO.map((m) => (
+          <button key={m} type="button" className="mini" onClick={() => aoMudar(valor.trim() ? `${valor.trim()}; ${m.toLowerCase()}` : m)}>{m}</button>
+        ))}
+      </div>
+      <textarea rows={3} value={valor} onChange={(e) => aoMudar(e.target.value)}
+        placeholder="Ex.: veio pagar a cirurgia; trouxe o risco cirúrgico; orientações para a cirurgia do dia 26…" />
+    </Campo>
   );
 }

@@ -4,7 +4,7 @@ import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando } from "../components/ui";
 import { NovoAgendamento, DetalheAgendamento } from "../components/AgendamentoModais";
 import {
-  listaProfissionais, listaConvenios, listaLocais, SELECT_AGENDA,
+  listaAgendas, listaConvenios, listaLocais, nomeAgenda, ehAgendaOrientacao, SELECT_AGENDA,
   type Agendamento, type Horario, type Bloqueio,
 } from "../lib/dados";
 import { STATUS_AGENDA, TIPOS_AGENDA, fmtDataLonga, fmtHora, inicioDoDia, isoDia, somaDias, nomeExibicao } from "../lib/util";
@@ -19,12 +19,13 @@ function minutosDoDia(t: string) {
 export default function Agenda() {
   const { eu } = useAuth();
   const [dia, setDia] = useState(() => inicioDoDia(new Date()));
-  const [filtro, setFiltro] = useState<string>(eu?.funcao === "medico" ? eu.id : "todos");
+  // Médico abre na própria agenda; quem atende a orientação abre na agenda da Orientação Cirúrgica
+  const [filtro, setFiltro] = useState<string>(eu?.funcao === "medico" || ehAgendaOrientacao(eu) ? eu!.id : "todos");
   const [novo, setNovo] = useState<null | { profissional_id?: string; inicio?: Date; duracao?: number; local_id?: string | null; encaixe?: boolean }>(null);
   const [aberto, setAberto] = useState<Agendamento | null>(null);
 
   const base = useCarregar(async () => {
-    const [medicos, convenios, locais] = await Promise.all([listaProfissionais(["medico"]), listaConvenios(), listaLocais()]);
+    const [medicos, convenios, locais] = await Promise.all([listaAgendas(), listaConvenios(), listaLocais()]);
     return { medicos, convenios, locais };
   }, []);
 
@@ -100,8 +101,8 @@ export default function Agenda() {
           <button onClick={() => setDia(somaDias(dia, 1))} aria-label="Próximo dia">▶</button>
           <input type="date" style={{ width: 160 }} value={isoDia(dia)} onChange={(e) => e.target.value && setDia(new Date(e.target.value + "T00:00:00"))} />
           <select style={{ width: 220 }} value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-            <option value="todos">Todos os médicos</option>
-            {medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+            <option value="todos">Todas as agendas</option>
+            {medicos.map((m) => <option key={m.id} value={m.id}>{nomeAgenda(m)}</option>)}
           </select>
           <button className="primario" onClick={() => setNovo({ profissional_id: filtro !== "todos" ? filtro : undefined, inicio: new Date(dia.getTime() + 8 * 3600000) })}>➕ Agendar</button>
         </div>
@@ -120,7 +121,12 @@ export default function Agenda() {
           <div className="agenda-wrap">
             <div className="agenda" style={{ gridTemplateColumns: `64px repeat(${colunas.length}, minmax(200px, 1fr))` }}>
               <div className="col-cab" />
-              {colunas.map((c) => <div key={c.id} className="col-cab">{c.nome}</div>)}
+              {colunas.map((c) => (
+                <div key={c.id} className="col-cab">
+                  {nomeAgenda(c)}
+                  {ehAgendaOrientacao(c) && <div className="pequeno muted" style={{ fontWeight: 400 }}>{c.nome.split(" ")[0]} · só registro, sem faturamento</div>}
+                </div>
+              ))}
               {linhas.map((min) => (
                 <Linha key={min} min={min}>
                   {colunas.map((c) => {
@@ -151,7 +157,9 @@ export default function Agenda() {
                             <button key={a.id} className={"ag-item " + st.cor} onClick={() => setAberto(a)}>
                               <b>{fmtHora(a.inicio)}</b> {nomeExibicao(a.pacientes!)}
                               <div className="pequeno muted">
-                                {TIPOS_AGENDA[a.tipo]}{a.primeira_vez && " · 1ª vez"}{a.encaixe && " · encaixe"} · {st.rotulo}
+                                {a.tipo === "orientacao"
+                                  ? <>{a.observacoes ? `📝 ${a.observacoes}` : "Sem notas"} · {st.rotulo}</>
+                                  : <>{TIPOS_AGENDA[a.tipo]}{a.primeira_vez && " · 1ª vez"}{a.encaixe && " · encaixe"} · {st.rotulo}</>}
                               </div>
                             </button>
                           );

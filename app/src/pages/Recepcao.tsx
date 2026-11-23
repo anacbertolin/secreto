@@ -26,7 +26,9 @@ export default function Recepcao() {
   const dia = useCarregar(async () => {
     return ok(
       await supabase.from("agendamentos").select(SELECT_AGENDA)
-        .gte("inicio", hoje.toISOString()).lt("inicio", somaDias(hoje, 1).toISOString()).order("inicio"),
+        .gte("inicio", hoje.toISOString()).lt("inicio", somaDias(hoje, 1).toISOString())
+        .neq("tipo", "orientacao") // Orientação Cirúrgica tem a própria coluna na Agenda (não passa pela recepção)
+        .order("inicio"),
     ) as Agendamento[];
   }, []);
 
