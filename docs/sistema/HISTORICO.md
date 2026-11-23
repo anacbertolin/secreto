@@ -1349,3 +1349,19 @@ Conferido no banco local e no real (transação desfeita); tela com dados simula
   quando chega mensagem da equipe. Código: `app/src/components/Interno.tsx`, `app/src/lib/interno.ts`.
 - **Testes:** banco real em transação desfeita (direta não duplica; não escreve como outro; não edita; enfermagem não vê a
   conversa recepção↔médico mas vê o grupo dela; marca só a própria leitura; anônimo bloqueado); tela com dados simulados.
+
+## 23/11/2026 — Agenda da Orientação Cirúrgica (etapa 1) — migrações 0093–0094
+Pedido da dona: a Alessandra registra na agenda cada paciente que a procura e, nas Notas, o que ele veio fazer (pagar
+cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" do Micrologos. É só registro.
+- **Decisão:** a coluna "Orientação Cirúrgica" fica DENTRO da Agenda (escolha da dona), e é a própria pessoa que atende a
+  orientação (`profissionais.orientacao_cirurgica` e não médico). Não criamos "pessoa falsa" (apareceria no chat, caixa…).
+- **0093:** novo valor `orientacao` em `tipo_agendamento`. **0094:** gatilho `orientacao_tipo` força o tipo nessa coluna (e
+  recusa esse tipo em médico); `tg_agendamento_conta` ignora `orientacao` (**não abre conta**). Testado no banco real:
+  orientação chegou → 0 contas; consulta médica chegou → 1 conta.
+- Horários da Alessandra cadastrados: seg–sex 8–17h, sáb 8–12h, 10 min.
+- **Tela:** Agenda lista médicos + "Orientação Cirúrgica" (quem atende a orientação abre direto nela); no novo
+  agendamento dessa coluna não há tipo/sala/1ª consulta e as **Notas** têm botões rápidos (Pagar cirurgia, Orçamento,
+  Trazer risco cirúrgico…); no detalhe: editar notas, "Paciente chegou" (sem pergunta de consulta particular) e
+  "✅ Atendido". Recepção, fila do médico e Início ignoram `tipo = 'orientacao'`. Horários e bloqueios inclui a agenda.
+- Pendente: lembretes do WhatsApp (função whatsapp-enviar) ignorarem `orientacao` — hoje os lembretes nem rodam
+  (número da clínica não está ligado ao sistema); etapa 2: calendário de 3 meses com ocupação + quadro de resumo.

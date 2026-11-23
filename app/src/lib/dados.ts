@@ -34,6 +34,27 @@ export async function listaProfissionais(funcoes?: string[]): Promise<Profission
   return (data ?? []) as Profissional[];
 }
 
+/** Colunas da Agenda: os médicos e a Orientação Cirúrgica (quem atende a orientação e não é médico). */
+export async function listaAgendas(): Promise<Profissional[]> {
+  const { data, error } = await supabase.from("profissionais").select("*").eq("ativo", true).order("nome");
+  if (error) throw error;
+  const todos = (data ?? []) as Profissional[];
+  return [
+    ...todos.filter((p) => p.funcao === "medico"),
+    ...todos.filter((p) => ehAgendaOrientacao(p)),
+  ];
+}
+
+/** Esta "agenda" é a da Orientação Cirúrgica? (só registro: não fatura, não entra na recepção nem na fila do médico) */
+export function ehAgendaOrientacao(p: Pick<Profissional, "funcao" | "orientacao_cirurgica"> | null | undefined): boolean {
+  return !!p && p.funcao !== "medico" && p.orientacao_cirurgica === true;
+}
+
+/** Nome da coluna na agenda */
+export function nomeAgenda(p: Profissional): string {
+  return ehAgendaOrientacao(p) ? "Orientação Cirúrgica" : p.nome;
+}
+
 export async function listaConvenios(): Promise<Convenio[]> {
   const { data, error } = await supabase.from("convenios").select("*").eq("ativo", true).order("nome");
   if (error) throw error;
