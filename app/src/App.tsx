@@ -38,6 +38,7 @@ import Telefone from "./components/Telefone";
 import AvisoVersao from "./components/AvisoVersao";
 import { TelefoneProvider } from "./lib/telefone";
 import { CentralProvider } from "./lib/central";
+import Central from "./pages/Central";
 import { useNaoLidas, podeVerSetor } from "./lib/whatsapp";
 import type { Profissional } from "./lib/auth";
 
@@ -52,6 +53,7 @@ const MENU: ItemMenu[] = [
   { para: "/agenda", rotulo: "Agenda", icone: "📅" },
   { para: "/recepcao", rotulo: "Recepção", icone: "🛎️", funcoes: ["medico", "enfermagem", "recepcao", "admin"] },
   { para: "/pacientes", rotulo: "Pacientes", icone: "👤" },
+  { para: "/central", rotulo: "Central de atendimento", icone: "🎧", funcoes: ["recepcao", "admin"] },
   { para: "/whatsapp", rotulo: "WhatsApp", icone: "💬", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
   { para: "/orientacao-cirurgica", rotulo: "Orientação cirúrgica", icone: "🩹", ve: (eu) => podeVerSetor(eu, "orientacao") },
   { para: "/ligacoes", rotulo: "Ligações", icone: "☎️", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
@@ -149,6 +151,18 @@ export default function App() {
   }
 
   let grupoAtual = "";
+  // Central de atendimento: tela cheia, sem o menu do sistema (igual ao Talklogos)
+  if (loc.pathname === "/central") {
+    return (
+      <TelefoneProvider>
+        <CentralProvider>
+          <Central />
+          <Telefone />
+        </CentralProvider>
+      </TelefoneProvider>
+    );
+  }
+
   return (
     <TelefoneProvider>
     <CentralProvider>
