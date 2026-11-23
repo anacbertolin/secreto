@@ -109,3 +109,21 @@ aplicativo "Talklogos – Plataforma de Multicanalidade".
 ### O que ainda não apareceu nas fotos ❓
 Painel de supervisão ("Painel Total" aberto), menu de voz (URA), status além de "Online", relatórios e a tela de
 Atendimentos (histórico/protocolo).
+
+### Mais 4 fotos (23/11/2026, tarde) ✅
+- **Status do Talklogos:** só **Online / Ausente / Ocupado** (menu ao clicar em "Online"). Confirma o que a dona disse.
+- **Menu "Mais opções"** (botão "…" no canto inferior esquerdo): Configurações e perfil, Ativar notificações, Usar tema
+  claro, Sair.
+- **Conversa encerrada:** a lista mostra "A conversa foi finalizada pelo usuário X"; o cabeçalho troca "Encerrar
+  Conversa" por **"Iniciar Atendimento"** (reabrir). PDF recebido aparece com miniatura e botão **"Abrir PDF"**.
+- **Cartões de "Meus Atendimentos":** etiqueta verde **"Atendendo"**, número oficial de origem ("WhatsApp Oficial 21972…")
+  e começo da última mensagem. Rodapé da conversa com **"Enviar template"** e **"Atualizar"**.
+- **Resposta rápida em uso (exemplo de Frase):** texto do **valor da consulta oftalmológica** (cartão débito/crédito,
+  parcelado em até 2x; valor menor em dinheiro/PIX; o valor pode variar conforme especialidade/médico; o que está incluso:
+  tonometria, refração, fundo de olho sem dilatação e exame de grau para óculos). Os valores ficam com a dona (mudam).
+- **Tela Atendimentos (histórico por protocolo):** filtros **Canal de atendimento**, **Buscar clientes**, **Data de início
+  do protocolo**, avaliação e **atendente**. Lista **"Atendimentos Finalizados (N)"** com a explicação "Protocolos
+  encerrados, iniciados na data selecionada. Cada protocolo aparece uma vez; os ciclos de reabertura aparecem no
+  dashboard". Cada cartão: contato, número de origem, etiqueta de **qualificação** (ex.: **"Não Qualificado"**), atendente
+  e hora. → O Talklogos tem um campo de qualificação, mas na prática fica "Não Qualificado" (a equipe não marca). No
+  sistema novo o resultado será 1–2 cliques e, quando der, automático (passo 4).
