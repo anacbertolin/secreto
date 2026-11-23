@@ -264,6 +264,9 @@ export function ContaDetalhe() {
   const { convenios, planos, procs, profs } = base.dados;
   const conv = convenios.find((x) => x.id === c.convenio_id);
   const editavel = ["aberta", "pronta"].includes(c.status) && !c.lote_id;
+  // particular já paga também pode ser cancelada (estorno/erro de lançamento), desde que não tenha repasse ativo
+  const pagaParticular = c.status === "paga" && !c.convenio_id && !c.lote_id;
+  const podeCancelar = editavel || pagaParticular;
   const pend = pendencias({ ...c, conta_itens: itens }, conv);
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setCab({ ...cab, [k]: e.target.value });
 
@@ -317,13 +320,24 @@ export function ContaDetalhe() {
           {c.status === "aberta" && c.convenio_id && <button className="primario" disabled={pend.length > 0} title={pend.join(", ")} onClick={() => mudarStatus("pronta")}>✅ Conferida (pronta p/ lote)</button>}
           {c.status === "pronta" && !c.lote_id && <button onClick={() => mudarStatus("aberta")}>↩️ Voltar para conferência</button>}
           {c.status === "aberta" && !c.convenio_id && <button className="primario" disabled={itens.length === 0} onClick={() => setModal("receber")}>💵 Receber</button>}
-          {editavel && <button className="perigo" onClick={() => setModal("cancelar")}>Cancelar conta</button>}
+          {podeCancelar && (
+            <button className="perigo" disabled={pagaParticular && !!repasse}
+              title={pagaParticular && repasse ? `Cancele antes o repasse nº ${repasse.numero}` : undefined}
+              onClick={() => setModal("cancelar")}>Cancelar conta</button>
+          )}
         </div>
       </div>
       <Aviso>{erro || e1}</Aviso>
       <Aviso tipo="ok">{okMsg}</Aviso>
       {c.status === "aberta" && pend.length > 0 && <Aviso tipo="alerta">Falta para liberar: {pend.join(", ")}.</Aviso>}
       {c.status === "cancelada" && <Aviso tipo="alerta">Conta cancelada: {c.motivo_cancelamento}</Aviso>}
+      {pagaParticular && repasse && <Aviso tipo="info">Para cancelar esta conta, cancele antes o repasse nº {repasse.numero} ao médico.</Aviso>}
+      {lote && c.status !== "cancelada" && (
+        <Aviso tipo="info">
+          Esta conta está no lote {lote.numero}. Para cancelar ou mexer nela, abra o lote e use “Desfazer lote” (só enquanto o
+          lote ainda não foi enviado ao convênio). Depois de enviado, ajustes são feitos como glosa/recurso.
+        </Aviso>
+      )}
       {c.status === "paga" && !c.convenio_id && <Aviso tipo="ok">Recebido {fmtMoeda(c.valor_pago)} em {fmtData(c.recebido_em)} · {FORMAS_PAGAMENTO[c.forma_pagamento ?? ""] ?? ""}{c.parcelas && c.parcelas > 1 ? ` em ${c.parcelas}x` : ""}</Aviso>}
 
       <div className="painel">
@@ -403,6 +417,12 @@ export function ContaDetalhe() {
       {modal === "receber" && <Receber conta={c} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
       {modal === "cancelar" && (
         <Modal titulo="Cancelar conta" aoFechar={() => setModal("")}>
+          {pagaParticular && (
+            <Aviso tipo="alerta">
+              Esta conta já foi <b>recebida</b>. Cancelar aqui não devolve o dinheiro sozinho: se houver devolução ao paciente,
+              lance como saída no Caixa.
+            </Aviso>
+          )}
           <CancelarForm aoConfirmar={(m) => { setModal(""); mudarStatus("cancelada", { motivo_cancelamento: m }); }} />
         </Modal>
       )}

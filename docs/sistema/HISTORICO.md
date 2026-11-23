@@ -1218,3 +1218,7 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
   para a auditoria ("EXCLUÍDO: …"). Testado no banco como usuário do faturamento (com rollback).
 - Tela: botão "🗑️ Excluir" no agendamento (também para cancelados/faltas), com motivo obrigatório.
 - Faturamento já podia incluir/excluir contas (políticas de `contas`) e, desde 0081–0083, marca/altera agenda e caixa.
+- Cancelar conta (pedido da dona): o botão só aparecia para conta aberta/conferida; ela tentou cancelar uma particular
+  já **paga**. Agora particular paga (fora de lote) também pode ser cancelada, com aviso de que o dinheiro não volta
+  sozinho (lançar saída no Caixa). Migração `0085_conta_cancelar_paga`: `tg_conta_regras` (agora security definer)
+  barra cancelar conta com repasse ativo. Conta em lote: aviso para "Desfazer lote" antes (convênio enviado = glosa).
