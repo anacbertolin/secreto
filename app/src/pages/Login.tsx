@@ -5,7 +5,8 @@ import { CLINICA } from "../lib/marca";
 import { emailDoLogin } from "../lib/util";
 
 export default function Login() {
-  const [login, setLogin] = useState("");
+  // Link de primeiro acesso (tela Equipe): ?u=<usuário> já preenche o usuário
+  const [login, setLogin] = useState(() => new URLSearchParams(window.location.search).get("u") ?? "");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -29,10 +30,10 @@ export default function Login() {
         </div>
         <Aviso>{erro}</Aviso>
         <Campo rotulo="Usuário (ou e-mail da administração)">
-          <input type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={login} onChange={(e) => setLogin(e.target.value)} required autoFocus />
+          <input type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={login} onChange={(e) => setLogin(e.target.value)} required autoFocus={!login} />
         </Campo>
         <Campo rotulo="Senha">
-          <input type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
+          <input type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} required autoFocus={!!login} />
         </Campo>
         <button className="primario grande" disabled={enviando}>{enviando ? "Entrando…" : "Entrar"}</button>
         <button type="button" className="sutil" onClick={() => setEsqueci(!esqueci)}>Esqueci minha senha / primeiro acesso</button>

@@ -1166,3 +1166,9 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
   `consumed-sistema.ico` (Windows, vários tamanhos, para trocar o ícone de um atalho à mão).
 - `app/public/manifest.webmanifest` (nome "Consumed Sistema", abre em janela própria) + links no `index.html`.
   Conferido no Chrome: manifesto sem erros. Com isso o Chrome oferece "Instalar" o sistema como aplicativo.
+
+## 23/11/2026 — Link de primeiro acesso para a equipe
+- Pedido da dona: sem e-mail cadastrado, não havia como mandar o acesso ao funcionário.
+- Tela Equipe → 🔑: depois de "Criar / redefinir acesso", aparece uma mensagem pronta (link + usuário + senha temporária)
+  com os botões "Enviar pelo WhatsApp" (wa.me; celular opcional, não é gravado) e "Copiar mensagem".
+- O link é `<endereço do sistema>/?u=<usuário>`: a tela de login já vem com o usuário preenchido (a senha NÃO vai no link).
