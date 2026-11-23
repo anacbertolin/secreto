@@ -1236,3 +1236,11 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
 - Caixa → Novo recebimento: os botões de itens agora vêm dessa tabela, com o preço; marcar soma o valor sozinho
   (pode digitar outro valor; aparece "usar este valor" para voltar à soma). Busca por nome. Cirurgia e terapia
   aparecem em "Procedimento". Tela Procedimentos mostra Terapia e a observação.
+- Migração `0087_consulta_particular_e_sem_cobranca` (decisões da dona):
+  - Revisão (renomeada de "Revisão 0,01") e Fotocoagulação continuação agora valem R$ 0,00: os 0,01/0,10 só existiam
+    porque a Micrologos não aceitava zero. Revisão = cortesia; sessão seguinte de pacote já foi paga. No Caixa, se só
+    houver itens de R$ 0,00, o sistema orienta usar "🎁 Cortesia".
+  - Chegada de paciente PARTICULAR para consulta: a recepção escolhe "💳 Cartão" (cód. ML 184) ou "💵 Dinheiro/Pix"
+    (cód. 63), ou outra consulta da tabela (`components/ConsultaParticular.tsx`, na Recepção e no "Paciente chegou" da
+    Agenda). Fica em `agendamentos.consulta_procedimento_id`; `tg_agendamento_conta` lança essa consulta na conta
+    (sem escolha = consulta padrão). Testado no banco com rollback: conta saiu com "Consulta Dinheiro/pix = 250,00".

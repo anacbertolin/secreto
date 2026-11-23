@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { EscolhaConsultaParticular } from "../components/ConsultaParticular";
 import { Link } from "react-router-dom";
 import { supabase, msgErro } from "../lib/supabase";
 import { useCarregar, ok, Aviso, Carregando, Modal, Campo, Etiqueta } from "../components/ui";
@@ -163,6 +164,8 @@ function ConfirmarChegada(props: { ag: Agendamento; convenios: Convenio[]; aoFec
     });
   }, [pac, a.convenio_id]);
 
+  // consulta particular: a recepção escolhe cartão ou dinheiro/Pix (migração 0087)
+  const pedeConsulta = !f.convenio_id && a.tipo === "consulta";
   const faltando = pac ? (["cpf", "data_nascimento", "nome_mae", "cep"] as const).filter((k) => !pac[k]) : [];
 
   async function salvar() {
@@ -175,7 +178,11 @@ function ConfirmarChegada(props: { ag: Agendamento; convenios: Convenio[]; aoFec
       convenio_validade: f.convenio_validade || null,
     }).eq("id", a.paciente_id);
     if (r1.error) return setErro(msgErro(r1.error));
-    const r2 = await supabase.from("agendamentos").update({ status: "chegou", convenio_id: f.convenio_id || null, plano_id: f.plano_id || null }).eq("id", a.id);
+    if (pedeConsulta && !f.consulta) return setErro("Escolha se a consulta particular é no cartão ou no dinheiro/Pix.");
+    const r2 = await supabase.from("agendamentos").update({
+      status: "chegou", convenio_id: f.convenio_id || null, plano_id: f.plano_id || null,
+      consulta_procedimento_id: pedeConsulta ? f.consulta : null,
+    }).eq("id", a.id);
     if (r2.error) return setErro(msgErro(r2.error));
     // a conta é aberta sozinha na chegada; aqui completamos a senha de autorização
     if (f.convenio_id && f.senha) {
@@ -225,6 +232,7 @@ function ConfirmarChegada(props: { ag: Agendamento; convenios: Convenio[]; aoFec
         )}
       </div>
       {vencida && <Aviso tipo="alerta">⚠️ A carteirinha está vencida. Confira com o paciente.</Aviso>}
+      {pedeConsulta && pac && <EscolhaConsultaParticular valor={f.consulta ?? ""} aoMudar={(id) => setF({ ...f, consulta: id })} />}
     </Modal>
   );
 }

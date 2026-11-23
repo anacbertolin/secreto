@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase, msgErro } from "../lib/supabase";
 import { Modal, Campo, Aviso, BuscaPaciente, Etiqueta, type PacienteResumo } from "./ui";
+import { EscolhaConsultaParticular } from "./ConsultaParticular";
 import type { Profissional } from "../lib/auth";
 import type { Agendamento, Convenio, Local } from "../lib/dados";
 import { nomePor } from "../lib/dados";
@@ -200,7 +201,7 @@ export function DetalheAgendamento(props: {
 }) {
   const a = props.ag;
   const [erro, setErro] = useState("");
-  const [modo, setModo] = useState<"" | "cancelar" | "remarcar" | "confirmar" | "excluir">("");
+  const [modo, setModo] = useState<"" | "cancelar" | "remarcar" | "confirmar" | "excluir" | "chegada">("");
   const [motivo, setMotivo] = useState("");
   const [canal, setCanal] = useState("telefone");
   const ini = new Date(a.inicio);
@@ -232,6 +233,9 @@ export function DetalheAgendamento(props: {
   }
 
   const ativo = !["cancelado", "faltou", "atendido"].includes(a.status);
+  // consulta particular: na chegada pergunta cartão ou dinheiro/Pix (migração 0087)
+  const consultaParticular = !a.convenio_id && a.tipo === "consulta";
+  const [consultaEscolhida, setConsultaEscolhida] = useState("");
   // excluir de vez (lançado por engano / desistência): antes da chegada; o banco confere as travas (migração 0084)
   const podeExcluir = ["agendado", "confirmado", "cancelado", "faltou"].includes(a.status);
   const p = a.pacientes!;
@@ -265,7 +269,7 @@ export function DetalheAgendamento(props: {
       {ativo && modo === "" && (
         <div className="linha">
           {a.status === "agendado" && <button onClick={() => setModo("confirmar")}>✅ Confirmar</button>}
-          {["agendado", "confirmado"].includes(a.status) && <button className="primario" onClick={() => atualizar({ status: "chegou" })}>🛎️ Paciente chegou</button>}
+          {["agendado", "confirmado"].includes(a.status) && <button className="primario" onClick={() => (consultaParticular ? setModo("chegada") : atualizar({ status: "chegou" }))}>🛎️ Paciente chegou</button>}
           {a.status === "chegou" && <button onClick={() => atualizar({ status: "confirmado", chegada_em: null })}>↩️ Desfazer chegada</button>}
           <button onClick={() => setModo("remarcar")}>🔁 Remarcar</button>
           {["agendado", "confirmado"].includes(a.status) && <button onClick={() => atualizar({ status: "faltou" })}>Faltou</button>}
@@ -277,6 +281,15 @@ export function DetalheAgendamento(props: {
         <div className="linha">
           {a.status === "faltou" && <button onClick={() => atualizar({ status: "agendado" })}>↩️ Desfazer falta</button>}
           {podeExcluir && <button className="perigo" onClick={() => { setMotivo(""); setModo("excluir"); }}>🗑️ Excluir da agenda</button>}
+        </div>
+      )}
+      {modo === "chegada" && (
+        <div className="grade">
+          <EscolhaConsultaParticular valor={consultaEscolhida} aoMudar={setConsultaEscolhida} />
+          <div className="linha">
+            <button onClick={() => setModo("")}>Voltar</button>
+            <button className="primario" disabled={!consultaEscolhida} onClick={() => atualizar({ status: "chegou", consulta_procedimento_id: consultaEscolhida })}>🛎️ Confirmar chegada</button>
+          </div>
         </div>
       )}
       {modo === "excluir" && (
