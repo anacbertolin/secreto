@@ -64,10 +64,11 @@ const saldoDe = (a: Atendimento) => (a.cancelado || a.cortesia ? 0 : n2(Number(a
 export function papelCaixa(eu: Profissional | null) {
   const f = eu?.funcao;
   return {
-    lancar: f === "recepcao" || f === "admin",
+    // abre, lança e fecha: recepção, administração e faturamento (migração 0083)
+    lancar: f === "recepcao" || f === "admin" || f === "faturamento",
     conferir: !!eu?.caixa_conferir || f === "admin",
     aprovar: !!eu?.caixa_aprovar || f === "admin",
-    ver: f === "recepcao" || f === "admin" || !!eu?.caixa_conferir || !!eu?.caixa_aprovar,
+    ver: f === "recepcao" || f === "admin" || f === "faturamento" || !!eu?.caixa_conferir || !!eu?.caixa_aprovar,
   };
 }
 
