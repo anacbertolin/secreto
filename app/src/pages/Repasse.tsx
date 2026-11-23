@@ -51,14 +51,16 @@ const soma = (ps: Parcela[], k: keyof Parcela) => ps.reduce((s, p) => s + Number
 function primeiroDiaMes(d = new Date()) { return isoDia(new Date(d.getFullYear(), d.getMonth(), 1)); }
 
 async function carregarBase() {
-  const [cfg, taxas, medicos, procedimentos] = await Promise.all([
+  const [cfg, taxas, medicos, procedimentos, lentes] = await Promise.all([
     supabase.from("repasse_config").select("*").single().then((x) => ok(x) as Config),
     supabase.from("repasse_taxas_cartao").select("*").order("forma", { ascending: false }).order("parcelas").then((x) => ok(x) as TaxaCartao[]),
     supabase.from("profissionais").select("id, nome").eq("funcao", "medico").order("nome").then((x) => ok(x) as Medico[]),
     supabase.from("repasse_procedimentos").select("*, repasse_procedimento_custos(*)").order("nome").then((x) => ok(x) as Procedimento[]),
+    supabase.from("lentes_catalogo").select("id, codigo, descricao, fabricante, custo_compra, preco_venda").eq("ativo", true).order("preco_venda").order("custo_compra")
+      .then((x) => ok(x) as { id: string; codigo: string; descricao: string; fabricante: string; custo_compra: number | null; preco_venda: number | null }[]),
   ]);
   for (const p of procedimentos) p.repasse_procedimento_custos.sort((a, b) => a.ordem - b.ordem);
-  return { cfg, taxas, medicos, procedimentos };
+  return { cfg, taxas, medicos, procedimentos, lentes };
 }
 
 // ================================================================== tela principal
@@ -227,6 +229,15 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
     })));
   }
 
+  /** venda de lente ao paciente: valor = preço de venda; o custo da lente sai antes da divisão (regra geral) */
+  function escolherLente(id: string) {
+    const l = base.lentes.find((x) => x.id === id);
+    if (!l) return;
+    setF((x) => ({ ...x, regra: "geral", procedimento_id: "", procedimento: `Lente ${l.descricao} (${l.codigo})`,
+      valor: l.preco_venda ? String(l.preco_venda).replace(".", ",") : x.valor }));
+    setCustos([{ tipo: "insumo", descricao: `Lente ${l.codigo} (custo de compra)`, valor: String(l.custo_compra ?? 0).replace(".", ","), favorecido_profissional_id: "", favorecido_nome: "" }]);
+  }
+
   async function salvar() {
     setErro("");
     if (!f.profissional_id) return setErro("Escolha o médico.");
@@ -275,6 +286,14 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
         </Campo>
         <Campo rotulo="Data da cirurgia"><input type="date" value={f.data_cirurgia} onChange={set("data_cirurgia")} /></Campo>
       </div>
+      {!cobranca && base.lentes.length > 0 && (
+        <Campo rotulo="Ou: venda de lente ao paciente (catálogo)">
+          <select value="" onChange={(e) => escolherLente(e.target.value)}>
+            <option value="">Escolher lente…</option>
+            {base.lentes.map((l) => <option key={l.id} value={l.id}>{l.descricao} · venda {fmtMoeda(l.preco_venda)} · custo {fmtMoeda(l.custo_compra)}</option>)}
+          </select>
+        </Campo>
+      )}
       <Campo rotulo="Descrição do procedimento"><input value={f.procedimento} onChange={set("procedimento")} placeholder="ex.: Blefaroplastia superior AO" /></Campo>
       <div className="campo">
         Paciente (opcional)
