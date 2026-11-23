@@ -520,3 +520,8 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .ct-autor { font-size: 0.75rem; font-weight: 700; color: var(--roxo); margin-bottom: 2px; }
 .ct-transferir button.primario .pequeno { color: white; }
 @media (max-width: 860px) { .ct.com-interna .ct-coluna { display: none; } .ct:not(.com-conversa):not(.com-interna) .ct-conversa { display: none; } .ct.com-interna .ct-conversa { display: flex; } }
+.ct-aviso-tel { background: var(--azul-claro); color: var(--azul); border-radius: 10px; padding: 9px 11px; font-size: 0.85rem; margin-bottom: 6px; }
+.ct-aviso-tel.ok { background: var(--sucesso-claro); color: var(--sucesso); }
+.ct-lig { cursor: pointer; }
+.ct-lig .ct-avatar { font-size: 1.05rem; }
+.ct-lig-acoes { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; align-items: center; }

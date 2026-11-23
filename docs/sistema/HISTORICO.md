@@ -1350,6 +1350,15 @@ Conferido no banco local e no real (transação desfeita); tela com dados simula
 - **Testes:** banco real em transação desfeita (direta não duplica; não escreve como outro; não edita; enfermagem não vê a
   conversa recepção↔médico mas vê o grupo dela; marca só a própria leitura; anônimo bloqueado); tela com dados simulados.
 
+### 23/11/2026 (noite) — Central: ordem das abas e ligações dentro da Central
+- Abas na ordem **Interno · Canais · Telefone** (pedido da dona; nome "Canais" mantido por ser o que a equipe já conhece).
+- **Ligações dentro da Central** (pedido da dona: ver perdidas e atendidas, retornar, achar a conversa e ouvir a gravação no
+  mesmo lugar): aba **Telefone** com **Perdidas sem retorno** / Hoje / 7 dias; cada ligação mostra recebida/feita, situação,
+  duração, quem atendeu e a anotação; ao clicar: **📞 Ligar de volta** (com o telefone conectado), **✓ Resolvida**,
+  **💬 Conversa** (abre a conversa do WhatsApp do mesmo paciente/número na Central), **🎧 Ouvir** (desligado até a central
+  da Telecall gravar — falta guardar o endereço da gravação em `ligacoes`) e Ficha. O item "Ligações" saiu do menu de quem
+  atende; fica "Ligações (consulta)" para médico, enfermagem e faturamento.
+
 ## 23/11/2026 — Agenda da Orientação Cirúrgica (etapa 1) — migrações 0093–0094
 Pedido da dona: a Alessandra registra na agenda cada paciente que a procura e, nas Notas, o que ele veio fazer (pagar
 cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" do Micrologos. É só registro.

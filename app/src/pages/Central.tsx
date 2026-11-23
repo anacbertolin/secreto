@@ -12,7 +12,8 @@ import { listaConvenios, listaLocais, listaProfissionais } from "../lib/dados";
 import { fmtData, isoDia } from "../lib/util";
 import { SELECT_CONVERSA, fmtNumeroWA, podeResponderSetor, type Conversa } from "../lib/whatsapp";
 import { STATUS_CENTRAL, fmtEsperando, useCentral, type StatusCentral } from "../lib/central";
-import { useTelefone } from "../lib/telefone";
+import { fmtNumeroTel, useTelefone } from "../lib/telefone";
+import { BotaoLigar } from "../components/Telefone";
 import { Chat, FichaPaciente, iniciais, nomeConversa } from "./WhatsApp";
 import { InternoChat, InternoLista } from "../components/Interno";
 import { useInternoNaoLidas } from "../lib/interno";
@@ -178,14 +179,14 @@ export default function Central() {
           <>
             {atende && <Equipe pessoas={equipe.dados ?? []} euId={eu?.id} livres={livres.length} />}
             <div className="ct-abas">
+              <button className={aba === "interno" ? "ativa" : ""} onClick={() => setAba("interno")}>
+                Interno {interno.total > 0 && <span className="ct-bolha verde" style={{ background: "#d92d20" }}>{interno.total}</span>}
+              </button>
               {atende && (
                 <button className={aba === "canais" ? "ativa" : ""} onClick={() => setAba("canais")}>
                   Canais {fila.length + minhas.length > 0 && <span className="ct-bolha verde">{fila.length + minhas.length}</span>}
                 </button>
               )}
-              <button className={aba === "interno" ? "ativa" : ""} onClick={() => setAba("interno")}>
-                Interno {interno.total > 0 && <span className="ct-bolha verde" style={{ background: "#d92d20" }}>{interno.total}</span>}
-              </button>
               {atende && <button className={aba === "telefone" ? "ativa" : ""} onClick={() => setAba("telefone")}>Telefone</button>}
             </div>
 
@@ -214,7 +215,7 @@ export default function Central() {
                   : minhasVisiveis.map((c) => <Cartao key={c.id} c={c} tipo="meu" />)}
               </div>
             ) : (
-              <PainelTelefone />
+              <PainelTelefone setor={setor} aoAbrirConversa={(id) => { setInternaId(null); setAbertaId(id); }} />
             )}
           </>
         ) : (
@@ -326,26 +327,116 @@ function Equipe({ pessoas, euId, livres }: { pessoas: { id: string; nome: string
   );
 }
 
-/** Aba Telefone: fica pronta; passa a funcionar quando a Telecall liberar os ramais */
-function PainelTelefone() {
+/** Aba Telefone: ligações perdidas, atendidas e feitas (histórico dentro da Central) + aviso enquanto a Telecall não liga */
+interface LigacaoCt {
+  id: string; direcao: "entrada" | "saida"; numero: string; paciente_id: string | null; situacao: string;
+  ramal: string | null; iniciada_em: string; atendida_em: string | null; encerrada_em: string | null;
+  transferida_para: string | null; retornada_em: string | null; observacao: string | null;
+  pacientes: { id: string; nome: string; nome_social: string | null; numero_prontuario: number } | null;
+  quem: { nome: string } | null;
+}
+const SITUACAO_LIG: Record<string, { rotulo: string; classe: string }> = {
+  tocando: { rotulo: "Tocando", classe: "espera" }, em_andamento: { rotulo: "Em ligação", classe: "atendendo" },
+  atendida: { rotulo: "Atendida", classe: "atendendo" }, perdida: { rotulo: "Perdida", classe: "nao-resp" },
+  nao_atendida: { rotulo: "Não atendeu", classe: "espera" }, falhou: { rotulo: "Falhou", classe: "cinza" },
+};
+
+function PainelTelefone({ setor, aoAbrirConversa }: { setor: string; aoAbrirConversa: (id: string) => void }) {
   const tel = useTelefone();
   const pronto = tel && (tel.estado === "pronto" || tel.estado === "pausa");
+  const [filtro, setFiltro] = useState<"perdidas" | "hoje" | "semana">("perdidas");
+  const [aviso, setAviso] = useState("");
+  const [aberta, setAberta] = useState<string | null>(null);
+  const lista = useCarregar(async () => {
+    let q = supabase.from("ligacoes")
+      .select("*, pacientes(id, nome, nome_social, numero_prontuario), quem:profissionais!ligacoes_profissional_id_fkey(nome)")
+      .order("iniciada_em", { ascending: false }).limit(200);
+    const desde = (dias: number) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - dias); return d.toISOString(); };
+    if (filtro === "perdidas") q = q.eq("situacao", "perdida").is("retornada_em", null).gte("iniciada_em", desde(30));
+    else q = q.gte("iniciada_em", desde(filtro === "hoje" ? 0 : 7));
+    return ok(await q) as unknown as LigacaoCt[];
+  }, [filtro]);
+  const perdidas = useCarregar(async () => {
+    const d = new Date(); d.setDate(d.getDate() - 30);
+    const { count } = await supabase.from("ligacoes").select("id", { count: "exact", head: true }).eq("situacao", "perdida").is("retornada_em", null).gte("iniciada_em", d.toISOString());
+    return count ?? 0;
+  }, [filtro]);
+  useEffect(() => {
+    const canal = supabase.channel("central-ligacoes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "ligacoes" }, () => { lista.recarregar(); perdidas.recarregar(); })
+      .subscribe();
+    return () => { supabase.removeChannel(canal); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function resolvida(id: string) {
+    await supabase.rpc("telefonia_marcar_retornada", { p_id: id });
+    lista.recarregar(); perdidas.recarregar();
+  }
+  async function abrirConversa(l: LigacaoCt) {
+    setAviso("");
+    const fim = l.numero.replace(/\D/g, "").slice(-8);
+    let q = supabase.from("whatsapp_conversas").select("id").eq("setor", setor).order("ultima_mensagem_em", { ascending: false, nullsFirst: false }).limit(1);
+    q = l.paciente_id ? q.or(`paciente_id.eq.${l.paciente_id},telefone.like.*${fim}`) : q.like("telefone", `%${fim}`);
+    const { data } = await q;
+    if (data?.[0]) aoAbrirConversa(data[0].id as string);
+    else setAviso("Este paciente ainda não tem conversa pelo WhatsApp.");
+  }
+  const dur = (l: LigacaoCt) => {
+    if (!l.atendida_em || !l.encerrada_em) return "";
+    const seg = Math.max(0, Math.round((new Date(l.encerrada_em).getTime() - new Date(l.atendida_em).getTime()) / 1000));
+    return `${Math.floor(seg / 60)}min ${String(seg % 60).padStart(2, "0")}s`;
+  };
+
   return (
     <div className="ct-rolagem">
-      <h3 className="ct-secao">Telefone</h3>
-      {pronto ? (
-        <div className="ct-vazio" style={{ textAlign: "left" }}>
-          ✅ Telefone conectado (ramal {tel!.ramal}). As ligações aparecem no canto da tela, com o nome do paciente.
-          Para ligar, use o botão 📞 da conversa ou o telefone do canto.
-        </div>
-      ) : (
-        <div className="ct-vazio" style={{ textAlign: "left" }}>
-          📞 O telefone vai aparecer aqui, junto com o WhatsApp, assim que a <b>Telecall</b> liberar os ramais.
-          <br /><br />
-          Quando estiver ligado: as ligações tocam nesta tela, com o nome e o prontuário do paciente, e você atende, transfere,
-          põe em espera e agenda sem trocar de tela.
-        </div>
+      {!pronto && (
+        <div className="ct-aviso-tel">📞 O telefone começa a tocar nesta tela assim que a <b>Telecall</b> liberar os ramais. As ligações aparecem aqui embaixo.</div>
       )}
+      {pronto && <div className="ct-aviso-tel ok">✅ Telefone conectado (ramal {tel!.ramal}).</div>}
+      <h3 className="ct-secao">Ligações</h3>
+      <div className="ct-filtro">
+        <button className={filtro === "perdidas" ? "ativo" : ""} onClick={() => setFiltro("perdidas")}>Perdidas sem retorno ({perdidas.dados ?? 0})</button>
+        <button className={filtro === "hoje" ? "ativo" : ""} onClick={() => setFiltro("hoje")}>Hoje</button>
+        <button className={filtro === "semana" ? "ativo" : ""} onClick={() => setFiltro("semana")}>7 dias</button>
+      </div>
+      {aviso && <Aviso tipo="info">{aviso}</Aviso>}
+      <Aviso>{lista.erro}</Aviso>
+      {lista.carregando && !lista.dados ? <Carregando /> : (lista.dados ?? []).length === 0 ? (
+        <div className="ct-vazio">{filtro === "perdidas" ? "Nenhuma ligação perdida esperando retorno. 👏" : "Nenhuma ligação neste período."}</div>
+      ) : (lista.dados ?? []).map((l) => {
+        const st = SITUACAO_LIG[l.situacao] ?? { rotulo: l.situacao, classe: "cinza" };
+        const nome = l.pacientes ? (l.pacientes.nome_social || l.pacientes.nome) : fmtNumeroTel(l.numero);
+        const expandida = aberta === l.id;
+        return (
+          <div key={l.id} className={"ct-cartao ct-lig" + (expandida ? " ativo" : "")} onClick={() => setAberta(expandida ? null : l.id)}>
+            <span className="ct-avatar" style={{ background: l.situacao === "perdida" ? "#d92d20" : l.direcao === "entrada" ? "#12b76a" : "#175cd3" }}>
+              {l.direcao === "entrada" ? "↙" : "↗"}
+            </span>
+            <span className="ct-cartao-corpo">
+              <span className="ct-linha"><b className="ct-nome-cartao">{nome}</b><span className="ct-hora">{quando(l.iniciada_em)}</span></span>
+              <span className="ct-origem" style={{ color: "var(--suave)" }}>
+                {l.direcao === "entrada" ? "Recebida" : "Feita"}{l.pacientes ? ` · ${fmtNumeroTel(l.numero)} · Pront. ${l.pacientes.numero_prontuario}` : ""}
+              </span>
+              <span className="ct-linha">
+                <span className="ct-previa">{l.quem?.nome ? `${l.quem.nome.split(" ")[0]}${dur(l) ? " · " + dur(l) : ""}` : dur(l)}{l.transferida_para ? ` · ↪ ${l.transferida_para}` : ""}</span>
+                <span className={"ct-tag " + st.classe}>{st.rotulo}{l.retornada_em ? " · retornada" : ""}</span>
+              </span>
+              {l.observacao && <span className="ct-previa dele">📝 {l.observacao}</span>}
+              {expandida && (
+                <span className="ct-lig-acoes" onClick={(e) => e.stopPropagation()}>
+                  {pronto ? <BotaoLigar numero={l.numero} pacienteId={l.paciente_id} rotulo="📞 Ligar de volta" />
+                    : <span className="pequeno">📞 {fmtNumeroTel(l.numero)}</span>}
+                  {l.situacao === "perdida" && !l.retornada_em && <button className="mini" onClick={() => void resolvida(l.id)}>✓ Resolvida</button>}
+                  <button className="mini" onClick={() => void abrirConversa(l)}>💬 Conversa</button>
+                  <button className="mini" disabled title="A gravação aparece aqui quando a Telecall estiver ligada e gravando">🎧 Ouvir</button>
+                  {l.paciente_id && <Link className="botao mini-l" to={`/pacientes/${l.paciente_id}`}>Ficha</Link>}
+                </span>
+              )}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
