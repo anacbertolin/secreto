@@ -31,7 +31,7 @@ export function Equipe() {
                 <tr key={p.id} style={{ opacity: p.ativo ? 1 : 0.5 }}>
                   <td><b>{p.nome}</b>{!p.ativo && <> <Etiqueta cor="cinza">inativo</Etiqueta></>}{p.especialidade && <div className="muted pequeno">{p.especialidade}</div>}</td>
                   <td>{p.usuario ? <>👤 {p.usuario}</> : p.email ?? <span className="muted">— (sem login)</span>}</td>
-                  <td>{FUNCOES[p.funcao]}{p.orientacao_cirurgica && <div><Etiqueta cor="azul">Orientação cirúrgica</Etiqueta></div>}</td>
+                  <td>{FUNCOES[p.funcao]}{p.orientacao_cirurgica && <div><Etiqueta cor="azul">Orientação cirúrgica</Etiqueta></div>}{p.caixa_conferir && <div><Etiqueta cor="amarelo">Confere o caixa</Etiqueta></div>}{p.caixa_aprovar && <div><Etiqueta cor="verde">Aprova o caixa</Etiqueta></div>}</td>
                   <td>{p.conselho && `${p.conselho} ${p.numero_conselho ?? ""}/${p.uf_conselho ?? ""}`}</td>
                   <td style={{ textAlign: "right" }}>
                     <div className="linha" style={{ justifyContent: "flex-end" }}>
@@ -56,6 +56,7 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
     nome: p.nome ?? "", email: p.usuario ? "" : p.email ?? "", usuario: p.usuario ?? "", funcao: p.funcao ?? "recepcao", conselho: p.conselho ?? "", numero_conselho: p.numero_conselho ?? "",
     uf_conselho: p.uf_conselho ?? "", especialidade: p.especialidade ?? "", rqe: p.rqe ?? "", cbo: (p as { cbo?: string | null }).cbo ?? "", ativo: p.ativo ?? true,
     orientacao_cirurgica: p.orientacao_cirurgica ?? false,
+    caixa_conferir: p.caixa_conferir ?? false, caixa_aprovar: p.caixa_aprovar ?? false,
   });
   // Médicos e funcionários entram com usuário; a administração com e-mail (decisão da dona, 16/11)
   const [modo, setModo] = useState<"usuario" | "email">(p.usuario ? "usuario" : p.email ? "email" : p.funcao === "admin" ? "email" : "usuario");
@@ -151,6 +152,14 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
         <label className="check inteiro">
           <input type="checkbox" checked={f.orientacao_cirurgica as boolean} onChange={(e) => setF({ ...f, orientacao_cirurgica: e.target.checked })} />
           Atende a <b>&nbsp;Orientação cirúrgica&nbsp;</b> (vê e responde o WhatsApp da orientação)
+        </label>
+        <label className="check inteiro">
+          <input type="checkbox" checked={f.caixa_conferir as boolean} onChange={(e) => setF({ ...f, caixa_conferir: e.target.checked })} />
+          <b>&nbsp;Confere o caixa&nbsp;</b> da recepção depois de fechado (telefone/WhatsApp)
+        </label>
+        <label className="check inteiro">
+          <input type="checkbox" checked={f.caixa_aprovar as boolean} onChange={(e) => setF({ ...f, caixa_aprovar: e.target.checked })} />
+          <b>&nbsp;Aprova o caixa&nbsp;</b> (aprovação final — supervisão)
         </label>
         {p.id && <label className="check inteiro"><input type="checkbox" checked={f.ativo as boolean} onChange={(e) => setF({ ...f, ativo: e.target.checked })} /> Ativo (desmarque quando a pessoa sair da clínica: ela perde o acesso)</label>}
       </div>
