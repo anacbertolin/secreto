@@ -1187,3 +1187,9 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
   quando a pessoa troca de tela ou depois de 10 min sem ninguém mexer no computador; até lá mostra o aviso com
   "Atualizar agora". A TV da sala de espera ficou de fora de propósito (recarregar desliga o som das chamadas,
   que o navegador só libera com um clique).
+
+## 23/11/2026 — Toda a equipe marca e encaixa na agenda
+- Pedido da dona: todos que acessam o sistema podem incluir e encaixar paciente na agenda.
+- Só o faturamento não podia. Migração `0081_agenda_toda_equipe`: faturamento ganha INSERT em `agendamentos`
+  (marcar/encaixar) e em `pacientes` (cadastrar paciente novo na hora de marcar). Remarcar, cancelar e check-in
+  (UPDATE) continuam com médico, enfermagem, recepção e admin. Advisors sem novidade.
