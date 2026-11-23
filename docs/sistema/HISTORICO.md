@@ -1134,3 +1134,23 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
 - Cadastrar a equipe na tela Equipe e marcar "Confere o caixa" (telefone/WhatsApp) e "Aprova o caixa" (Luciano, Sol).
 - Etapa 2 (opcional): comparar com o relatório do dia do Micrologos (precisa de um exemplo do arquivo); depois, botão "Receber" na agenda
   quando a agenda do nosso sistema for usada; integração maquininha/PIX; conferência de notas fiscais.
+
+## 23/11/2026 — Central de atendimento, passo 2: status da atendente e fila do WhatsApp (migração 0080)
+- **Pedido da dona** (via aba DÚVIDAS + levantamento do Talklogos em `docs/micrologos/modulos/talklogos-central-atendimento.md`):
+  central parecida com o Talklogos; **5 atendentes** na Central (telefone + WhatsApp) e **1 na Orientação Cirúrgica**
+  (fila separada). Tudo muito fácil: a dona escolheu **só 3 status** — 🟢 Disponível / ⏸️ Pausa / 🍽️ Almoço.
+- **Migração 0080 `central_fila_status`** (aplicada): `whatsapp_conversas.fila_desde` (desde quando espera; entra ao chegar
+  mensagem do paciente sem responsável, sai ao assumir/arquivar, volta ao ser devolvida se a última mensagem é do paciente);
+  `central_status` (status por pessoa; equipe lê; só a função grava); `central_mudar_status` (fora de Disponível devolve as
+  conversas da pessoa); `central_pegar_proximo` (o que espera há mais tempo no setor da pessoa, `for update skip locked`;
+  só Disponível). Setor: quem tem "Atende a Orientação cirúrgica" fica na fila da orientação; recepção/admin na Central.
+  Conversas que já esperavam foram colocadas na fila. Advisors: só os avisos esperados de SECURITY DEFINER.
+- **Telas:** WhatsApp/Orientação ganharam a barra **Meu status** (3 botões grandes) + quem da equipe está disponível/pausa/
+  almoço; aba **Na fila** (primeira, em ordem de chegada, "⏳ Esperando há X min"); botão grande **👉 Pegar o próximo**.
+  O **telefone acompanha o status** (fora de Disponível não toca); o "Pausa" do telefone usa o mesmo status.
+  Código: `app/src/lib/central.tsx`, `app/src/pages/WhatsApp.tsx`, `app/src/components/Telefone.tsx`.
+- **Testes:** banco real em transação desfeita (ordem da fila, pegar o próximo, almoço devolve e volta à fila na mesma ordem,
+  em almoço não pega, respondida e solta fica fora da fila, orientação separada, médico sem status, sem gravação direta);
+  navegador com dados simulados.
+- **Próximos passos combinados:** 3) etiqueta de origem/campanha (Google Ads) e vários números na mesma fila; 4) resultado ao
+  encerrar + protocolo + relatório de conversões; 5) painel de supervisão; 6) respostas rápidas.
