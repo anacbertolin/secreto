@@ -1180,3 +1180,6 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
 - Tela Equipe → 🔑: depois de "Criar / redefinir acesso", aparece uma mensagem pronta (link + usuário + senha temporária)
   com os botões "Enviar pelo WhatsApp" (wa.me; celular opcional, não é gravado) e "Copiar mensagem".
 - O link é `<endereço do sistema>/?u=<usuário>`: a tela de login já vem com o usuário preenchido (a senha NÃO vai no link).
+- Aviso de versão nova (`app/src/components/AvisoVersao.tsx`): a dona não viu a novidade porque a página estava aberta
+  desde antes da publicação. Agora, a cada 3 min e ao voltar para a janela, o sistema compara o script publicado com o
+  carregado e mostra "Saiu uma versão nova — Atualizar agora" (não recarrega sozinho para não perder o que se digita).

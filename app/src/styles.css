@@ -421,3 +421,8 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .equipe-chip { display: inline-flex; align-items: center; gap: 5px; background: white; border: 1px solid var(--borda); border-radius: 99px; padding: 3px 10px; font-size: 0.85rem; }
 .fila-pegar { width: 100%; padding: 11px; font-size: 1rem; margin-bottom: 10px; }
 .fila-espera { color: var(--alerta); font-weight: 600; }
+
+/* Aviso de versão nova (components/AvisoVersao.tsx) */
+.aviso-versao { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 9999; background: #fff;
+  border: 1px solid #b3d7ef; box-shadow: 0 6px 24px rgba(0,0,0,.18); border-radius: 10px; padding: 10px 14px;
+  display: flex; gap: 12px; align-items: center; max-width: calc(100vw - 32px); flex-wrap: wrap; }

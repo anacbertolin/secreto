@@ -35,6 +35,7 @@ import ConfigMemed from "./pages/ConfigMemed";
 import Ligacoes from "./pages/Ligacoes";
 import ConfigTelefone from "./pages/ConfigTelefone";
 import Telefone from "./components/Telefone";
+import AvisoVersao from "./components/AvisoVersao";
 import { TelefoneProvider } from "./lib/telefone";
 import { CentralProvider } from "./lib/central";
 import { useNaoLidas, podeVerSetor } from "./lib/whatsapp";
@@ -152,6 +153,7 @@ export default function App() {
     <TelefoneProvider>
     <CentralProvider>
     <div className="app">
+      <AvisoVersao />
       <div className="topo-movel">
         <img src="/logo-branco.png" alt={CLINICA.nome} style={{ height: 22 }} />
         <button className="sutil" style={{ color: "white" }} onClick={() => setMenuAberto(true)}>☰ Menu</button>
