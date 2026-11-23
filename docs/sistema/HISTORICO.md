@@ -1167,6 +1167,14 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
 - `app/public/manifest.webmanifest` (nome "Consumed Sistema", abre em janela própria) + links no `index.html`.
   Conferido no Chrome: manifesto sem erros. Com isso o Chrome oferece "Instalar" o sistema como aplicativo.
 
+## 23/11/2026 — WhatsApp da Orientação Cirúrgica: Meta parou de entregar (corrigido)
+- Sintoma: mensagens para +55 21 96724-7984 não apareciam no sistema. Logs: última entrega da Meta em 20/11 ~00:43 UTC;
+  às 07:01 UTC de 20/11 houve um `GET` de verificação do webhook com token diferente do `WHATSAPP_VERIFY_TOKEN` (403) e,
+  depois disso, nenhum `POST`. Ou seja, a configuração do webhook na Meta foi mexida/ficou inválida.
+- Correção: a dona reconfigurou o webhook no app da Meta (com o Claude no Chrome). Confirmado no banco: mensagem recebida,
+  texto enviado e **áudio MP3 enviado, entregue, guardado e transcrito** (primeiro teste real do envio de áudio).
+- Para diagnosticar de novo: `function_edge_logs` com `event_message like '%whatsapp-webhook%'` (POST 200 = entregas da
+  Meta; GET 403 = tentativa de verificação com token errado).
 ## 23/11/2026 — Link de primeiro acesso para a equipe
 - Pedido da dona: sem e-mail cadastrado, não havia como mandar o acesso ao funcionário.
 - Tela Equipe → 🔑: depois de "Criar / redefinir acesso", aparece uma mensagem pronta (link + usuário + senha temporária)
