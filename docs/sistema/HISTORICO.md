@@ -1395,6 +1395,29 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
   ícones da Central (Conversas · Atendimentos · Ferramentas) ficou clara e perdeu o botão "Sistema". Em telas até 1500 px a
   ficha do paciente à direita se esconde para sobrar espaço para a conversa (continua em Opções → Agendamentos e ficha).
 
+## 23/11/2026 (noite) — Agenda: botões rápidos, busca, lista, nota rápida e confirmações pelo WhatsApp
+- Pedido da dona: "tudo é importante"; prioridade para achar o paciente rápido, disparar as confirmações do dia
+  seguinte direto da agenda, botões rápidos (encaixe, chegada, atendido, retorno, status) e preencher a nota rápido
+  (ex.: entregar laudo, jejum, paciente indicação).
+- **Barra de botões rápidos** (`app/src/pages/Agenda.tsx`), age no paciente selecionado (um clique): Incluir, Encaixar
+  (mesmo médico e horário), Chegada (consulta particular abre a escolha cartão/Pix), Atendido (só depois da chegada),
+  Retorno (abre agendamento tipo retorno já com o paciente), Status… (agendado, confirmado por canal, na espera,
+  atendido, faltou, cancelar), Nota, Pedir confirmação (WhatsApp), Remarcar, Abrir.
+  `DetalheAgendamento` ganhou `modoInicial` para abrir direto em cancelar/remarcar/chegada.
+- **Busca de paciente** acima da agenda (nome, prontuário, CPF, telefone): mostra os agendamentos dos últimos 90 dias e
+  os futuros; um clique leva ao dia e seleciona; botão para agendar o paciente.
+- **Nota rápida** no quadro de resumo: botões prontos (Entregar laudo, Jejum, Indicação, Trazer exames anteriores,
+  Dilatar, Acompanhante, Prioridade, Pendência no cadastro; na Orientação, os motivos da orientação), salva sozinha ao
+  sair do campo ou com Ctrl+Enter. A nota aparece em amarelo dentro do quadradinho do paciente na grade.
+- **Visão em lista** (Hora | Paciente | Agenda | Convênio | Status/chegada | Notas), com "mostrar horários vagos"
+  (clique no vago agenda). A escolha Grade/Lista fica lembrada no computador. **Filtro de período**: dia todo, manhã
+  (até 12h), tarde (12–18h), noite (depois das 18h).
+- **Confirmações pelo WhatsApp:** botão "📲 Confirmações do dia" (recepção/admin) abre a janela de lembretes já no dia
+  seguinte (ou no dia mostrado, se for futuro). "📲 Pedir confirmação" manda para um paciente só (pode repetir).
+  Função `whatsapp-enviar` versão 13: ação `lembretes` aceita `agendamento_id` e **ignora `tipo = 'orientacao'`**
+  (item pendente resolvido). Continua dependendo do número da clínica ligado à Meta e do modelo `lembrete_consulta`
+  aprovado; até lá, os botões mostram o aviso "ainda não foi ligado".
+- Sem mudança de banco.
 ### 23/11/2026 — Orientação cirúrgica com o mesmo layout da Central de atendimento
 - Pedido da dona: a parte de WhatsApp da aba Orientação cirúrgica deve ficar igual à Central de atendimento.
 - `/orientacao-cirurgica` agora abre a tela da Central (`Central.tsx`, prop `setor="orientacao"`), dentro do sistema com o menu ao lado, como `/central`.

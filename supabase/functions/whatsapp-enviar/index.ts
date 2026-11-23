@@ -10,6 +10,8 @@
 //   retomar    → { conversa_id } ou { paciente_id, setor? }  envia o modelo "retomar_conversa"
 //                (ou "retomar_orientacao" no número da orientação) — fora das 24 h
 //   lembretes  → { data: "AAAA-MM-DD", simular?: true }  lembrete com botões para os agendamentos do dia
+//                ou { agendamento_id, simular?: true }  só para um paciente (botão da Agenda; pode repetir)
+//                A Orientação Cirúrgica (tipo 'orientacao', só registro) nunca recebe lembrete.
 //                (só recepção e admin; "simular" só conta, não envia)
 //   midia      → { mensagem_id }  abre a foto/áudio/documento que o paciente mandou (cópia guardada no
 //                Storage, bucket "whatsapp-midia"; se ainda não houver, busca na Meta e guarda)
@@ -322,17 +324,23 @@ Deno.serve(async (req) => {
   if (corpo.acao === "lembretes") {
     if (!atende("clinica")) return semPermissao("clinica");
     if (!ligado("clinica")) return naoLigado("clinica");
+    const umSo = typeof corpo.agendamento_id === "string" && corpo.agendamento_id ? String(corpo.agendamento_id) : "";
     const dia = String(corpo.data ?? "");
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return resposta({ erro: "Data inválida." }, 400);
+    if (!umSo && !/^\d{4}-\d{2}-\d{2}$/.test(dia)) return resposta({ erro: "Data inválida." }, 400);
     const modelo = await lerModelo(db, "lembrete_consulta");
     if (!modelo?.ativo) return resposta({ erro: "O modelo de lembrete ainda não foi aprovado/ligado (WhatsApp → Modelos)." }, 409);
 
-    // Brasil não tem horário de verão desde 2019: o dia vai de 00:00 a 24:00 em -03:00
-    const ini = new Date(`${dia}T00:00:00-03:00`);
-    const fim = new Date(ini.getTime() + 24 * 60 * 60 * 1000);
-    const { data: ags, error } = await db.from("agendamentos")
+    let q = db.from("agendamentos")
       .select("id, inicio, status, pacientes(id, nome, nome_social, telefone, whatsapp_autorizado), profissionais(nome)")
-      .gte("inicio", ini.toISOString()).lt("inicio", fim.toISOString()).eq("status", "agendado").order("inicio");
+      .eq("status", "agendado").neq("tipo", "orientacao").order("inicio");
+    if (umSo) q = q.eq("id", umSo);
+    else {
+      // Brasil não tem horário de verão desde 2019: o dia vai de 00:00 a 24:00 em -03:00
+      const ini = new Date(`${dia}T00:00:00-03:00`);
+      const fim = new Date(ini.getTime() + 24 * 60 * 60 * 1000);
+      q = q.gte("inicio", ini.toISOString()).lt("inicio", fim.toISOString());
+    }
+    const { data: ags, error } = await q;
     if (error) return resposta({ erro: error.message }, 500);
 
     const ids = (ags ?? []).map((a: Json) => a.id);
@@ -346,7 +354,8 @@ Deno.serve(async (req) => {
     const fila: Json[] = [];
     for (const a of (ags ?? []) as Json[]) {
       const p = a.pacientes;
-      if (enviados.has(a.id)) { res.ja_enviados++; continue; }
+      // em lote não repete; pedido de um paciente só (botão da Agenda) manda de novo
+      if (enviados.has(a.id)) { res.ja_enviados++; if (!umSo) continue; }
       if (p.whatsapp_autorizado === false) { res.sem_autorizacao++; continue; }
       if (p.whatsapp_autorizado !== true) { res.nao_perguntado++; continue; }
       const { data: numero } = await db.rpc("telefone_whatsapp", { p: p.telefone });
