@@ -18,7 +18,7 @@ const ICONE_TIPO: Record<string, string> = {
   localizacao: "📍 Localização", contato: "👤 Contato",
 };
 
-function nomeConversa(c: Conversa): string {
+export function nomeConversa(c: Conversa): string {
   if (c.pacientes) return nomeExibicao(c.pacientes);
   return c.nome_contato || fmtNumeroWA(c.telefone);
 }
@@ -299,9 +299,11 @@ function quandoCurto(d: string): string {
 }
 
 // ---------------------------------------------------------------------------
-function Chat(props: {
+export function Chat(props: {
   conversa: Conversa; podeResponder: boolean; quemResponde: string; destaque?: string | null;
   aoMudar: () => void; aoVoltar: () => void;
+  /** Tela da Central de atendimento: cabeçalho no jeito do Talklogos (Encerrar conversa / Opções) */
+  central?: { aoAgendar: () => void };
 }) {
   const c = props.conversa;
   const { eu } = useAuth();
@@ -312,6 +314,8 @@ function Chat(props: {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
   const [ligar, setLigar] = useState(false);
+  const [opcoes, setOpcoes] = useState(false);
+  const [transferir, setTransferir] = useState(false);
   const fim = useRef<HTMLDivElement>(null);
 
   // As 500 mais recentes (com histórico importado do celular a conversa pode ter milhares)
@@ -464,8 +468,50 @@ function Chat(props: {
   const nomeEquipe = (id: string | null) => equipe.dados?.find((x) => x.id === id)?.nome.split(" ")[0];
   let diaAnterior = "";
 
+  const comigo = !!eu && c.responsavel_id === eu.id && !c.arquivada;
   return (
     <div className="wa-chat-corpo">
+      {props.central ? (
+        <div className="ct-cab">
+          <button className="sutil wa-voltar" onClick={props.aoVoltar}>←</button>
+          <div className="ct-avatar">{iniciais(nomeConversa(c))}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="ct-nome"><span className="ct-canal" title="WhatsApp">💬</span> <b>{nomeConversa(c)}</b> <span className="muted">· {fmtNumeroWA(c.telefone)}</span></div>
+            <div className={"ct-desde" + (c.arquivada ? " encerrada" : !c.responsavel_id ? " fila" : "")}>
+              {c.arquivada ? "Conversa encerrada"
+                : c.responsavel_id ? `Em conversa desde ${c.atendido_desde ? fmtDataHora(c.atendido_desde) : "—"} com ${c.responsavel_id === eu?.id ? "você" : nomeEquipe(c.responsavel_id) ?? "outra pessoa"}`
+                : `Na fila, esperando atendimento${c.fila_desde ? " desde " + fmtHora(c.fila_desde) : ""}`}
+            </div>
+            {c.pacientes && (
+              <div className="ct-paciente">👤 Paciente <Link to={`/pacientes/${c.pacientes.id}`}><b>{nomeExibicao(c.pacientes)}</b></Link> · Pront. {c.pacientes.numero_prontuario}</div>
+            )}
+          </div>
+          {podeResponder && (
+            <div className="ct-acoes">
+              {comigo ? (
+                <button className="ct-encerrar" onClick={() => { if (confirm("Encerrar esta conversa? Se o paciente escrever de novo, ela volta para a fila.")) void mudar({ arquivada: true }); }}>Encerrar conversa</button>
+              ) : (
+                <button className="ct-iniciar" onClick={() => eu && void mudar({ responsavel_id: eu.id, arquivada: false })}>
+                  {c.responsavel_id && !c.arquivada ? `Assumir (está com ${nomeEquipe(c.responsavel_id) ?? "outra pessoa"})` : "Iniciar atendimento"}
+                </button>
+              )}
+              <div className="ct-opcoes-caixa">
+                <button className="ct-opcoes" onClick={() => setOpcoes(!opcoes)}>Opções ▾</button>
+                {opcoes && (
+                  <div className="ct-menu" onMouseLeave={() => setOpcoes(false)}>
+                    <button onClick={() => { setOpcoes(false); setLigar(true); }}>{c.paciente_id ? "Trocar paciente" : "Associar paciente"}</button>
+                    <button onClick={() => { setOpcoes(false); props.central!.aoAgendar(); }}>Agendar</button>
+                    {c.paciente_id && <Link to={`/pacientes/${c.paciente_id}`} onClick={() => setOpcoes(false)}>Agendamentos e ficha</Link>}
+                    <button onClick={() => { setOpcoes(false); setTransferir(true); }}>Transferir para colega</button>
+                    {comigo && <button onClick={() => { setOpcoes(false); void mudar({ responsavel_id: null }); }}>Devolver para a fila</button>}
+                  </div>
+                )}
+              </div>
+              <BotaoLigar numero={c.telefone} pacienteId={c.pacientes?.id ?? c.paciente_id} rotulo="📞" />
+            </div>
+          )}
+        </div>
+      ) : (
       <div className="wa-cab">
         <button className="sutil wa-voltar" onClick={props.aoVoltar}>←</button>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -490,6 +536,7 @@ function Chat(props: {
           {podeResponder && <button className="mini" onClick={() => mudar({ arquivada: !c.arquivada })}>{c.arquivada ? "Desarquivar" : "Arquivar"}</button>}
         </div>
       </div>
+      )}
 
       {!c.paciente_id && (
         <Aviso tipo="info">Este número não foi reconhecido no cadastro (ou é de mais de um paciente). Use “Ligar a um paciente”.</Aviso>
@@ -577,8 +624,12 @@ function Chat(props: {
         </div>
       )}
 
+      {transferir && (
+        <Transferir setor={c.setor ?? "clinica"} atual={c.responsavel_id} aoFechar={() => setTransferir(false)}
+          aoEscolher={async (id) => { await mudar({ responsavel_id: id, arquivada: false }); setTransferir(false); }} />
+      )}
       {ligar && (
-        <Modal titulo="Ligar a um paciente" aoFechar={() => setLigar(false)}>
+        <Modal titulo={props.central ? "Associar a um paciente" : "Ligar a um paciente"} aoFechar={() => setLigar(false)}>
           <p className="muted pequeno">Escolha de quem é este WhatsApp ({fmtNumeroWA(c.telefone)}).</p>
           <BuscaPaciente autoFocus aoEscolher={async (p) => { await mudar({ paciente_id: p.id }); setLigar(false); }} />
           {c.paciente_id && (
@@ -594,6 +645,43 @@ function Chat(props: {
   );
 }
 
+export function iniciais(nome: string): string {
+  const p = nome.replace(/[^\p{L}\s]/gu, " ").trim().split(/\s+/).filter(Boolean);
+  if (p.length === 0) return "?";
+  return ((p[0][0] ?? "") + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
+}
+
+/** Transferir a conversa para uma colega do mesmo setor (aparece o status de cada uma) */
+function Transferir(props: { setor: SetorWA; atual: string | null; aoFechar: () => void; aoEscolher: (id: string) => void }) {
+  const lista = useCarregar(async () => {
+    const [eq, st] = await Promise.all([
+      supabase.from("profissionais").select("id, nome, funcao, orientacao_cirurgica").eq("ativo", true).order("nome"),
+      supabase.from("central_status").select("profissional_id, status"),
+    ]);
+    const status = new Map(((st.data ?? []) as { profissional_id: string; status: StatusCentral }[]).map((x) => [x.profissional_id, x.status]));
+    return ((ok(eq) as { id: string; nome: string; funcao: string; orientacao_cirurgica: boolean }[]))
+      .filter((p) => props.setor === "orientacao" ? p.orientacao_cirurgica : !p.orientacao_cirurgica && ["recepcao", "admin"].includes(p.funcao))
+      .map((p) => ({ ...p, status: status.get(p.id) ?? null }));
+  }, [props.setor]);
+  return (
+    <Modal titulo="Transferir para quem?" aoFechar={props.aoFechar}>
+      <Aviso>{lista.erro}</Aviso>
+      {!lista.dados ? <Carregando /> : (
+        <div className="ct-transferir">
+          {lista.dados.filter((p) => p.id !== props.atual).length === 0 && <div className="muted">Nenhuma colega cadastrada para atender este setor.</div>}
+          {lista.dados.filter((p) => p.id !== props.atual).map((p) => (
+            <button key={p.id} onClick={() => props.aoEscolher(p.id)}>
+              <span className="ct-avatar pequeno">{iniciais(p.nome)}</span>
+              <span style={{ flex: 1, textAlign: "left" }}>{p.nome}</span>
+              {p.status && <span className="pequeno" style={{ color: STATUS_CENTRAL[p.status].cor }}>● {STATUS_CENTRAL[p.status].rotulo}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 // ---------------------------------------------------------------------------
 interface PacienteFichaWA {
   id: string; nome: string; nome_social: string | null; numero_prontuario: number; data_nascimento: string | null;
@@ -602,7 +690,7 @@ interface PacienteFichaWA {
 interface ProximoAg { id: string; inicio: string; tipo: string; status: string; profissionais: { nome: string } | null }
 
 /** Ficha resumida do paciente ao lado da conversa, com os próximos agendamentos */
-function FichaPaciente({ conversa: c }: { conversa: Conversa }) {
+export function FichaPaciente({ conversa: c }: { conversa: Conversa }) {
   const dados = useCarregar(async () => {
     if (!c.paciente_id) return null;
     const p = ok(await supabase.from("pacientes")

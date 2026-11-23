@@ -1244,3 +1244,24 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
     (cód. 63), ou outra consulta da tabela (`components/ConsultaParticular.tsx`, na Recepção e no "Paciente chegou" da
     Agenda). Fica em `agendamentos.consulta_procedimento_id`; `tg_agendamento_conta` lança essa consulta na conta
     (sem escolha = consulta padrão). Testado no banco com rollback: conta saiu com "Consulta Dinheiro/pix = 250,00".
+
+## 23/11/2026 (noite) — Central de atendimento: tela única no jeito do Talklogos (migração 0081)
+- **Pedido da dona:** "fazendo tudo parecido, a dificuldade do funcionário diminui muito". Referência: fotos e levantamento
+  em `docs/micrologos/modulos/talklogos-central-atendimento.md`. Telefone entra depois (aguardando a Telecall); a aba
+  **Telefone** já fica criada.
+- **Tela `/central`** (menu 🎧 Central de atendimento; recepção/admin e quem atende a Orientação, cada um na sua fila;
+  tela cheia sem o menu do sistema, como o Talklogos; `app/src/pages/Central.tsx`):
+  menu da esquerda (Conversas · Atendimentos encerrados · voltar ao Sistema); coluna do meio com **status ▾** (Disponível /
+  Pausa / Almoço, com o aviso de quantas conversas voltaram para a fila), Buscar, **equipe com iniciais e status**
+  (Todos / Livres / Em pausa), abas **Canais** e **Telefone**, botão **Pegar o próximo**, **Fila de espera** (⏳ há X min) e
+  **Meus atendimentos** (Todos / Não respondidos); cartões com iniciais, origem ("WhatsApp oficial · Central"), começo da
+  última mensagem e etiqueta **Atendendo / Não respondido**; conversa no centro; ficha do paciente à direita.
+- **Cabeçalho da conversa no jeito do Talklogos** (`Chat` com `central`, em `app/src/pages/WhatsApp.tsx`): "Em conversa
+  desde dd/mm hh:mm com <atendente>", linha do paciente com prontuário, botões **Encerrar conversa** (arquiva; se o paciente
+  escrever de novo volta para a fila — regra 0015) / **Iniciar atendimento** (assume e reabre) e **Opções ▾**: Associar
+  paciente, Agendar (abre o agendamento já com o paciente), Agendamentos e ficha, **Transferir para colega** (lista com o
+  status de cada uma), Devolver para a fila. A tela antiga `/whatsapp` continua igual para quem só consulta.
+- **Migração 0081 `central_atendido_desde`** (aplicada): `whatsapp_conversas.atendido_desde`, preenchido pelo gatilho da
+  fila quando alguém assume/recebe transferência. Testado no banco real (transação desfeita): iniciar, transferir, encerrar
+  mantendo quem atendeu e saindo da fila. Advisors sem novidade.
+- Testes de tela com dados simulados (computador e celular). Falta o teste com o número da Central ligado na Meta.

@@ -13,6 +13,7 @@ export interface Conversa {
   paciente_id: string | null;
   responsavel_id: string | null;
   fila_desde?: string | null;
+  atendido_desde?: string | null;
   ultima_mensagem_em: string | null;
   ultima_recebida_em: string | null;
   nao_lidas: number;
