@@ -1374,3 +1374,13 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
   "✅ Atendido". Recepção, fila do médico e Início ignoram `tipo = 'orientacao'`. Horários e bloqueios inclui a agenda.
 - Pendente: lembretes do WhatsApp (função whatsapp-enviar) ignorarem `orientacao` — hoje os lembretes nem rodam
   (número da clínica não está ligado ao sistema); etapa 2: calendário de 3 meses com ocupação + quadro de resumo.
+
+### 23/11/2026 — Agenda no estilo do Micrologos (etapa 2) — migração 0095
+- **Calendário de 3 meses** em cima da Agenda (`app/src/components/AgendaTopo.tsx`): cada dia colorido pela ocupação das
+  agendas mostradas (vagas = horários cadastrados ÷ duração; ocupados = agendamentos não cancelados/faltas): 100%,
+  51–99%, 1–50%, 0%, "não atende". Clicar no dia abre o dia.
+- **Quadro de resumo**: um clique no paciente mostra telefones (principal e secundário), nascimento/idade, convênio,
+  **Notas**, chegada, **Inclusão** (quem/quando) e **Alteração** (quem/quando); dois cliques (ou o botão) abrem o
+  agendamento. **0095:** `agendamentos.atualizado_por` (gatilho `quem_alterou`).
+- **Observação do dia** por coluna (tabela `agenda_obs_dia`, RLS para quem vê a agenda, auditada): "＋ obs. do dia" no topo.
+- Só a coluna da Orientação na tela → grade de 10 em 10 min; com médicos, 15 min.

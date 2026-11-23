@@ -525,3 +525,31 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .ct-lig { cursor: pointer; }
 .ct-lig .ct-avatar { font-size: 1.05rem; }
 .ct-lig-acoes { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; align-items: center; }
+
+/* Agenda: parte de cima no estilo do Micrologos (calendário de 3 meses + resumo) */
+.agenda-topo { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; margin-bottom: 12px; }
+.agenda-topo .painel + .painel { margin-top: 0; }
+@media (max-width: 1100px) { .agenda-topo { grid-template-columns: 1fr; } }
+.minical-legenda { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; align-items: center; }
+.minical-legenda span[class^="oc-"] { padding: 1px 8px; border-radius: 4px; }
+.minical-meses { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 760px) { .minical-meses { grid-template-columns: 1fr; } .minical-mes:not(:first-child) { display: none; } }
+.minical-titulo { text-align: center; font-weight: 600; font-size: 0.85rem; text-transform: capitalize; margin-bottom: 4px; }
+.minical-grade { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.minical-cab { text-align: center; font-size: 0.7rem; color: var(--suave); }
+.minical-dia { padding: 3px 0; font-size: 0.78rem; border: 1px solid transparent; border-radius: 4px; background: #f4f6f8; cursor: pointer; min-width: 0; }
+.minical-dia.hoje { font-weight: 700; text-decoration: underline; }
+.minical-dia.sel { border-color: #1f4fd1; box-shadow: 0 0 0 1px #1f4fd1 inset; }
+.oc-100 { background: #f6b1b8 !important; }
+.oc-51 { background: #f8cf6a !important; }
+.oc-1 { background: #3fbf9b !important; color: #06281e; }
+.oc-0 { background: #d6f2ea !important; }
+.oc-nao { background: #f2f3f5 !important; color: #9aa3ad; }
+.resumo-ag { font-size: 0.85rem; }
+.resumo-ag.vazio { color: var(--suave); display: flex; align-items: center; height: 100%; }
+.resumo-ag-dados { display: grid; grid-template-columns: 88px 1fr; gap: 3px 8px; margin: 8px 0; }
+.resumo-ag-dados dt { color: var(--suave); }
+.resumo-ag-dados dd { margin: 0; overflow-wrap: anywhere; }
+.resumo-notas { background: #fffbe6; border-radius: 4px; padding: 2px 6px; }
+.agenda .col-cab .obs-dia { display: block; width: 100%; text-align: left; font-size: 0.75rem; font-weight: 400; margin-top: 4px; padding: 2px 6px; border: 1px dashed #d6dbe1; border-radius: 4px; background: #fffdf2; white-space: normal; }
+.ag-item.sel { outline: 2px solid #1f4fd1; outline-offset: 1px; }

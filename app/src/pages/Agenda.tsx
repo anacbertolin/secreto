@@ -3,13 +3,17 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando } from "../components/ui";
 import { NovoAgendamento, DetalheAgendamento } from "../components/AgendamentoModais";
+import { MiniCalendario, ResumoAgendamento } from "../components/AgendaTopo";
+import { Modal } from "../components/ui";
 import {
   listaAgendas, listaConvenios, listaLocais, nomeAgenda, ehAgendaOrientacao, SELECT_AGENDA,
   type Agendamento, type Horario, type Bloqueio,
 } from "../lib/dados";
 import { STATUS_AGENDA, TIPOS_AGENDA, fmtDataLonga, fmtHora, inicioDoDia, isoDia, somaDias, nomeExibicao } from "../lib/util";
+import { msgErro } from "../lib/supabase";
 
-const PASSO = 15; // minutos por linha da grade
+// minutos por linha da grade: 15 (médicos); 10 quando só a agenda da Orientação Cirúrgica está na tela
+const PASSO_PADRAO = 15;
 
 function minutosDoDia(t: string) {
   const [h, m] = t.split(":").map(Number);
@@ -23,26 +27,52 @@ export default function Agenda() {
   const [filtro, setFiltro] = useState<string>(eu?.funcao === "medico" || ehAgendaOrientacao(eu) ? eu!.id : "todos");
   const [novo, setNovo] = useState<null | { profissional_id?: string; inicio?: Date; duracao?: number; local_id?: string | null; encaixe?: boolean }>(null);
   const [aberto, setAberto] = useState<Agendamento | null>(null);
+  const [selecionado, setSelecionado] = useState<Agendamento | null>(null);
+  const [versao, setVersao] = useState(0); // força o calendário de 3 meses a recontar a ocupação
+  const [editObs, setEditObs] = useState<{ profissional_id: string; nome: string; texto: string } | null>(null);
 
   const base = useCarregar(async () => {
-    const [medicos, convenios, locais] = await Promise.all([listaAgendas(), listaConvenios(), listaLocais()]);
-    return { medicos, convenios, locais };
+    const [medicos, convenios, locais, equipe] = await Promise.all([
+      listaAgendas(), listaConvenios(), listaLocais(),
+      supabase.from("profissionais").select("id, nome").then((r) => ok(r) as { id: string; nome: string }[]),
+    ]);
+    return { medicos, convenios, locais, equipe };
   }, []);
 
   const doDia = useCarregar(async () => {
     const fimDia = somaDias(dia, 1);
-    const [ags, hors, blqs] = await Promise.all([
+    const [ags, hors, blqs, obs] = await Promise.all([
       supabase.from("agendamentos").select(SELECT_AGENDA).gte("inicio", dia.toISOString()).lt("inicio", fimDia.toISOString()).order("inicio"),
       supabase.from("horarios_profissional").select("*").eq("ativo", true).eq("dia_semana", dia.getDay()),
       supabase.from("bloqueios_agenda").select("*").eq("ativo", true).lt("inicio", fimDia.toISOString()).gt("fim", dia.toISOString()),
+      supabase.from("agenda_obs_dia").select("profissional_id, texto").eq("dia", isoDia(dia)),
     ]);
     const d = isoDia(dia);
     const horarios = (ok(hors) as Horario[]).filter((h) => (!h.vigente_de || h.vigente_de <= d) && (!h.vigente_ate || h.vigente_ate >= d));
-    return { ags: ok(ags) as Agendamento[], horarios, bloqueios: ok(blqs) as Bloqueio[] };
+    const obsDia = new Map((ok(obs) as { profissional_id: string; texto: string }[]).map((o) => [o.profissional_id, o.texto]));
+    return { ags: ok(ags) as Agendamento[], horarios, bloqueios: ok(blqs) as Bloqueio[], obsDia };
   }, [dia.getTime()]);
 
   const medicos = base.dados?.medicos ?? [];
   const colunas = filtro === "todos" ? medicos : medicos.filter((m) => m.id === filtro);
+  const PASSO = colunas.length > 0 && colunas.every((c) => ehAgendaOrientacao(c)) ? 10 : PASSO_PADRAO;
+  // o resumo acompanha as alterações do dia (ex.: depois de marcar a chegada)
+  const sel = selecionado ? (doDia.dados?.ags.find((a) => a.id === selecionado.id) ?? null) : null;
+  const nomeDe = (id?: string | null) => base.dados?.equipe.find((x) => x.id === id)?.nome ?? "";
+  function recarregar() {
+    doDia.recarregar();
+    setVersao((v) => v + 1);
+  }
+  async function salvarObs() {
+    if (!editObs) return;
+    const t = editObs.texto.trim();
+    const r = t
+      ? await supabase.from("agenda_obs_dia").upsert({ profissional_id: editObs.profissional_id, dia: isoDia(dia), texto: t }, { onConflict: "profissional_id,dia" })
+      : await supabase.from("agenda_obs_dia").delete().eq("profissional_id", editObs.profissional_id).eq("dia", isoDia(dia));
+    if (r.error) return alert(msgErro(r.error));
+    setEditObs(null);
+    doDia.recarregar();
+  }
   const [mostrarCancelados, setMostrarCancelados] = useState(false);
 
   // Faixa de horas exibida: do primeiro ao último horário de atendimento (padrão 7h–19h)
@@ -59,7 +89,7 @@ export default function Agenda() {
       b = Math.max(b, i.getHours() * 60 + i.getMinutes() + PASSO);
     }
     return { iniMin: Math.floor(a / PASSO) * PASSO, fimMin: Math.ceil(b / PASSO) * PASSO };
-  }, [doDia.dados, colunas]);
+  }, [doDia.dados, colunas, PASSO]);
 
   const linhas: number[] = [];
   for (let m = iniMin; m < fimMin; m += PASSO) linhas.push(m);
@@ -108,6 +138,22 @@ export default function Agenda() {
         </div>
       </div>
       <Aviso>{base.erro || doDia.erro}</Aviso>
+      {base.dados && (
+        <div className="agenda-topo">
+          <div className="painel" style={{ padding: 10 }}>
+            <MiniCalendario dia={dia} aoEscolher={(d) => { setDia(inicioDoDia(d)); setSelecionado(null); }} colunas={colunas.map((c) => c.id)} versao={versao} />
+          </div>
+          <div className="painel" style={{ padding: 10 }}>
+            <ResumoAgendamento
+              ag={sel}
+              nomeDe={nomeDe}
+              convenio={(id) => base.dados!.convenios.find((c) => c.id === id)?.nome ?? ""}
+              agenda={(id) => { const m = medicos.find((x) => x.id === id); return m ? nomeAgenda(m) : ""; }}
+              aoAbrir={() => sel && setAberto(sel)}
+            />
+          </div>
+        </div>
+      )}
       {base.carregando || (doDia.carregando && !doDia.dados) ? <Carregando /> : medicos.length === 0 ? (
         <div className="painel vazio">
           Nenhum médico cadastrado ainda. A administração cadastra a equipe em <b>Cadastros → Equipe</b> e os horários em <b>Horários e bloqueios</b>.
@@ -125,6 +171,10 @@ export default function Agenda() {
                 <div key={c.id} className="col-cab">
                   {nomeAgenda(c)}
                   {ehAgendaOrientacao(c) && <div className="pequeno muted" style={{ fontWeight: 400 }}>{c.nome.split(" ")[0]} · só registro, sem faturamento</div>}
+                  <button className="obs-dia" title="Observação do dia desta agenda"
+                    onClick={() => setEditObs({ profissional_id: c.id, nome: nomeAgenda(c), texto: doDia.dados?.obsDia.get(c.id) ?? "" })}>
+                    {doDia.dados?.obsDia.get(c.id) ? <>📌 {doDia.dados.obsDia.get(c.id)}</> : <span className="muted">＋ obs. do dia</span>}
+                  </button>
                 </div>
               ))}
               {linhas.map((min) => (
@@ -150,11 +200,12 @@ export default function Agenda() {
                           });
                         }}
                       >
-                        {b && itens.length === 0 && min === Math.max(iniMin, minutosBloqueio(b, dia)) && <span className="pequeno muted">🚫 {b.motivo}</span>}
+                        {b && itens.length === 0 && min === Math.max(iniMin, minutosBloqueio(b, dia, PASSO)) && <span className="pequeno muted">🚫 {b.motivo}</span>}
                         {itens.map((a) => {
                           const st = STATUS_AGENDA[a.status];
                           return (
-                            <button key={a.id} className={"ag-item " + st.cor} onClick={() => setAberto(a)}>
+                            <button key={a.id} className={"ag-item " + st.cor + (sel?.id === a.id ? " sel" : "")}
+                              onClick={() => setSelecionado(a)} onDoubleClick={() => setAberto(a)}>
                               <b>{fmtHora(a.inicio)}</b> {nomeExibicao(a.pacientes!)}
                               <div className="pequeno muted">
                                 {a.tipo === "orientacao"
@@ -180,7 +231,7 @@ export default function Agenda() {
           locais={base.dados.locais}
           inicial={novo}
           aoFechar={() => setNovo(null)}
-          aoSalvar={() => { setNovo(null); doDia.recarregar(); }}
+          aoSalvar={() => { setNovo(null); recarregar(); }}
         />
       )}
       {aberto && base.dados && (
@@ -190,17 +241,24 @@ export default function Agenda() {
           convenios={base.dados.convenios}
           locais={base.dados.locais}
           aoFechar={() => setAberto(null)}
-          aoAlterar={() => { setAberto(null); doDia.recarregar(); }}
+          aoAlterar={() => { setAberto(null); recarregar(); }}
         />
+      )}
+      {editObs && (
+        <Modal titulo={`Observação do dia — ${editObs.nome}`} aoFechar={() => setEditObs(null)}
+          rodape={<><button onClick={() => setEditObs(null)}>Cancelar</button><button className="primario" onClick={salvarObs}>Salvar</button></>}>
+          <p className="muted pequeno" style={{ marginTop: 0 }}>{fmtDataLonga(dia)}. Aparece no topo da coluna para toda a equipe (ex.: “chega às 10h”, “não atende convênio X hoje”). Deixe em branco para apagar.</p>
+          <textarea rows={4} autoFocus value={editObs.texto} onChange={(e) => setEditObs({ ...editObs, texto: e.target.value })} />
+        </Modal>
       )}
     </div>
   );
 }
 
-function minutosBloqueio(b: Bloqueio, dia: Date) {
+function minutosBloqueio(b: Bloqueio, dia: Date, passo: number) {
   const i = new Date(b.inicio);
   if (i < dia) return 0;
-  return Math.floor((i.getHours() * 60 + i.getMinutes()) / PASSO) * PASSO;
+  return Math.floor((i.getHours() * 60 + i.getMinutes()) / passo) * passo;
 }
 
 function Linha({ min, children }: { min: number; children: React.ReactNode }) {
