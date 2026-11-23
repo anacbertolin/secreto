@@ -28,6 +28,7 @@ sabemos sobre ele, para servir de referência durante o desenvolvimento e a **im
 | [modulos/clinic-internacao-estoque.md](modulos/clinic-internacao-estoque.md) | Centro cirúrgico, internação, prescrição de internados, estoque e compras |
 | [modulos/cash-financeiro-paylogos.md](modulos/cash-financeiro-paylogos.md) | Financeiro, notas fiscais e Paylogos |
 | [modulos/talklogos-analytics-quality.md](modulos/talklogos-analytics-quality.md) | Omnichannel, bot e IA, campanhas, BI e módulo Quality |
+| [modulos/talklogos-central-atendimento.md](modulos/talklogos-central-atendimento.md) | Central de atendimento como a equipe usa hoje (tela, fila, o que manter e melhorar) e comparação com o sistema novo |
 | [modulos/cadastros-e-tabelas.md](modulos/cadastros-e-tabelas.md) | Todos os cadastros e tabelas de apoio |
 | **Dados e migração** | |
 | [03-modelo-de-dados.md](03-modelo-de-dados.md) | Entidades identificadas, relacionamentos e campos conhecidos |
