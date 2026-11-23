@@ -1319,3 +1319,14 @@ Conferido no banco local e no real (transação desfeita); tela com dados simula
 - Tela: **Repasse médico → aba "Lentes"** (custo e preço de venda editáveis, nova lente).
 - Próximo: escolher a lente do catálogo/estoque no lançamento (custo real + baixa sem duplicar a da cirurgia) e a regra da
   venda de lente premium ao paciente (falta a dona definir preço de venda e divisão).
+
+### 23/11 (noite) — Venda de lente ao paciente
+- **Preços de venda (dona):** lente simples (Hoya, monofocal) **R$ 2.900**; **Clareon** (tórica ou não; "independência
+  de visão para longe") **R$ 7.500**; multifocais **Vivity e PanOptix R$ 15.000** (valor total). Gravados em
+  `lentes_catalogo.preco_venda` (dado). Usado 15.000 também nas versões tóricas de Vivity/PanOptix e 7.500 nas Clareon
+  monofocais (SY60WF, AutonoMe) — confirmar com a dona.
+- **Regra (dona):** igual à das cirurgias — valor − imposto − taxa do cartão − **custo da lente** = sobra → 20% clínica /
+  80% médico, conforme as parcelas. Usada principalmente em convênios (Unimed e outros): o convênio paga a cirurgia e o
+  paciente paga a lente à parte. Entra no faturamento de convênios quando ele estiver completo.
+- Tela: no "Novo lançamento", campo **"Ou: venda de lente ao paciente (catálogo)"** preenche descrição, valor (preço de venda)
+  e o custo da lente. Ex.: PanOptix R$ 15.000 PIX → médico 6.840,84; em 12x → 5.674,44 (472,87/mês).
