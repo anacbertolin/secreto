@@ -190,15 +190,56 @@ function SenhaAcesso({ p, aoFechar }: { p: Profissional; aoFechar: () => void })
         <>
           <p>Isto cria o acesso de <b>{loginExibicao(p.email)}</b> (ou troca a senha, se ela esqueceu) com a senha temporária abaixo.</p>
           <p style={{ fontSize: "1.6rem", fontFamily: "monospace", letterSpacing: 2, textAlign: "center", background: "#f3f5f7", padding: 12, borderRadius: 8 }}>{senha}</p>
-          <p className="muted pequeno">Entregue a senha pessoalmente ou por telefone. No primeiro acesso a pessoa é obrigada a criar a própria senha.</p>
+          <p className="muted pequeno">Depois de criar, o sistema monta uma mensagem com o link do primeiro acesso para mandar pelo WhatsApp. No primeiro acesso a pessoa é obrigada a criar a própria senha.</p>
           <button className="primario" onClick={criar} disabled={enviando}>{enviando ? "Criando…" : "Criar / redefinir acesso"}</button>
         </>
       ) : (
-        <Aviso tipo="ok">
-          {feito} {p.usuario ? "Usuário" : "Login"}: <b>{loginExibicao(p.email)}</b> · Senha temporária: <b style={{ fontFamily: "monospace" }}>{senha}</b>
-        </Aviso>
+        <>
+          <Aviso tipo="ok">
+            {feito} {p.usuario ? "Usuário" : "Login"}: <b>{loginExibicao(p.email)}</b> · Senha temporária: <b style={{ fontFamily: "monospace" }}>{senha}</b>
+          </Aviso>
+          <EnviarAcesso p={p} senha={senha} />
+        </>
       )}
     </Modal>
+  );
+}
+
+/** Mensagem pronta com o link do primeiro acesso, para mandar pelo WhatsApp ou copiar. */
+function EnviarAcesso({ p, senha }: { p: Profissional; senha: string }) {
+  const login = loginExibicao(p.email);
+  const link = `${window.location.origin}/?u=${encodeURIComponent(login)}`;
+  const primeiro = p.nome.trim().split(/\s+/)[0];
+  const msg =
+    `Olá, ${primeiro}! Seu acesso ao sistema da Consumed está pronto.\n\n` +
+    `1) Abra este link: ${link}\n` +
+    `2) Usuário: ${login}\n` +
+    `3) Senha temporária: ${senha}\n\n` +
+    `No primeiro acesso o sistema vai pedir para você criar a sua própria senha. Não compartilhe a sua senha com ninguém.`;
+  const [fone, setFone] = useState("");
+  const [copiado, setCopiado] = useState(false);
+  const digitos = fone.replace(/\D/g, "");
+  const numero = digitos.length >= 10 && digitos.length <= 11 ? `55${digitos}` : digitos.length >= 12 ? digitos : "";
+  const wa = `https://wa.me/${numero}?text=${encodeURIComponent(msg)}`;
+  async function copiar() {
+    try { await navigator.clipboard.writeText(msg); setCopiado(true); setTimeout(() => setCopiado(false), 2500); } catch { /* navegador sem permissão */ }
+  }
+  return (
+    <div className="grade" style={{ marginTop: 12 }}>
+      <b>Mandar o acesso para {primeiro}</b>
+      <textarea readOnly value={msg} rows={8} style={{ width: "100%", fontSize: ".9rem" }} onFocus={(e) => e.currentTarget.select()} />
+      <Campo rotulo="Celular (WhatsApp) da pessoa — opcional">
+        <input inputMode="tel" placeholder="(21) 99999-9999" value={fone} onChange={(e) => setFone(e.target.value)} />
+      </Campo>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <a className="botao primario" href={wa} target="_blank" rel="noreferrer">🟢 Enviar pelo WhatsApp</a>
+        <button type="button" onClick={copiar}>{copiado ? "✅ Copiado!" : "📋 Copiar mensagem"}</button>
+      </div>
+      <p className="muted pequeno" style={{ margin: 0 }}>
+        Sem o celular, o WhatsApp abre para você escolher o contato. O link já preenche o usuário; a senha temporária só serve
+        para o primeiro acesso.
+      </p>
+    </div>
   );
 }
 

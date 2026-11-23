@@ -1175,3 +1175,8 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
   texto enviado e **áudio MP3 enviado, entregue, guardado e transcrito** (primeiro teste real do envio de áudio).
 - Para diagnosticar de novo: `function_edge_logs` com `event_message like '%whatsapp-webhook%'` (POST 200 = entregas da
   Meta; GET 403 = tentativa de verificação com token errado).
+## 23/11/2026 — Link de primeiro acesso para a equipe
+- Pedido da dona: sem e-mail cadastrado, não havia como mandar o acesso ao funcionário.
+- Tela Equipe → 🔑: depois de "Criar / redefinir acesso", aparece uma mensagem pronta (link + usuário + senha temporária)
+  com os botões "Enviar pelo WhatsApp" (wa.me; celular opcional, não é gravado) e "Copiar mensagem".
+- O link é `<endereço do sistema>/?u=<usuário>`: a tela de login já vem com o usuário preenchido (a senha NÃO vai no link).
