@@ -1206,3 +1206,6 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
   mostrava o que combinava com o texto (parecia que só existia consulta). Agora são 3 botões — **Consulta · Exame ·
   Procedimento** — mais "Qual?" opcional com sugestões por tipo (terapias entram em Procedimento). Grava em
   `descricao` como "Exame — OCT" (ou só "Exame"). Sem mudança no banco.
+- Caixa → Novo recebimento (pedido da dona): um paciente pode fazer vários exames na mesma visita. Agora os tipos
+  (Consulta/Exame/Procedimento) e os itens de cada tipo são botões que se marcam juntos, + campo "Outro".
+  `descricao` fica, por ex., "Consulta + Exame (Mapeamento de retina, Tonometria, Microscopia especular)". Valor é um só.
