@@ -1390,10 +1390,14 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
   cadastrados (hoje a Alessandra). Quem atende a orientação lança no próprio nome (fica registrado quem lançou).
 - **Notas editáveis no quadro de resumo da Agenda (23/11, noite):** a dona não conseguia preencher as Notas. Agora o
   campo do resumo é editável para qualquer agendamento (grava `agendamentos.observacoes`, botão "Salvar notas").
+- **Central dentro do sistema** (pedido da dona: "manter o padrão" — antes abria em tela cheia, sem o menu do sistema):
+  `/central` agora é uma rota normal dentro do layout (menu do sistema à esquerda, como Agenda e as demais); a faixa de
+  ícones da Central (Conversas · Atendimentos · Ferramentas) ficou clara e perdeu o botão "Sistema". Em telas até 1500 px a
+  ficha do paciente à direita se esconde para sobrar espaço para a conversa (continua em Opções → Agendamentos e ficha).
 
 ### 23/11/2026 — Orientação cirúrgica com o mesmo layout da Central de atendimento
 - Pedido da dona: a parte de WhatsApp da aba Orientação cirúrgica deve ficar igual à Central de atendimento.
-- `/orientacao-cirurgica` agora abre a tela da Central (`Central.tsx`, prop `setor="orientacao"`), em tela cheia, como `/central`.
+- `/orientacao-cirurgica` agora abre a tela da Central (`Central.tsx`, prop `setor="orientacao"`), dentro do sistema com o menu ao lado, como `/central`.
   - Quem atende a orientação: igual à Central (status, equipe, fila, Pegar o próximo, Meus atendimentos, Interno, Telefone).
   - Médicos e admin (que só veem): modo consulta — fila e "Em atendimento (com quem)", conversa sem responder, histórico em Atendimentos.
   - `?paciente=` (botão 🩹 da ficha) abre a conversa do paciente; se não houver, vai às Ferramentas para começar uma.

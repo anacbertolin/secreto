@@ -191,8 +191,6 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
           </button>
         )}
         {veCanais && <Link to={ferramentas} title={setor === "orientacao" ? "Pesquisar mensagens, modelos, fora do horário e importar conversas" : "Lembretes de consulta, modelos, fora do horário, pesquisar e importar conversas"}><span className="ct-icone">🧰</span>Ferramentas</Link>}
-        <span style={{ flex: 1 }} />
-        <Link to="/" title="Voltar para o sistema"><span className="ct-icone">↩</span>Sistema</Link>
       </nav>
 
       {/* ---------- Coluna do meio ---------- */}

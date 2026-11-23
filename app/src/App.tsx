@@ -158,19 +158,6 @@ export default function App() {
 
   let grupoAtual = "";
   // Central de atendimento: tela cheia, sem o menu do sistema (igual ao Talklogos)
-  // A aba Orientação cirúrgica usa a mesma tela, sempre no número da orientação (pedido da dona, 23/11)
-  const ehOrientacao = loc.pathname === "/orientacao-cirurgica";
-  if (loc.pathname === "/central" || (ehOrientacao && podeVerSetor(eu, "orientacao"))) {
-    return (
-      <TelefoneProvider>
-        <CentralProvider>
-          {ehOrientacao ? <Central key="orientacao" setor="orientacao" /> : <Central key="central" />}
-          <Telefone />
-        </CentralProvider>
-      </TelefoneProvider>
-    );
-  }
-
   return (
     <TelefoneProvider>
     <CentralProvider>
@@ -204,7 +191,7 @@ export default function App() {
           <button onClick={sair}>Sair</button>
         </div>
       </aside>
-      <main className="conteudo">
+      <main className={"conteudo" + (loc.pathname === "/central" || loc.pathname === "/orientacao-cirurgica" ? " sem-margem" : "")}>
         <Routes>
           <Route path="/" element={<Inicio />} />
           <Route path="/agenda" element={<Agenda />} />
@@ -231,7 +218,10 @@ export default function App() {
           <Route path="/repasse/:id" element={<Protegida funcoes={["faturamento", "admin"]}><RepasseDetalhe /></Protegida>} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/whatsapp" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><WhatsApp key="clinica" /></Protegida>} />
-          <Route path="/orientacao-cirurgica" element={<div className="painel vazio">Você não tem acesso a esta área.</div>} />
+          {/* Orientação cirúrgica: mesma tela da Central, sempre no número da orientação (pedido da dona, 23/11) */}
+          <Route path="/orientacao-cirurgica" element={
+            podeVerSetor(eu, "orientacao") ? <Central key="orientacao" setor="orientacao" /> : <div className="painel vazio">Você não tem acesso a esta área.</div>
+          } />
           <Route path="/orientacao-cirurgica/ferramentas" element={
             podeVerSetor(eu, "orientacao") ? <WhatsApp key="orientacao" setor="orientacao" /> : <div className="painel vazio">Você não tem acesso a esta área.</div>
           } />
@@ -243,6 +233,7 @@ export default function App() {
           <Route path="/cadastros/convenios" element={<Protegida funcoes={["recepcao", "admin", "faturamento"]}><Convenios /></Protegida>} />
           <Route path="/cadastros/locais" element={<Protegida funcoes={["recepcao", "admin"]}><Locais /></Protegida>} />
           <Route path="/cadastros/exames" element={<Protegida funcoes={["recepcao", "admin"]}><CatalogoExames /></Protegida>} />
+          <Route path="/central" element={<Central key="central" />} />
           <Route path="/ligacoes" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><Ligacoes /></Protegida>} />
           <Route path="/cadastros/telefone" element={<Protegida funcoes={["admin"]}><ConfigTelefone /></Protegida>} />
           <Route path="/cadastros/memed" element={<Protegida funcoes={["admin"]}><ConfigMemed /></Protegida>} />
