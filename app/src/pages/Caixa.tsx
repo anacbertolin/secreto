@@ -555,7 +555,12 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
     if (f.paciente.trim().length < 2) return setErro("Informe o nome do paciente.");
     if (cortesia && !f.motivo.trim()) return setErro("Informe o motivo da cortesia.");
     if (!cortesia) {
-      if (lerValor(f.valor) === null || valor <= 0) return setErro("Informe o valor do atendimento.");
+      if (lerValor(f.valor) === null || valor <= 0) {
+        // itens sem cobrança na tabela (ex.: Revisão, sessão seguinte de pacote de fotocoagulação)
+        if (itens.length && itens.every((i) => precoDe.get(i) === 0))
+          return setErro("Estes itens não são cobrados (R$ 0,00). Feche esta janela e use o botão “🎁 Cortesia (sem cobrança)”.");
+        return setErro("Informe o valor do atendimento.");
+      }
       const v = validarLinhas(linhas);
       if (v.erro) return setErro(v.erro);
       if (pago > valor) return setErro("O valor pago está maior que o valor do atendimento.");
