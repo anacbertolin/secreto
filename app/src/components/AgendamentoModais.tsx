@@ -209,6 +209,8 @@ export function NovoAgendamento(props: {
   );
 }
 
+export type ModoAgendamento = "" | "cancelar" | "remarcar" | "confirmar" | "excluir" | "chegada";
+
 export function DetalheAgendamento(props: {
   ag: Agendamento;
   aoFechar: () => void;
@@ -216,10 +218,12 @@ export function DetalheAgendamento(props: {
   medicos: Profissional[];
   convenios: Convenio[];
   locais: Local[];
+  /** Abre já numa ação (botões rápidos da Agenda) */
+  modoInicial?: ModoAgendamento;
 }) {
   const a = props.ag;
   const [erro, setErro] = useState("");
-  const [modo, setModo] = useState<"" | "cancelar" | "remarcar" | "confirmar" | "excluir" | "chegada">("");
+  const [modo, setModo] = useState<ModoAgendamento>(props.modoInicial ?? "");
   const [motivo, setMotivo] = useState("");
   const [canal, setCanal] = useState("telefone");
   const ini = new Date(a.inicio);
@@ -383,7 +387,7 @@ export function DetalheAgendamento(props: {
 }
 
 /** Motivos mais comuns da Orientação Cirúrgica (botões rápidos que completam as Notas) */
-const MOTIVOS_ORIENTACAO = [
+export const MOTIVOS_ORIENTACAO = [
   "Pagar cirurgia", "Orçamento", "Trazer risco cirúrgico", "Pegar documentação", "Orientação para a cirurgia",
   "Retirar nota fiscal", "Encaminhamento", "Marcar cirurgia", "Acompanhante",
 ];

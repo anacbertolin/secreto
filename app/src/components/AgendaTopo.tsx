@@ -5,6 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useCarregar, ok, Etiqueta } from "./ui";
 import type { Agendamento, Horario } from "../lib/dados";
+import { MOTIVOS_ORIENTACAO } from "./AgendamentoModais";
+
+/** Avisos mais comuns nas notas da agenda (pedido da dona, 23/11): um toque acrescenta à nota */
+export const NOTAS_RAPIDAS = [
+  "Entregar laudo", "Jejum", "Indicação", "Trazer exames anteriores", "Dilatar", "Acompanhante", "Prioridade", "Pendência no cadastro",
+];
 import { STATUS_AGENDA, TIPOS_AGENDA, fmtData, fmtDataHora, fmtHora, fmtTelefone, idade, isoDia, nomeExibicao } from "../lib/util";
 
 const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
@@ -118,7 +124,18 @@ export function ResumoAgendamento(props: {
   const [notas, setNotas] = useState(a?.observacoes ?? "");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
+  const [salvoAgora, setSalvoAgora] = useState(false);
   useEffect(() => { setNotas(a?.observacoes ?? ""); setErro(""); }, [a?.id, a?.observacoes]);
+  useEffect(() => { setSalvoAgora(false); }, [a?.id]);
+  async function salvar(texto: string) {
+    const t = texto.trim();
+    if (!a || t === (a.observacoes ?? "")) return;
+    setSalvando(true);
+    const e = await props.aoSalvarNotas(t);
+    setErro(e);
+    setSalvoAgora(!e);
+    setSalvando(false);
+  }
   if (!a) {
     return (
       <div className="resumo-ag vazio pequeno">
@@ -147,15 +164,25 @@ export function ResumoAgendamento(props: {
         <dd>{props.convenio(a.convenio_id) || "Particular"}{a.tipo !== "orientacao" && ` · ${TIPOS_AGENDA[a.tipo] ?? a.tipo}`}</dd>
         <dt>Notas</dt>
         <dd>
-          <textarea className="resumo-notas" rows={2} value={notas} placeholder="Escreva aqui as notas deste agendamento…"
-            onChange={(e) => setNotas(e.target.value)} />
-          {notas !== (a.observacoes ?? "") && (
-            <button className="primario mini" disabled={salvando} style={{ marginTop: 4 }}
-              onClick={async () => { setSalvando(true); setErro(await props.aoSalvarNotas(notas.trim())); setSalvando(false); }}>
-              {salvando ? "Salvando…" : "Salvar notas"}
-            </button>
-          )}
-          {erro && <div className="pequeno" style={{ color: "var(--perigo)" }}>{erro}</div>}
+          <div className="notas-rapidas">
+            {(a.tipo === "orientacao" ? MOTIVOS_ORIENTACAO : NOTAS_RAPIDAS).map((m) => (
+              <button key={m} type="button" className="mini" title="Acrescentar à nota e salvar"
+                onClick={() => {
+                  const t = notas.trim() ? `${notas.trim()}; ${m.toLowerCase()}` : m;
+                  setNotas(t);
+                  salvar(t);
+                }}>{m}</button>
+            ))}
+          </div>
+          <textarea id="resumo-notas" className="resumo-notas" rows={2} value={notas}
+            placeholder="Escreva aqui a nota (ex.: entregar laudo, jejum, paciente indicado por…). Salva sozinha ao sair do campo."
+            onChange={(e) => setNotas(e.target.value)}
+            onBlur={() => salvar(notas)}
+            onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); salvar(notas); } }} />
+          <div className="pequeno muted" style={{ minHeight: 16 }}>
+            {salvando ? "Salvando…" : erro ? <span style={{ color: "var(--perigo)" }}>{erro}</span>
+              : notas.trim() !== (a.observacoes ?? "") ? "Não salvo ainda (Ctrl+Enter salva)" : salvoAgora ? "✓ Nota salva" : ""}
+          </div>
         </dd>
         {a.chegada_em && (<><dt>Chegada</dt><dd>{fmtHora(a.chegada_em)}</dd></>)}
         <dt>Inclusão</dt>

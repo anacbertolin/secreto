@@ -843,8 +843,9 @@ interface ResumoLembretes {
   sem_celular: number; falhas: string[]; a_enviar?: number;
 }
 
-function Lembretes(props: { aoFechar: () => void; aoEnviar: () => void }) {
-  const [data, setData] = useState(isoDia(somaDias(new Date(), 1)));
+/** Também usado na Agenda (botão "📲 Confirmações do dia") */
+export function Lembretes(props: { aoFechar: () => void; aoEnviar: () => void; dataInicial?: string }) {
+  const [data, setData] = useState(props.dataInicial ?? isoDia(somaDias(new Date(), 1)));
   const [previa, setPrevia] = useState<ResumoLembretes | null>(null);
   const [resultado, setResultado] = useState<ResumoLembretes | null>(null);
   const [ocupado, setOcupado] = useState(false);
