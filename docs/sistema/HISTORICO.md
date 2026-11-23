@@ -1183,3 +1183,7 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
 - Aviso de versão nova (`app/src/components/AvisoVersao.tsx`): a dona não viu a novidade porque a página estava aberta
   desde antes da publicação. Agora, a cada 3 min e ao voltar para a janela, o sistema compara o script publicado com o
   carregado e mostra "Saiu uma versão nova — Atualizar agora" (não recarrega sozinho para não perder o que se digita).
+- Atualização automática (pedido da dona): ao detectar versão nova (confere a cada 1 min), o sistema recarrega sozinho
+  quando a pessoa troca de tela ou depois de 10 min sem ninguém mexer no computador; até lá mostra o aviso com
+  "Atualizar agora". A TV da sala de espera ficou de fora de propósito (recarregar desliga o som das chamadas,
+  que o navegador só libera com um clique).
