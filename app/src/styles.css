@@ -516,3 +516,7 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .ct-iniciar:hover { background: #05603a; color: white; }
 .ct-conversa { min-width: 0; overflow: hidden; display: flex; flex-direction: column; }
 @media (max-width: 860px) { .ct-cab { flex-wrap: wrap; } .ct-acoes { width: 100%; flex-wrap: wrap; } .ct-nome { white-space: normal; } }
+.ct.com-interna { grid-template-columns: 76px 340px minmax(0, 1fr); }
+.ct-autor { font-size: 0.75rem; font-weight: 700; color: var(--roxo); margin-bottom: 2px; }
+.ct-transferir button.primario .pequeno { color: white; }
+@media (max-width: 860px) { .ct.com-interna .ct-coluna { display: none; } .ct:not(.com-conversa):not(.com-interna) .ct-conversa { display: none; } .ct.com-interna .ct-conversa { display: flex; } }

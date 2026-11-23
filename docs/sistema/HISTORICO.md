@@ -1265,3 +1265,22 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
   fila quando alguém assume/recebe transferência. Testado no banco real (transação desfeita): iniciar, transferir, encerrar
   mantendo quem atendeu e saindo da fila. Advisors sem novidade.
 - Testes de tela com dados simulados (computador e celular). Falta o teste com o número da Central ligado na Meta.
+
+## 23/11/2026 (noite) — Central: um item só no menu + conversa interna da equipe (migração 0092)
+- **Pedido da dona:** "Central de atendimento e WhatsApp não ficou a mesma coisa? Deveria ser um só" e "a gente fala com o
+  paciente e fala entre a gente (funcionários e médicos) no sistema, tudo no mesmo local" (Interno/Grupos do Talklogos).
+- **Menu:** fica **🎧 Central de atendimento** para toda a equipe, com o contador de mensagens novas (WhatsApp da clínica, da
+  orientação e conversa interna). Quem atende (recepção/admin/orientação) trabalha só nela; as ferramentas do WhatsApp
+  (lembretes, modelos, fora do horário, pesquisar, importar) abrem pelo botão **🧰 Ferramentas** do menu da Central.
+  "WhatsApp (consulta)" continua para médico, enfermagem e faturamento; "Orientação cirúrgica (consulta)" para médicos/admin.
+  Médicos, enfermagem e faturamento entram na Central só com a aba **Interno**.
+- **Migração 0092 `chat_interno`** (aplicada; numerada 0092 porque outras sessões usaram 0081–0087): `interno_conversas`
+  (direta com `chave_direta` única, ou grupo com nome), `interno_participantes` (com `lida_em`), `interno_mensagens`
+  (texto até 4000; ninguém edita nem apaga). RLS: só participantes leem; cada um escreve em nome próprio e marca só a
+  própria leitura. Funções `interno_abrir_direta`, `interno_criar_grupo`, `interno_adicionar`. Realtime nas mensagens.
+  Obs.: há dois arquivos 0081 (`0081_agenda_toda_equipe` de outra sessão e `0081_central_atendido_desde`); ambos aplicados.
+- **Tela:** aba **Interno** na Central (entre Canais e Telefone) com "✉️ Nova conversa" (escolhe o colega), "👥 Novo grupo",
+  lista com não lidas; conversa no centro com o nome de quem escreveu e "+ Pessoas" nos grupos. Som e aviso do computador
+  quando chega mensagem da equipe. Código: `app/src/components/Interno.tsx`, `app/src/lib/interno.ts`.
+- **Testes:** banco real em transação desfeita (direta não duplica; não escreve como outro; não edita; enfermagem não vê a
+  conversa recepção↔médico mas vê o grupo dela; marca só a própria leitura; anônimo bloqueado); tela com dados simulados.

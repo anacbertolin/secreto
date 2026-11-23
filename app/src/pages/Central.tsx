@@ -14,9 +14,11 @@ import { SELECT_CONVERSA, fmtNumeroWA, podeResponderSetor, type Conversa } from 
 import { STATUS_CENTRAL, fmtEsperando, useCentral, type StatusCentral } from "../lib/central";
 import { useTelefone } from "../lib/telefone";
 import { Chat, FichaPaciente, iniciais, nomeConversa } from "./WhatsApp";
+import { InternoChat, InternoLista } from "../components/Interno";
+import { useInternoNaoLidas } from "../lib/interno";
 
 type Visao = "conversas" | "atendimentos";
-type Aba = "canais" | "telefone";
+type Aba = "canais" | "interno" | "telefone";
 
 interface Previa { texto: string; direcao: "recebida" | "enviada"; quando: string }
 
@@ -31,9 +33,13 @@ export default function Central() {
   const central = useCentral();
   const setor = central?.setor ?? "clinica";
   const podeResponder = podeResponderSetor(eu, setor);
+  // Quem atende vê fila, WhatsApp e telefone; médicos, enfermagem e faturamento usam só a conversa interna
+  const atende = !!central?.atende && podeResponder;
   const [visao, setVisao] = useState<Visao>("conversas");
-  const [aba, setAba] = useState<Aba>("canais");
+  const [aba, setAba] = useState<Aba>(atende ? "canais" : "interno");
   const [abertaId, setAbertaId] = useState<string | null>(null);
+  const [internaId, setInternaId] = useState<string | null>(null);
+  const interno = useInternoNaoLidas(eu?.id);
   const [busca, setBusca] = useState("");
   const [soNaoRespondidos, setSoNaoRespondidos] = useState(false);
   const [diaHistorico, setDiaHistorico] = useState(isoDia(new Date()));
@@ -117,13 +123,13 @@ export default function Central() {
 
   async function pegarProximo() {
     const id = await central?.pegarProximo();
-    if (id) { lista.recarregar(); setAbertaId(id); }
+    if (id) { lista.recarregar(); setInternaId(null); setAbertaId(id); }
   }
 
   function Cartao({ c, tipo }: { c: Conversa; tipo: "fila" | "meu" | "historico" }) {
     const pv = previas[c.id];
     return (
-      <button className={"ct-cartao" + (c.id === abertaId ? " ativo" : "")} onClick={() => setAbertaId(c.id)}>
+      <button className={"ct-cartao" + (c.id === abertaId && !internaId ? " ativo" : "")} onClick={() => { setInternaId(null); setAbertaId(c.id); }}>
         <span className="ct-avatar">{iniciais(nomeConversa(c))}</span>
         <span className="ct-cartao-corpo">
           <span className="ct-linha">
@@ -143,21 +149,20 @@ export default function Central() {
     );
   }
 
-  if (!central?.atende || !podeResponder) {
-    return <div className="painel vazio">A Central de atendimento é usada por quem atende o WhatsApp e o telefone (recepção, administração e orientação cirúrgica).</div>;
-  }
-
   const livres = (equipe.dados ?? []).filter((x) => (x.status ?? "disponivel") === "disponivel");
   return (
-    <div className={"ct" + (aberta ? " com-conversa" : "")}>
+    <div className={"ct" + (aberta && !internaId ? " com-conversa" : "") + (internaId ? " com-interna" : "")}>
       {/* ---------- Menu da esquerda ---------- */}
       <nav className="ct-menu-lateral">
         <button className={visao === "conversas" ? "ativo" : ""} onClick={() => setVisao("conversas")} title="Conversas">
           <span className="ct-icone">💬{fila.length > 0 && <span className="ct-bolha">{fila.length}</span>}</span>Conversas
         </button>
-        <button className={visao === "atendimentos" ? "ativo" : ""} onClick={() => setVisao("atendimentos")} title="Atendimentos encerrados">
-          <span className="ct-icone">📋</span>Atendimentos
-        </button>
+        {atende && (
+          <button className={visao === "atendimentos" ? "ativo" : ""} onClick={() => setVisao("atendimentos")} title="Atendimentos encerrados">
+            <span className="ct-icone">📋</span>Atendimentos
+          </button>
+        )}
+        {atende && <Link to={setor === "orientacao" ? "/orientacao-cirurgica" : "/whatsapp"} title="Lembretes de consulta, modelos, fora do horário, pesquisar e importar conversas"><span className="ct-icone">🧰</span>Ferramentas</Link>}
         <span style={{ flex: 1 }} />
         <Link to="/" title="Voltar para o sistema"><span className="ct-icone">↩</span>Sistema</Link>
       </nav>
@@ -165,21 +170,28 @@ export default function Central() {
       {/* ---------- Coluna do meio ---------- */}
       <section className="ct-coluna">
         <div className="ct-topo">
-          <SeletorStatus />
+          {atende && <SeletorStatus />}
           <input className="ct-busca" placeholder="🔍 Buscar" value={busca} onChange={(e) => setBusca(e.target.value)} />
         </div>
 
         {visao === "conversas" ? (
           <>
-            <Equipe pessoas={equipe.dados ?? []} euId={eu?.id} livres={livres.length} />
+            {atende && <Equipe pessoas={equipe.dados ?? []} euId={eu?.id} livres={livres.length} />}
             <div className="ct-abas">
-              <button className={aba === "canais" ? "ativa" : ""} onClick={() => setAba("canais")}>
-                Canais {fila.length + minhas.length > 0 && <span className="ct-bolha verde">{fila.length + minhas.length}</span>}
+              {atende && (
+                <button className={aba === "canais" ? "ativa" : ""} onClick={() => setAba("canais")}>
+                  Canais {fila.length + minhas.length > 0 && <span className="ct-bolha verde">{fila.length + minhas.length}</span>}
+                </button>
+              )}
+              <button className={aba === "interno" ? "ativa" : ""} onClick={() => setAba("interno")}>
+                Interno {interno.total > 0 && <span className="ct-bolha verde" style={{ background: "#d92d20" }}>{interno.total}</span>}
               </button>
-              <button className={aba === "telefone" ? "ativa" : ""} onClick={() => setAba("telefone")}>Telefone</button>
+              {atende && <button className={aba === "telefone" ? "ativa" : ""} onClick={() => setAba("telefone")}>Telefone</button>}
             </div>
 
-            {aba === "canais" ? (
+            {aba === "interno" ? (
+              <InternoLista busca={busca} abertaId={internaId} naoLidas={interno.porConversa} aoAbrir={(id) => setInternaId(id)} />
+            ) : aba === "canais" && atende ? (
               <div className="ct-rolagem">
                 <button className="ct-pegar" disabled={fila.length === 0 || central.status !== "disponivel"} onClick={() => void pegarProximo()}>
                   {fila.length === 0 ? "Fila vazia 👍" : central.status !== "disponivel" ? "Você está em pausa" : `👉 Pegar o próximo (${fila.length} na fila)`}
@@ -220,20 +232,26 @@ export default function Central() {
 
       {/* ---------- Conversa ---------- */}
       <section className="ct-conversa wa-chat painel">
-        {aberta ? (
+        {internaId ? (
+          <InternoChat key={internaId} conversaId={internaId} aoVoltar={() => setInternaId(null)} />
+        ) : aberta ? (
           <Chat key={aberta.id} conversa={aberta} podeResponder={podeResponder} quemResponde="" central={{ aoAgendar: () => setAgendar(aberta) }}
             aoMudar={() => { lista.recarregar(); encerradas.recarregar(); }} aoVoltar={() => setAbertaId(null)} />
         ) : (
           <div className="ct-boas-vindas">
             <div className="ct-boas-icone">💬</div>
             <h2>Central de atendimento</h2>
-            <p>{fila.length > 0 ? `${fila.length} paciente${fila.length > 1 ? "s" : ""} esperando na fila.` : "Ninguém esperando agora."}</p>
-            <p className="muted">Escolha uma conversa ao lado ou clique em <b>Pegar o próximo</b>.</p>
+            {atende ? (
+              <>
+                <p>{fila.length > 0 ? `${fila.length} paciente${fila.length > 1 ? "s" : ""} esperando na fila.` : "Ninguém esperando agora."}</p>
+                <p className="muted">Escolha uma conversa ao lado ou clique em <b>Pegar o próximo</b>.</p>
+              </>
+            ) : <p className="muted">Converse com a equipe pela aba <b>Interno</b>.</p>}
           </div>
         )}
       </section>
 
-      {aberta && <FichaPaciente key={aberta.id} conversa={aberta} />}
+      {aberta && !internaId && <FichaPaciente key={aberta.id} conversa={aberta} />}
 
       {agendar && base.dados && (
         <NovoAgendamento {...base.dados}
