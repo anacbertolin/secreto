@@ -38,6 +38,7 @@ import Telefone from "./components/Telefone";
 import AvisoVersao from "./components/AvisoVersao";
 import { TelefoneProvider } from "./lib/telefone";
 import { CentralProvider } from "./lib/central";
+import { useInternoNaoLidas } from "./lib/interno";
 import Central from "./pages/Central";
 import { useNaoLidas, podeVerSetor } from "./lib/whatsapp";
 import type { Profissional } from "./lib/auth";
@@ -53,9 +54,11 @@ const MENU: ItemMenu[] = [
   { para: "/agenda", rotulo: "Agenda", icone: "📅" },
   { para: "/recepcao", rotulo: "Recepção", icone: "🛎️", funcoes: ["medico", "enfermagem", "recepcao", "admin"] },
   { para: "/pacientes", rotulo: "Pacientes", icone: "👤" },
-  { para: "/central", rotulo: "Central de atendimento", icone: "🎧", funcoes: ["recepcao", "admin"] },
-  { para: "/whatsapp", rotulo: "WhatsApp", icone: "💬", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
-  { para: "/orientacao-cirurgica", rotulo: "Orientação cirúrgica", icone: "🩹", ve: (eu) => podeVerSetor(eu, "orientacao") },
+  // Central de atendimento (23/11): quem atende usa só ela (WhatsApp + telefone + conversa interna);
+  // médicos, enfermagem e faturamento entram nela para a conversa interna e consultam o WhatsApp no item abaixo.
+  { para: "/central", rotulo: "Central de atendimento", icone: "🎧", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
+  { para: "/whatsapp", rotulo: "WhatsApp (consulta)", icone: "💬", funcoes: ["medico", "enfermagem", "faturamento"] },
+  { para: "/orientacao-cirurgica", rotulo: "Orientação cirúrgica (consulta)", icone: "🩹", ve: (eu) => podeVerSetor(eu, "orientacao") && !eu?.orientacao_cirurgica },
   { para: "/ligacoes", rotulo: "Ligações", icone: "☎️", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
   { para: "/whatsapp/assistente", rotulo: "Assistente do WhatsApp", icone: "🤖", funcoes: ["recepcao", "admin"] },
   { para: "/consultorio", rotulo: "Consultório", icone: "🩺", funcoes: ["medico", "enfermagem"] },
@@ -100,10 +103,12 @@ export default function App() {
   const naoLidas = useNaoLidas(pode("recepcao", "admin"));
   // Orientação cirúrgica: contador e som só para quem atende esse número (Alessandra)
   const naoLidasOrientacao = useNaoLidas(eu?.orientacao_cirurgica === true, "orientacao");
+  // Conversa interna da equipe: na Central o som já toca pela própria tela
+  const interno = useInternoNaoLidas(eu?.id, loc.pathname !== "/central");
+  const naoLidasCentral = naoLidas + naoLidasOrientacao + interno.total;
   useEffect(() => {
-    const total = naoLidas + naoLidasOrientacao;
-    document.title = (total ? `(${total}) ` : "") + "Consumed · Sistema da Clínica";
-  }, [naoLidas, naoLidasOrientacao]);
+    document.title = (naoLidasCentral ? `(${naoLidasCentral}) ` : "") + "Consumed · Sistema da Clínica";
+  }, [naoLidasCentral]);
 
   // Conferência pública de documentos (QR): não precisa de login
   // Portal do paciente: link + data de nascimento, sem login
@@ -184,8 +189,7 @@ export default function App() {
               cab,
               <NavLink key={m.para} to={m.para} end={m.para === "/" || m.para === "/whatsapp" || m.para === "/exames"}>
                 <span aria-hidden>{m.icone}</span> {m.rotulo}
-                {m.para === "/whatsapp" && naoLidas > 0 && <span className="wa-badge" style={{ marginLeft: "auto" }}>{naoLidas}</span>}
-                {m.para === "/orientacao-cirurgica" && naoLidasOrientacao > 0 && <span className="wa-badge" style={{ marginLeft: "auto" }}>{naoLidasOrientacao}</span>}
+                {m.para === "/central" && naoLidasCentral > 0 && <span className="wa-badge" style={{ marginLeft: "auto" }}>{naoLidasCentral}</span>}
               </NavLink>,
             ];
           })}
