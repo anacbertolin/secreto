@@ -1,7 +1,7 @@
 // Parte de cima da Agenda, no estilo do Micrologos (pedido da dona, 23/11/2026):
 //  * MiniCalendario: 3 meses, cada dia colorido pela ocupação das agendas mostradas (100%, 51–99%, 1–50%, 0%, não atende).
 //  * ResumoAgendamento: telefones, nascimento/idade, convênio, notas, chegada, quem incluiu e quem alterou.
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useCarregar, ok, Etiqueta } from "./ui";
 import type { Agendamento, Horario } from "../lib/dados";
@@ -111,8 +111,14 @@ export function ResumoAgendamento(props: {
   convenio: (id?: string | null) => string;
   agenda: (id: string) => string;
   aoAbrir: () => void;
+  /** Grava as notas do agendamento; devolve a mensagem de erro (ou "" se deu certo) */
+  aoSalvarNotas: (texto: string) => Promise<string>;
 }) {
   const a = props.ag;
+  const [notas, setNotas] = useState(a?.observacoes ?? "");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
+  useEffect(() => { setNotas(a?.observacoes ?? ""); setErro(""); }, [a?.id, a?.observacoes]);
   if (!a) {
     return (
       <div className="resumo-ag vazio pequeno">
@@ -140,7 +146,17 @@ export function ResumoAgendamento(props: {
         <dt>Convênio</dt>
         <dd>{props.convenio(a.convenio_id) || "Particular"}{a.tipo !== "orientacao" && ` · ${TIPOS_AGENDA[a.tipo] ?? a.tipo}`}</dd>
         <dt>Notas</dt>
-        <dd className="resumo-notas">{a.observacoes || <span className="muted">—</span>}</dd>
+        <dd>
+          <textarea className="resumo-notas" rows={2} value={notas} placeholder="Escreva aqui as notas deste agendamento…"
+            onChange={(e) => setNotas(e.target.value)} />
+          {notas !== (a.observacoes ?? "") && (
+            <button className="primario mini" disabled={salvando} style={{ marginTop: 4 }}
+              onClick={async () => { setSalvando(true); setErro(await props.aoSalvarNotas(notas.trim())); setSalvando(false); }}>
+              {salvando ? "Salvando…" : "Salvar notas"}
+            </button>
+          )}
+          {erro && <div className="pequeno" style={{ color: "var(--perigo)" }}>{erro}</div>}
+        </dd>
         {a.chegada_em && (<><dt>Chegada</dt><dd>{fmtHora(a.chegada_em)}</dd></>)}
         <dt>Inclusão</dt>
         <dd>{props.nomeDe(a.criado_por) || "—"}{a.criado_em && ` · ${fmtDataHora(a.criado_em)}`}</dd>

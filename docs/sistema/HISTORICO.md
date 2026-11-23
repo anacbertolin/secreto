@@ -1388,3 +1388,5 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
   Camilo) e a Agenda mostrava duas colunas "Orientação Cirúrgica". Agora é **uma coluna só** (`listaAgendas` devolve uma
   coluna com `membros`; `colunaDoAgendamento` junta os agendamentos). A "dona" da coluna é quem tem horários
   cadastrados (hoje a Alessandra). Quem atende a orientação lança no próprio nome (fica registrado quem lançou).
+- **Notas editáveis no quadro de resumo da Agenda (23/11, noite):** a dona não conseguia preencher as Notas. Agora o
+  campo do resumo é editável para qualquer agendamento (grava `agendamentos.observacoes`, botão "Salvar notas").

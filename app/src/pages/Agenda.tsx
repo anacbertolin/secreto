@@ -154,6 +154,13 @@ export default function Agenda() {
               convenio={(id) => base.dados!.convenios.find((c) => c.id === id)?.nome ?? ""}
               agenda={(id) => { const m = medicos.find((x) => x.id === colDe(id)); return m ? nomeAgenda(m) : ""; }}
               aoAbrir={() => sel && setAberto(sel)}
+              aoSalvarNotas={async (texto) => {
+                if (!sel) return "";
+                const { error } = await supabase.from("agendamentos").update({ observacoes: texto || null }).eq("id", sel.id);
+                if (error) return msgErro(error);
+                doDia.recarregar();
+                return "";
+              }}
             />
           </div>
         </div>

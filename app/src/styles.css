@@ -553,3 +553,4 @@ table.tabela { width: 100%; border-collapse: collapse; }
 .resumo-notas { background: #fffbe6; border-radius: 4px; padding: 2px 6px; }
 .agenda .col-cab .obs-dia { display: block; width: 100%; text-align: left; font-size: 0.75rem; font-weight: 400; margin-top: 4px; padding: 2px 6px; border: 1px dashed #d6dbe1; border-radius: 4px; background: #fffdf2; white-space: normal; }
 .ag-item.sel { outline: 2px solid #1f4fd1; outline-offset: 1px; }
+textarea.resumo-notas { width: 100%; min-height: 44px; font-size: 0.85rem; padding: 4px 6px; background: #fffbe6; border: 1px solid #efe2a8; border-radius: 4px; }
