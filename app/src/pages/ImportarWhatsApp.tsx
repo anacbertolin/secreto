@@ -186,7 +186,7 @@ export default function ImportarWhatsApp() {
           <h1>Importar conversas antigas</h1>
           <p className="sub" style={{ margin: 0 }}>Traz para o sistema as conversas exportadas do WhatsApp do celular, como histórico de cada paciente.</p>
         </div>
-        <Link className="botao" to={setor === "orientacao" ? "/orientacao-cirurgica" : "/whatsapp"}>← Voltar ao WhatsApp</Link>
+        <Link className="botao" to={setor === "orientacao" ? "/orientacao-cirurgica/ferramentas" : "/whatsapp"}>← Voltar ao WhatsApp</Link>
       </div>
 
       <details className="painel" open={itens.length === 0}>

@@ -158,11 +158,13 @@ export default function App() {
 
   let grupoAtual = "";
   // Central de atendimento: tela cheia, sem o menu do sistema (igual ao Talklogos)
-  if (loc.pathname === "/central") {
+  // A aba Orientação cirúrgica usa a mesma tela, sempre no número da orientação (pedido da dona, 23/11)
+  const ehOrientacao = loc.pathname === "/orientacao-cirurgica";
+  if (loc.pathname === "/central" || (ehOrientacao && podeVerSetor(eu, "orientacao"))) {
     return (
       <TelefoneProvider>
         <CentralProvider>
-          <Central />
+          {ehOrientacao ? <Central key="orientacao" setor="orientacao" /> : <Central key="central" />}
           <Telefone />
         </CentralProvider>
       </TelefoneProvider>
@@ -229,7 +231,8 @@ export default function App() {
           <Route path="/repasse/:id" element={<Protegida funcoes={["faturamento", "admin"]}><RepasseDetalhe /></Protegida>} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/whatsapp" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><WhatsApp key="clinica" /></Protegida>} />
-          <Route path="/orientacao-cirurgica" element={
+          <Route path="/orientacao-cirurgica" element={<div className="painel vazio">Você não tem acesso a esta área.</div>} />
+          <Route path="/orientacao-cirurgica/ferramentas" element={
             podeVerSetor(eu, "orientacao") ? <WhatsApp key="orientacao" setor="orientacao" /> : <div className="painel vazio">Você não tem acesso a esta área.</div>
           } />
           <Route path="/whatsapp/importar" element={<ImportarWhatsApp />} />
