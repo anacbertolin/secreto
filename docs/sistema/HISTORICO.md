@@ -1305,3 +1305,17 @@ Conferido no banco local e no real (transação desfeita); tela com dados simula
 - **Correção da dona (23/11, mesmo dia):** Clínica Vital = **taxa de sala R$ 1.100** (fica para a clínica) + **R$ 500 para o
   médico que operou** → valor sugerido **R$ 1.600**. Ajustado direto na tabela de procedimentos (dado, não estrutura);
   nenhum lançamento da Vital existia ainda. Pergunta em aberto: na cobrança de Campo Grande incide imposto? (hoje: não).
+
+### 23/11 (noite) — Repasse: confirmações e catálogo de lentes (migração 0072)
+- Cobrança de Campo Grande **sem imposto** (confirmado pela dona).
+- "Lente Hoya" é a **lente simples (monofocal)**: nos custos dos procedimentos virou "Lente intraocular monofocal (Hoya)"
+  (ajuste de dado). Monofocal = um foco (em geral longe; óculos para perto).
+- **Migração 0072 `lentes_catalogo`** (aplicada): catálogo por MODELO (código do fornecedor, descrição, fabricante, linha,
+  tipo óptico monofocal/foco estendido/multifocal, tórica, pré-carregada "AutonoMe", **custo de compra com IPI**, preço de
+  venda a definir). `estoque_itens.lente_id` liga a unidade do estoque ao modelo. Leem: faturamento, admin, médico,
+  enfermagem; alteram: faturamento e admin. Carregadas as 10 lentes premium da Alcon (tabela do e-mail de 01/04/2026: Clareon
+  684,60; AutonoMe 861,00; Toric 1.584,45; Vivity e PanOptix 4.198,95; Vivity/PanOptix Toric 5.553,45 — valores lidos da foto,
+  alinhados na ordem das linhas; pedir confirmação) + "Monofocal Hoya" 320,00.
+- Tela: **Repasse médico → aba "Lentes"** (custo e preço de venda editáveis, nova lente).
+- Próximo: escolher a lente do catálogo/estoque no lançamento (custo real + baixa sem duplicar a da cirurgia) e a regra da
+  venda de lente premium ao paciente (falta a dona definir preço de venda e divisão).

@@ -79,10 +79,12 @@ export default function RepasseMedico() {
         <button className={aba === "lancamentos" ? "ativa" : ""} onClick={() => setParams({ aba: "lancamentos" })}>Lançamentos</button>
         <button className={aba === "medicos" ? "ativa" : ""} onClick={() => setParams({ aba: "medicos" })}>Relatório por médico</button>
         <button className={aba === "regras" ? "ativa" : ""} onClick={() => setParams({ aba: "regras" })}>Regras e taxas</button>
+        <button className={aba === "lentes" ? "ativa" : ""} onClick={() => setParams({ aba: "lentes" })}>Lentes</button>
       </div>
       {base.dados && aba === "lancamentos" && <Lancamentos base={base.dados} />}
       {base.dados && aba === "medicos" && <RelatorioMedicos medicos={base.dados.medicos} />}
       {base.dados && aba === "regras" && <Regras cfg={base.dados.cfg} taxas={base.dados.taxas} aoMudar={base.recarregar} />}
+      {aba === "lentes" && <LentesCatalogo />}
       {base.dados && aba === "regras" && <Procedimentos procs={base.dados.procedimentos} medicos={base.dados.medicos} aoMudar={base.recarregar} />}
     </div>
   );
@@ -888,6 +890,88 @@ function CobrancasMedicos() {
         </tbody>
         <tfoot><tr><th colSpan={3}>Total a receber</th><th style={num}>{fmtMoeda(total)}</th></tr></tfoot>
       </table>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ catálogo de lentes intraoculares (migração 0072)
+interface Lente {
+  id: string; codigo: string; descricao: string; fabricante: string; linha: string | null; tipo_optico: string; torica: boolean;
+  pre_carregada: boolean; custo_compra: number | null; preco_venda: number | null; observacoes: string | null; ativo: boolean;
+}
+const TIPO_OPTICO: Record<string, string> = { monofocal: "Monofocal (simples)", foco_estendido: "Foco estendido", multifocal: "Multifocal / trifocal" };
+function LentesCatalogo() {
+  const [erro, setErro] = useState("");
+  const [okMsg, setOkMsg] = useState("");
+  const [vals, setVals] = useState<Record<string, { custo: string; venda: string }>>({});
+  const [nova, setNova] = useState<{ codigo: string; descricao: string; fabricante: string; tipo_optico: string; torica: boolean; custo: string } | null>(null);
+  const { dados, erro: e1, carregando, recarregar } = useCarregar(async () =>
+    ok(await supabase.from("lentes_catalogo").select("*").order("fabricante").order("custo_compra")) as Lente[], []);
+  useEffect(() => {
+    if (dados) setVals(Object.fromEntries(dados.map((l) => [l.id, {
+      custo: l.custo_compra === null ? "" : String(l.custo_compra).replace(".", ","), venda: l.preco_venda === null ? "" : String(l.preco_venda).replace(".", ","),
+    }])));
+  }, [dados]);
+  async function salvar() {
+    setErro(""); setOkMsg("");
+    for (const l of dados ?? []) {
+      const c = vals[l.id]?.custo.trim() ? numOuNulo(vals[l.id].custo) : null, v = vals[l.id]?.venda.trim() ? numOuNulo(vals[l.id].venda) : null;
+      if ((vals[l.id]?.custo.trim() && c === null) || (vals[l.id]?.venda.trim() && v === null)) return setErro(`Valor inválido em ${l.codigo}.`);
+      if (c === (l.custo_compra === null ? null : Number(l.custo_compra)) && v === (l.preco_venda === null ? null : Number(l.preco_venda))) continue;
+      const { error } = await supabase.from("lentes_catalogo").update({ custo_compra: c, preco_venda: v }).eq("id", l.id);
+      if (error) return setErro(`${l.codigo}: ${msgErro(error)}`);
+    }
+    setOkMsg("Valores salvos."); recarregar();
+  }
+  async function incluir() {
+    if (!nova) return;
+    setErro("");
+    if (!nova.codigo.trim() || !nova.descricao.trim()) return setErro("Informe o código e a descrição da lente.");
+    const { error } = await supabase.from("lentes_catalogo").insert({ codigo: nova.codigo.trim(), descricao: nova.descricao.trim(), fabricante: nova.fabricante.trim() || "Alcon",
+      tipo_optico: nova.tipo_optico, torica: nova.torica, custo_compra: numOuNulo(nova.custo) });
+    if (error) return setErro(msgErro(error));
+    setNova(null); setOkMsg("Lente incluída."); recarregar();
+  }
+  return (
+    <div className="painel rolagem">
+      <div className="linha"><h2 style={{ margin: 0 }}>Lentes intraoculares</h2><span style={{ marginLeft: "auto" }} />
+        <button onClick={() => setNova({ codigo: "", descricao: "", fabricante: "Alcon", tipo_optico: "monofocal", torica: false, custo: "" })}>➕ Nova lente</button>
+        <button className="primario" onClick={salvar}>Salvar valores</button></div>
+      <p className="muted pequeno">Custo de compra (com IPI, da tabela do fornecedor) e preço de venda ao paciente. <b>Monofocal</b> = lente simples (um foco, em geral longe; óculos para perto).
+        <b> Foco estendido</b> e <b>multifocal/trifocal</b> = lentes premium. <b>Tórica</b> corrige astigmatismo. "AutonoMe" = já vem carregada no injetor.</p>
+      <Aviso>{erro || e1}</Aviso>
+      <Aviso tipo="ok">{okMsg}</Aviso>
+      {carregando && !dados ? <Carregando /> : (
+        <table className="tabela">
+          <thead><tr><th>Código</th><th>Lente</th><th>Tipo</th><th style={num}>Custo de compra (R$)</th><th style={num}>Preço de venda (R$)</th></tr></thead>
+          <tbody>
+            {(dados ?? []).map((l) => (
+              <tr key={l.id}>
+                <td><b>{l.codigo}</b><div className="muted pequeno">{l.fabricante}</div></td>
+                <td>{l.descricao}{l.observacoes && <div className="muted pequeno">{l.observacoes}</div>}</td>
+                <td className="pequeno">{TIPO_OPTICO[l.tipo_optico]}{l.torica && <div><Etiqueta cor="azul">tórica</Etiqueta></div>}</td>
+                <td style={num}><input style={{ width: 110, textAlign: "right" }} inputMode="decimal" aria-label={`Custo de ${l.codigo}`} value={vals[l.id]?.custo ?? ""} onChange={(e) => setVals({ ...vals, [l.id]: { ...vals[l.id], custo: e.target.value } })} /></td>
+                <td style={num}><input style={{ width: 110, textAlign: "right" }} inputMode="decimal" placeholder="a definir" aria-label={`Preço de venda de ${l.codigo}`} value={vals[l.id]?.venda ?? ""} onChange={(e) => setVals({ ...vals, [l.id]: { ...vals[l.id], venda: e.target.value } })} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {nova && (
+        <Modal titulo="Nova lente" aoFechar={() => setNova(null)} rodape={<><button onClick={() => setNova(null)}>Cancelar</button><button className="primario" onClick={incluir}>Incluir</button></>}>
+          <div className="grade g3">
+            <Campo rotulo="Código"><input value={nova.codigo} onChange={(e) => setNova({ ...nova, codigo: e.target.value })} /></Campo>
+            <Campo rotulo="Fabricante"><input value={nova.fabricante} onChange={(e) => setNova({ ...nova, fabricante: e.target.value })} /></Campo>
+            <Campo rotulo="Custo de compra (R$)"><input inputMode="decimal" value={nova.custo} onChange={(e) => setNova({ ...nova, custo: e.target.value })} /></Campo>
+          </div>
+          <Campo rotulo="Descrição"><input value={nova.descricao} onChange={(e) => setNova({ ...nova, descricao: e.target.value })} /></Campo>
+          <div className="grade g3">
+            <Campo rotulo="Tipo"><select value={nova.tipo_optico} onChange={(e) => setNova({ ...nova, tipo_optico: e.target.value })}>
+              {Object.entries(TIPO_OPTICO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Campo>
+            <label className="linha pequeno"><input type="checkbox" checked={nova.torica} onChange={(e) => setNova({ ...nova, torica: e.target.checked })} /> Tórica</label>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
