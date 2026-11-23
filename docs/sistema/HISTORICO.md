@@ -1196,3 +1196,9 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
 - Migração `0082_agenda_faturamento_corrige`: faturamento também ALTERA agendamentos (remarcar, cancelar, corrigir),
   porque é quem corrige erros da agenda na hora de faturar/importar o XML (decisão da dona). Com isso todas as
   funções têm o mesmo acesso à agenda. Advisors sem novidade.
+
+## 23/11/2026 — Faturamento abre e fecha o caixa
+- Pedido da dona: o faturamento fiscaliza, abre e fecha o caixa da recepção.
+- Migração `0083_caixa_faturamento`: `interno.caixa_papel` passa a dar 'lancar' (abrir, lançar, fechar) e 'ver' também à
+  função faturamento; `papelCaixa` em `Caixa.tsx` igual. Conferir/aprovar continuam pelas marcações da tela Equipe.
+  Regra mantida: quem fechou o caixa não confere o próprio caixa.
