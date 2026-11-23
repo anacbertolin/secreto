@@ -45,7 +45,14 @@ export const STATUS_CAIXA: Record<CaixaRow["status"], { rotulo: string; cor: str
   conferido: { rotulo: "Conferido · aguardando aprovação", cor: "roxo" },
   aprovado: { rotulo: "Aprovado", cor: "verde" },
 };
-const DESCRICOES = ["Consulta", "Retorno", "Exame", "Mapeamento de retina", "Tonometria", "Campimetria", "OCT", "Topografia", "Cirurgia", "Injeção intravítrea", "Laser", "Lente de contato"];
+/** O que foi recebido: tipo (botões) + detalhe opcional, gravados juntos em `descricao` ("Exame — OCT"). */
+const TIPOS_RECEBIMENTO = ["Consulta", "Exame", "Procedimento"] as const;
+type TipoRecebimento = (typeof TIPOS_RECEBIMENTO)[number];
+const DETALHES: Record<TipoRecebimento, string[]> = {
+  Consulta: ["Primeira vez", "Retorno"],
+  Exame: ["Mapeamento de retina", "Tonometria", "Campimetria", "OCT", "Topografia", "Biometria", "Paquimetria", "Retinografia", "Microscopia especular"],
+  Procedimento: ["Cirurgia", "Injeção intravítrea", "Laser", "Terapia", "Lente de contato"],
+};
 const num = { textAlign: "right" as const, fontVariantNumeric: "tabular-nums" as const };
 const n2 = (v: number) => Math.round(v * 100) / 100;
 
@@ -467,7 +474,8 @@ async function gravarPagamentos(caixaId: string, atendimentoId: string, pags: Re
 function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
   caixaId: string; medicos: { id: string; nome: string }[]; cortesia?: boolean; aoFechar: () => void; aoSalvar: () => void;
 }) {
-  const [f, setF] = useState({ paciente: "", medico: "", descricao: cortesia ? "Retorno" : "Consulta", valor: "", motivo: cortesia ? "Retorno" : "", autorizou: "", obs: "" });
+  const [f, setF] = useState({ paciente: "", medico: "", tipo: "Consulta" as TipoRecebimento, detalhe: cortesia ? "Retorno" : "", valor: "", motivo: cortesia ? "Retorno" : "", autorizou: "", obs: "" });
+  const descricao = f.detalhe.trim() ? `${f.tipo} — ${f.detalhe.trim()}` : f.tipo;
   const [linhas, setLinhas] = useState<LinhaPag[]>([linhaVazia()]);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -496,7 +504,7 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
     setSalvando(true);
     try {
       const r = await supabase.from("caixa_atendimentos").insert({
-        caixa_id: caixaId, paciente_nome: f.paciente.trim(), medico_id: f.medico || null, descricao: f.descricao.trim() || null,
+        caixa_id: caixaId, paciente_nome: f.paciente.trim(), medico_id: f.medico || null, descricao,
         valor: cortesia ? 0 : valor, cortesia: !!cortesia, motivo_cortesia: cortesia ? f.motivo.trim() : null,
         cortesia_autorizada_por: cortesia ? f.autorizou.trim() || null : null, observacao: f.obs.trim() || null,
       }).select("id").single();
@@ -519,8 +527,15 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
           <select value={f.medico} onChange={set("medico")}><option value="">—</option>{medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}</select>
         </Campo>
         <Campo rotulo="O que foi feito">
-          <input list="caixa-descricoes" value={f.descricao} onChange={set("descricao")} />
-          <datalist id="caixa-descricoes">{DESCRICOES.map((d) => <option key={d} value={d} />)}</datalist>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {TIPOS_RECEBIMENTO.map((t) => (
+              <button key={t} type="button" className={f.tipo === t ? "primario" : ""} onClick={() => setF({ ...f, tipo: t, detalhe: "" })}>{t}</button>
+            ))}
+          </div>
+        </Campo>
+        <Campo rotulo={`Qual ${f.tipo === "Consulta" ? "consulta" : f.tipo === "Exame" ? "exame" : "procedimento"}? (opcional)`}>
+          <input list="caixa-detalhes" value={f.detalhe} onChange={set("detalhe")} placeholder={`Ex.: ${DETALHES[f.tipo][0]}`} />
+          <datalist id="caixa-detalhes">{DETALHES[f.tipo].map((d) => <option key={d} value={d} />)}</datalist>
         </Campo>
         {cortesia ? (
           <>
@@ -530,7 +545,6 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
         ) : (
           <>
             <Campo rotulo="Valor do atendimento (R$)"><input inputMode="decimal" value={f.valor} onChange={(e) => mudaValor(e.target.value)} /></Campo>
-            <div />
             <LinhasPagamento linhas={linhas} setLinhas={setLinhas} />
             <div className="inteiro">
               Pago agora: <b>{fmtMoeda(pago)}</b>
