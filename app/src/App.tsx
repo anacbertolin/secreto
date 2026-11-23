@@ -59,7 +59,8 @@ const MENU: ItemMenu[] = [
   { para: "/central", rotulo: "Central de atendimento", icone: "🎧", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
   { para: "/whatsapp", rotulo: "WhatsApp (consulta)", icone: "💬", funcoes: ["medico", "enfermagem", "faturamento"] },
   { para: "/orientacao-cirurgica", rotulo: "Orientação cirúrgica (consulta)", icone: "🩹", ve: (eu) => podeVerSetor(eu, "orientacao") && !eu?.orientacao_cirurgica },
-  { para: "/ligacoes", rotulo: "Ligações", icone: "☎️", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
+  // Ligações: dentro da Central de atendimento, aba Telefone (pedido da dona, 23/11); a página /ligacoes continua para consulta
+  { para: "/ligacoes", rotulo: "Ligações (consulta)", icone: "☎️", funcoes: ["medico", "enfermagem", "faturamento"] },
   { para: "/whatsapp/assistente", rotulo: "Assistente do WhatsApp", icone: "🤖", funcoes: ["recepcao", "admin"] },
   { para: "/consultorio", rotulo: "Consultório", icone: "🩺", funcoes: ["medico", "enfermagem"] },
   { para: "/busca-ativa", rotulo: "Busca ativa", icone: "📞", funcoes: ["medico", "enfermagem", "recepcao", "admin"] },
