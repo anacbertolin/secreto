@@ -200,7 +200,7 @@ export function DetalheAgendamento(props: {
 }) {
   const a = props.ag;
   const [erro, setErro] = useState("");
-  const [modo, setModo] = useState<"" | "cancelar" | "remarcar" | "confirmar">("");
+  const [modo, setModo] = useState<"" | "cancelar" | "remarcar" | "confirmar" | "excluir">("");
   const [motivo, setMotivo] = useState("");
   const [canal, setCanal] = useState("telefone");
   const ini = new Date(a.inicio);
@@ -224,7 +224,16 @@ export function DetalheAgendamento(props: {
     });
   }
 
+  async function excluir() {
+    setErro("");
+    const { error } = await supabase.rpc("agendamento_excluir", { p_id: a.id, p_motivo: motivo });
+    if (error) return setErro(msgErro(error));
+    props.aoAlterar();
+  }
+
   const ativo = !["cancelado", "faltou", "atendido"].includes(a.status);
+  // excluir de vez (lançado por engano / desistência): antes da chegada; o banco confere as travas (migração 0084)
+  const podeExcluir = ["agendado", "confirmado", "cancelado", "faltou"].includes(a.status);
   const p = a.pacientes!;
 
   return (
@@ -260,10 +269,32 @@ export function DetalheAgendamento(props: {
           {a.status === "chegou" && <button onClick={() => atualizar({ status: "confirmado", chegada_em: null })}>↩️ Desfazer chegada</button>}
           <button onClick={() => setModo("remarcar")}>🔁 Remarcar</button>
           {["agendado", "confirmado"].includes(a.status) && <button onClick={() => atualizar({ status: "faltou" })}>Faltou</button>}
-          <button className="perigo" onClick={() => setModo("cancelar")}>Cancelar</button>
+          <button className="perigo" onClick={() => { setMotivo(""); setModo("cancelar"); }}>Cancelar</button>
+          {podeExcluir && <button className="perigo" onClick={() => { setMotivo(""); setModo("excluir"); }}>🗑️ Excluir</button>}
         </div>
       )}
-      {a.status === "faltou" && <button onClick={() => atualizar({ status: "agendado" })}>↩️ Desfazer falta</button>}
+      {!ativo && modo === "" && (
+        <div className="linha">
+          {a.status === "faltou" && <button onClick={() => atualizar({ status: "agendado" })}>↩️ Desfazer falta</button>}
+          {podeExcluir && <button className="perigo" onClick={() => { setMotivo(""); setModo("excluir"); }}>🗑️ Excluir da agenda</button>}
+        </div>
+      )}
+      {modo === "excluir" && (
+        <div className="secao grade">
+          <p style={{ margin: 0 }}>
+            O agendamento <b>some da agenda</b> (diferente de "Cancelar", que deixa o paciente riscado). Use quando foi
+            lançado por engano ou o paciente desistiu. Fica registrado quem excluiu e por quê.
+          </p>
+          <Campo rotulo="Motivo da exclusão *">
+            <select value={motivo} onChange={(e) => setMotivo(e.target.value)}>
+              <option value="">Escolha…</option>
+              <option>Lançado por engano</option><option>Paciente errado</option><option>Horário/médico errado</option>
+              <option>Paciente desistiu</option><option>Duplicado</option><option>Outro</option>
+            </select>
+          </Campo>
+          <div className="linha"><button onClick={() => setModo("")}>Voltar</button><button className="perigo" disabled={!motivo} onClick={excluir}>Excluir de vez</button></div>
+        </div>
+      )}
 
       {modo === "confirmar" && (
         <div className="secao grade">

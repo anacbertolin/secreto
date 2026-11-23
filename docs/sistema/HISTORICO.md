@@ -1209,3 +1209,12 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
 - Caixa → Novo recebimento (pedido da dona): um paciente pode fazer vários exames na mesma visita. Agora os tipos
   (Consulta/Exame/Procedimento) e os itens de cada tipo são botões que se marcam juntos, + campo "Outro".
   `descricao` fica, por ex., "Consulta + Exame (Mapeamento de retina, Tonometria, Microscopia especular)". Valor é um só.
+
+## 23/11/2026 — Excluir agendamento lançado por engano
+- Pedido da dona: o faturamento não conseguia "excluir" paciente da agenda (só havia "Cancelar", que deixa riscado).
+- Migração `0084_agendamento_excluir`: função `public.agendamento_excluir(id, motivo)` para toda a equipe (inclusive
+  faturamento). Travas: não exclui depois da chegada, nem com atendimento/exame/cirurgia ligado, nem com conta em lote,
+  recebida ou com repasse. Conta aberta/cancelada automática sai junto; vínculos do WhatsApp viram nulos. O motivo vai
+  para a auditoria ("EXCLUÍDO: …"). Testado no banco como usuário do faturamento (com rollback).
+- Tela: botão "🗑️ Excluir" no agendamento (também para cancelados/faltas), com motivo obrigatório.
+- Faturamento já podia incluir/excluir contas (políticas de `contas`) e, desde 0081–0083, marca/altera agenda e caixa.
