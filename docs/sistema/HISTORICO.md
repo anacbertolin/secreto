@@ -1193,3 +1193,6 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
 - Só o faturamento não podia. Migração `0081_agenda_toda_equipe`: faturamento ganha INSERT em `agendamentos`
   (marcar/encaixar) e em `pacientes` (cadastrar paciente novo na hora de marcar). Remarcar, cancelar e check-in
   (UPDATE) continuam com médico, enfermagem, recepção e admin. Advisors sem novidade.
+- Migração `0082_agenda_faturamento_corrige`: faturamento também ALTERA agendamentos (remarcar, cancelar, corrigir),
+  porque é quem corrige erros da agenda na hora de faturar/importar o XML (decisão da dona). Com isso todas as
+  funções têm o mesmo acesso à agenda. Advisors sem novidade.
