@@ -1222,3 +1222,17 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
   já **paga**. Agora particular paga (fora de lote) também pode ser cancelada, com aviso de que o dinheiro não volta
   sozinho (lançar saída no Caixa). Migração `0085_conta_cancelar_paga`: `tg_conta_regras` (agora security definer)
   barra cancelar conta com repasse ativo. Conta em lote: aviso para "Desfazer lote" antes (convênio enviado = glosa).
+
+## 23/11/2026 — Tabela de preços particular (Micrologos)
+- A dona extraiu da Micrologos (ML Clinic Master → Cadastros → Tabelas → Produtos/Serviços → Preços, tabela
+  "Particular", cód. 1) a planilha `procedimentos-particulares.xlsx`: 93 procedimentos (consulta 11, exame 29,
+  procedimento 12 + taxa 1, cirurgia 38, terapia 2). "Appai Particular" e "Assist Particular" ficaram de fora (não usadas).
+- Migração `0086_procedimentos_particulares_micrologos`: tipo novo `terapia`, coluna `procedimentos.observacao`;
+  procedimentos na tabela '00' (tabela própria) com `codigo` = código interno da Micrologos (NÃO é TUSS); preço em
+  `precos` sem convênio, vigente desde 23/11/2026. Taxa de Sala ficou com tipo `taxa`.
+- Regras da dona: preços de cartão e de dinheiro/Pix são itens separados (Blefaroplastias, Consulta, Cirurgia Refrativa);
+  Taxa de Sala = 0,00 (não usada); Revisão = 0,01 e Fotocoagulação continuação = 0,10 são valores simbólicos.
+- Conta particular no Faturamento já pega esses preços sozinha (`interno.preco` com convênio nulo).
+- Caixa → Novo recebimento: os botões de itens agora vêm dessa tabela, com o preço; marcar soma o valor sozinho
+  (pode digitar outro valor; aparece "usar este valor" para voltar à soma). Busca por nome. Cirurgia e terapia
+  aparecem em "Procedimento". Tela Procedimentos mostra Terapia e a observação.
