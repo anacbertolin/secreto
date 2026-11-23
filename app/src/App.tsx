@@ -158,17 +158,6 @@ export default function App() {
 
   let grupoAtual = "";
   // Central de atendimento: tela cheia, sem o menu do sistema (igual ao Talklogos)
-  if (loc.pathname === "/central") {
-    return (
-      <TelefoneProvider>
-        <CentralProvider>
-          <Central />
-          <Telefone />
-        </CentralProvider>
-      </TelefoneProvider>
-    );
-  }
-
   return (
     <TelefoneProvider>
     <CentralProvider>
@@ -202,7 +191,7 @@ export default function App() {
           <button onClick={sair}>Sair</button>
         </div>
       </aside>
-      <main className="conteudo">
+      <main className={"conteudo" + (loc.pathname === "/central" ? " sem-margem" : "")}>
         <Routes>
           <Route path="/" element={<Inicio />} />
           <Route path="/agenda" element={<Agenda />} />
@@ -240,6 +229,7 @@ export default function App() {
           <Route path="/cadastros/convenios" element={<Protegida funcoes={["recepcao", "admin", "faturamento"]}><Convenios /></Protegida>} />
           <Route path="/cadastros/locais" element={<Protegida funcoes={["recepcao", "admin"]}><Locais /></Protegida>} />
           <Route path="/cadastros/exames" element={<Protegida funcoes={["recepcao", "admin"]}><CatalogoExames /></Protegida>} />
+          <Route path="/central" element={<Central />} />
           <Route path="/ligacoes" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><Ligacoes /></Protegida>} />
           <Route path="/cadastros/telefone" element={<Protegida funcoes={["admin"]}><ConfigTelefone /></Protegida>} />
           <Route path="/cadastros/memed" element={<Protegida funcoes={["admin"]}><ConfigMemed /></Protegida>} />
