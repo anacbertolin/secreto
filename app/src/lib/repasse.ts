@@ -25,7 +25,8 @@ export function taxaInternaPct(forma: string, parcelas: number, taxas: TaxaCarta
 }
 
 /** Regra geral (migrações 0062, 0070): bruto − imposto − taxa do cartão − custos = honorários; clínica % e médico o resto */
-export function calcularRepasse(valorTotal: number, regras: RegrasRepasse, taxaPct: number, custos = 0) {
+export function calcularRepasse(valorTotal: number, regras: RegrasRepasse, taxaPct: number, custos = 0, regra = "geral") {
+  if (regra === "direto") regras = { ...regras, imposto_pct: 0, centro_cirurgico_pct: 0 }; // sem imposto e sem os 20%
   const imposto = round2((valorTotal * regras.imposto_pct) / 100);
   const bruto = (valorTotal * taxaPct) / 100;
   const taxa = regras.taxa_arredondamento === "arredondar" ? round2(bruto) : trunc2(bruto);
@@ -42,7 +43,14 @@ export function partesPorParcela(total: number, n: number): number[] {
 }
 
 export const TIPOS_CUSTO: Record<string, string> = {
-  sala: "Taxa de sala (fica para a clínica)", instrumentacao: "Instrumentação", auxiliar: "Auxiliar", insumo: "Insumo / material (fica para a clínica)", outro: "Outro",
+  sala: "Taxa de sala (fica para a clínica)", instrumentacao: "Instrumentação", auxiliar: "Auxiliar", anestesista: "Anestesista", insumo: "Insumo / material (fica para a clínica)", outro: "Outro",
 };
 /** sala e insumo ficam para a clínica: não têm a quem pagar */
 export const custoDaClinica = (tipo: string) => tipo === "sala" || tipo === "insumo";
+
+/** tipos de lançamento (migração 0071) */
+export const REGRAS: Record<string, { rotulo: string; explica: string }> = {
+  geral: { rotulo: "Cirurgia particular", explica: "valor − imposto − taxa do cartão − custos; da sobra, 20% clínica e 80% médico" },
+  direto: { rotulo: "Parceiro (sem imposto e sem os 20%)", explica: "valor − custos = médico (ex.: Clínica Vital)" },
+  cobranca: { rotulo: "Cobrança ao médico", explica: "o paciente pagou ao médico lá fora; o médico deve os custos à clínica (ex.: Campo Grande)" },
+};

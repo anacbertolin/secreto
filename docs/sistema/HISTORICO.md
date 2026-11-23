@@ -1266,6 +1266,60 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
   mantendo quem atendeu e saindo da fila. Advisors sem novidade.
 - Testes de tela com dados simulados (computador e celular). Falta o teste com o número da Central ligado na Meta.
 
+### 21/11 — Confirmações da dona sobre o repasse
+- Auxiliar (Dr. Matheus) e instrumentação recebem **de uma vez** (pagamento único); só o médico que operou recebe parcelado.
+- Instrumentação fica com o nome genérico "Instrumentação" (sem nome de pessoa).
+
+---
+
+## 23/11/2026 — Repasse: parceiro, cobrança ao médico, anestesista e 10 procedimentos (migração 0071)
+### Fonte: 10 PDFs (Dra. Gisele e Dr. Pedro) + explicações da dona
+- PDFs mostravam só custos (sem imposto nem 20/80); aplicada a **regra geral** (dinheiro/PIX nos exemplos).
+- **Anestesista:** o Luciano transfere (como o auxiliar) → novo tipo de custo `anestesista`.
+- **Lente Hoya** (PDF dizia "Roya"): comprada pela clínica → custo `insumo` antes da divisão.
+- **Cisto com biópsia:** da Dra. Gisele; biópsia sem custo de laboratório.
+- **Campo Grande:** o Dr. Pedro (sócio) atende no consultório dele em Campo Grande; o paciente paga a ele e ele **deve à
+  clínica** a taxa de sala, a lente etc. → lançamento do tipo **cobrança** (médico deve; nada vai para ele).
+- **Clínica Vital:** traz pacientes de catarata e paga **R$ 1.500 por cirurgia: R$ 1.000 centro cirúrgico + R$ 500
+  cirurgião, sem imposto e sem os 20%** ("se não me engano" — a dona pode ajustar; o PDF dizia sala 1.100) → tipo **direto**.
+### O que entrou
+- **Migração 0071 `repasse_regras_parceiro_cobranca`** (aplicada): `repasses.regra` e `repasse_procedimentos.regra`
+  ('geral' | 'direto' | 'cobranca'); tipo de custo `anestesista`; `repasse_lancar` recebe `regra` (na cobrança o valor =
+  soma dos custos, 1 parcela, sem favorecidos); cálculo por tipo; na cobrança a "parcela" é o pagamento do médico à clínica
+  (status "concluído" quando ele paga; não se marca "pago ao médico"); gatilho `situacao` olha `recebido_em` também.
+- Procedimentos novos: Gisele — Blefaroplastia com castanhares (9.900; Matheus 2.000, sala 900, instr. 250), Ptose
+  palpebral (8.000; 1.500/500/200), Tumor de carúncula (3.000; 750/200/100), Cisto (1.600; sala 200, instr. 100), Cisto com
+  biópsia (2.600; 200/100); Pedro — Fascectomia (5.500; sala 1.100, lente 320, anestesista 350, instr. 100), Fascectomia +
+  TREC (10.500; 1.800/320/800/200); cobranças Campo Grande (sala 1.100 + lente 320) e Ciclofoto Campo Grande (1.500);
+  Catarata — Clínica Vital (direto; 1.500, centro cirúrgico 1.000).
+- **Telas:** "Novo lançamento" com **Tipo de lançamento** (escolher o procedimento ajusta); cobrança sem valor/forma (o valor
+  é o que o médico deve) e botão **"Médico pagou hoje"**; prévia do parceiro sem imposto/20%; etiquetas "parceiro" e
+  "médico deve" na lista; relatório ganhou **"A receber dos médicos (cobranças em aberto)"** e o relatório por médico deixou
+  de contar cobranças; editor de procedimentos com o tipo.
+### Resultados (médico)
+Blefaro c/ castanhares 4.212,00 · Ptose 3.680,00 · Tumor de carúncula 1.200,00 · Cisto 848,00 · Cisto c/ biópsia 1.528,00 ·
+Fascectomia 2.244,00 · Fascectomia + TREC 4.644,00 · Vital 500,00 · Campo Grande: Pedro deve 1.420,00 · Ciclofoto CG: deve 1.500,00.
+Conferido no banco local e no real (transação desfeita); tela com dados simulados.
+### Ideias oferecidas à dona (sem resposta)
+- Ligar a lente ao Estoque (custo real e baixa automática); relatório "o que fica para a clínica no mês".
+- **Correção da dona (23/11, mesmo dia):** Clínica Vital = **taxa de sala R$ 1.100** (fica para a clínica) + **R$ 500 para o
+  médico que operou** → valor sugerido **R$ 1.600**. Ajustado direto na tabela de procedimentos (dado, não estrutura);
+  nenhum lançamento da Vital existia ainda. Pergunta em aberto: na cobrança de Campo Grande incide imposto? (hoje: não).
+
+### 23/11 (noite) — Repasse: confirmações e catálogo de lentes (migração 0072)
+- Cobrança de Campo Grande **sem imposto** (confirmado pela dona).
+- "Lente Hoya" é a **lente simples (monofocal)**: nos custos dos procedimentos virou "Lente intraocular monofocal (Hoya)"
+  (ajuste de dado). Monofocal = um foco (em geral longe; óculos para perto).
+- **Migração 0072 `lentes_catalogo`** (aplicada): catálogo por MODELO (código do fornecedor, descrição, fabricante, linha,
+  tipo óptico monofocal/foco estendido/multifocal, tórica, pré-carregada "AutonoMe", **custo de compra com IPI**, preço de
+  venda a definir). `estoque_itens.lente_id` liga a unidade do estoque ao modelo. Leem: faturamento, admin, médico,
+  enfermagem; alteram: faturamento e admin. Carregadas as 10 lentes premium da Alcon (tabela do e-mail de 01/04/2026: Clareon
+  684,60; AutonoMe 861,00; Toric 1.584,45; Vivity e PanOptix 4.198,95; Vivity/PanOptix Toric 5.553,45 — valores lidos da foto,
+  alinhados na ordem das linhas; pedir confirmação) + "Monofocal Hoya" 320,00.
+- Tela: **Repasse médico → aba "Lentes"** (custo e preço de venda editáveis, nova lente).
+- Próximo: escolher a lente do catálogo/estoque no lançamento (custo real + baixa sem duplicar a da cirurgia) e a regra da
+  venda de lente premium ao paciente (falta a dona definir preço de venda e divisão).
+
 ## 23/11/2026 (noite) — Central: um item só no menu + conversa interna da equipe (migração 0092)
 - **Pedido da dona:** "Central de atendimento e WhatsApp não ficou a mesma coisa? Deveria ser um só" e "a gente fala com o
   paciente e fala entre a gente (funcionários e médicos) no sistema, tudo no mesmo local" (Interno/Grupos do Talklogos).

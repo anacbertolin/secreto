@@ -8,7 +8,7 @@ import { useCarregar, ok, Aviso, Carregando, Etiqueta, Modal, Campo, BuscaPacien
 import { fmtData, fmtMoeda, isoDia, nomeExibicao, numOuNulo } from "../lib/util";
 import { nomePor } from "../lib/dados";
 import {
-  FORMAS_REPASSE, TIPOS_CUSTO, calcularRepasse, custoDaClinica, partesPorParcela, taxaInternaPct, type RegrasRepasse, type TaxaCartao,
+  FORMAS_REPASSE, REGRAS, TIPOS_CUSTO, calcularRepasse, custoDaClinica, partesPorParcela, taxaInternaPct, type RegrasRepasse, type TaxaCartao,
 } from "../lib/repasse";
 
 // ------------------------------------------------------------------ tipos
@@ -21,7 +21,7 @@ interface Custo {
   favorecido_nome: string | null; pago_em: string | null; ordem: number; profissionais?: { nome: string } | null;
 }
 interface ProcCusto { id?: string; tipo: string; descricao: string; valor: number; favorecido_profissional_id: string | null; favorecido_nome: string | null; ordem: number }
-interface Procedimento { id: string; nome: string; profissional_id: string | null; valor_sugerido: number | null; observacoes: string | null; ativo: boolean; repasse_procedimento_custos: ProcCusto[] }
+interface Procedimento { id: string; nome: string; regra: string; profissional_id: string | null; valor_sugerido: number | null; observacoes: string | null; ativo: boolean; repasse_procedimento_custos: ProcCusto[] }
 /** custo sendo digitado na tela */
 interface CustoEdit { tipo: string; descricao: string; valor: string; favorecido_profissional_id: string; favorecido_nome: string }
 interface Repasse {
@@ -29,7 +29,7 @@ interface Repasse {
   data_cirurgia: string; data_pagamento: string; valor_total: number; forma_pagamento: string; parcelas: number;
   imposto_pct: number; centro_cirurgico_pct: number; taxa_interna_pct: number; taxa_arredondamento: "truncar" | "arredondar";
   imposto_total: number; centro_cirurgico_total: number; taxa_interna_total: number; medico_total: number; custos_total: number;
-  procedimento_id: string | null; status: string; motivo_cancelamento: string | null; observacoes: string | null;
+  procedimento_id: string | null; regra: string; status: string; motivo_cancelamento: string | null; observacoes: string | null;
   pacientes?: { nome: string; nome_social: string | null; numero_prontuario: number } | null;
   profissionais?: { nome: string } | null;
   repasse_parcelas?: Parcela[];
@@ -79,10 +79,12 @@ export default function RepasseMedico() {
         <button className={aba === "lancamentos" ? "ativa" : ""} onClick={() => setParams({ aba: "lancamentos" })}>Lançamentos</button>
         <button className={aba === "medicos" ? "ativa" : ""} onClick={() => setParams({ aba: "medicos" })}>Relatório por médico</button>
         <button className={aba === "regras" ? "ativa" : ""} onClick={() => setParams({ aba: "regras" })}>Regras e taxas</button>
+        <button className={aba === "lentes" ? "ativa" : ""} onClick={() => setParams({ aba: "lentes" })}>Lentes</button>
       </div>
       {base.dados && aba === "lancamentos" && <Lancamentos base={base.dados} />}
       {base.dados && aba === "medicos" && <RelatorioMedicos medicos={base.dados.medicos} />}
       {base.dados && aba === "regras" && <Regras cfg={base.dados.cfg} taxas={base.dados.taxas} aoMudar={base.recarregar} />}
+      {aba === "lentes" && <LentesCatalogo />}
       {base.dados && aba === "regras" && <Procedimentos procs={base.dados.procedimentos} medicos={base.dados.medicos} aoMudar={base.recarregar} />}
     </div>
   );
@@ -137,7 +139,7 @@ function Lancamentos({ base }: { base: Awaited<ReturnType<typeof carregarBase>> 
                     <td>{r.numero}</td>
                     <td>{fmtData(r.data_cirurgia)}</td>
                     <td><b>{r.profissionais?.nome}</b></td>
-                    <td>{r.pacientes ? nomeExibicao(r.pacientes) : <span className="muted">—</span>}<div className="muted pequeno">{r.procedimento}</div></td>
+                    <td>{r.pacientes ? nomeExibicao(r.pacientes) : <span className="muted">—</span>}<div className="muted pequeno">{r.procedimento}</div>{r.regra && r.regra !== "geral" && <Etiqueta cor="roxo">{r.regra === "cobranca" ? "médico deve" : "parceiro"}</Etiqueta>}</td>
                     <td>{FORMAS_REPASSE[r.forma_pagamento]}{r.parcelas > 1 && ` ${r.parcelas}x`}</td>
                     <td style={num}>{fmtMoeda(r.valor_total)}</td>
                     <td style={num}>{fmtMoeda(soma(ps, "medico"))}</td>
@@ -162,7 +164,7 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
   base: Awaited<ReturnType<typeof carregarBase>>; contaId: string | null; aoFechar: () => void; aoCriar: (id: string) => void;
 }) {
   const hoje = isoDia(new Date());
-  const [f, setF] = useState({ profissional_id: "", procedimento_id: "", procedimento: "", data_cirurgia: hoje, data_pagamento: hoje, valor: "", forma: "pix", parcelas: "12", observacoes: "" });
+  const [f, setF] = useState({ regra: "geral", profissional_id: "", procedimento_id: "", procedimento: "", data_cirurgia: hoje, data_pagamento: hoje, valor: "", forma: "pix", parcelas: "12", observacoes: "" });
   const [pac, setPac] = useState<PacienteResumo | { id: string; nome: string; nome_social: string | null; numero_prontuario: number } | null>(null);
   const [conta, setConta] = useState<string | null>(null);
   const [custos, setCustos] = useState<CustoEdit[]>([]);
@@ -198,22 +200,23 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
     })();
   }, [contaId, base.medicos]);
 
-  const valor = numOuNulo(f.valor) ?? 0;
-  const n = f.forma === "credito" ? Number(f.parcelas) : 1;
-  const taxaPct = taxaInternaPct(f.forma, n, base.taxas);
+  const cobranca = f.regra === "cobranca";
   const custosNum = custos.map((c) => numOuNulo(c.valor));
   const custosTotal = custosNum.reduce<number>((s, v) => s + (v ?? 0), 0);
+  const valor = cobranca ? custosTotal : numOuNulo(f.valor) ?? 0;
+  const n = !cobranca && f.forma === "credito" ? Number(f.parcelas) : 1;
+  const taxaPct = cobranca ? 0 : taxaInternaPct(f.forma, n, base.taxas);
   const prev = useMemo(() => {
-    if (valor <= 0 || taxaPct === null) return null;
-    const t = calcularRepasse(valor, base.cfg, taxaPct, custosTotal);
+    if (cobranca || valor <= 0 || taxaPct === null) return null; // cobrança: não há divisão
+    const t = calcularRepasse(valor, base.cfg, taxaPct, custosTotal, f.regra);
     return { ...t, medParc: partesPorParcela(t.medico, n) };
-  }, [valor, n, taxaPct, base.cfg, custosTotal]);
+  }, [cobranca, valor, n, taxaPct, base.cfg, custosTotal, f.regra]);
   const procsDoMedico = base.procedimentos.filter((p) => p.ativo && (!p.profissional_id || !f.profissional_id || p.profissional_id === f.profissional_id));
 
   function escolherProcedimento(id: string) {
     const p = base.procedimentos.find((x) => x.id === id);
     setF((x) => ({
-      ...x, procedimento_id: id,
+      ...x, procedimento_id: id, regra: p?.regra ?? x.regra,
       procedimento: p ? p.nome : x.procedimento,
       profissional_id: x.profissional_id || p?.profissional_id || "",
       valor: p?.valor_sugerido && !numOuNulo(x.valor) ? String(p.valor_sugerido).replace(".", ",") : x.valor,
@@ -228,7 +231,7 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
     setErro("");
     if (!f.profissional_id) return setErro("Escolha o médico.");
     if (!f.procedimento.trim()) return setErro("Informe o procedimento (ex.: Refrativa AO).");
-    if (valor <= 0) return setErro("Informe o valor total da cirurgia.");
+    if (valor <= 0) return setErro(cobranca ? "Informe o que o médico deve (taxa de sala, lente…)." : "Informe o valor total da cirurgia.");
     if (taxaPct === null) return setErro(`Não há taxa cadastrada para ${n}x. Cadastre na aba "Regras e taxas".`);
     for (const [i, c] of custos.entries()) {
       if (!c.descricao.trim()) return setErro(`Descreva o custo da linha ${i + 1}.`);
@@ -238,7 +241,7 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
     setSalvando(true);
     const { data, error } = await supabase.rpc("repasse_lancar", { p: {
       conta_id: conta, paciente_id: pac?.id ?? null, profissional_id: f.profissional_id, procedimento_id: f.procedimento_id || null,
-      procedimento: f.procedimento.trim(), data_cirurgia: f.data_cirurgia, data_pagamento: f.data_pagamento, valor_total: valor,
+      regra: f.regra, procedimento: f.procedimento.trim(), data_cirurgia: f.data_cirurgia, data_pagamento: f.data_pagamento, valor_total: valor,
       forma_pagamento: f.forma, parcelas: n, observacoes: f.observacoes.trim() || null,
       custos: custos.map((c, i) => ({ tipo: c.tipo, descricao: c.descricao.trim(), valor: custosNum[i],
         favorecido_profissional_id: c.favorecido_profissional_id || null, favorecido_nome: c.favorecido_nome.trim() || null })),
@@ -250,12 +253,16 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
 
   return (
-    <Modal titulo="Novo repasse de cirurgia particular" largo aoFechar={aoFechar}
+    <Modal titulo="Novo lançamento" largo aoFechar={aoFechar}
       rodape={<><button onClick={aoFechar}>Cancelar</button><button className="primario" disabled={salvando} onClick={salvar}>Lançar repasse</button></>}>
       <Aviso>{erro}</Aviso>
       {conta && <Aviso tipo="info">Dados puxados da conta particular. Confira antes de lançar.</Aviso>}
+      <Campo rotulo="Tipo de lançamento">
+        <select value={f.regra} onChange={set("regra")}>{Object.entries(REGRAS).map(([k, v]) => <option key={k} value={k}>{v.rotulo}</option>)}</select>
+      </Campo>
+      <p className="muted pequeno" style={{ marginTop: -6 }}>{REGRAS[f.regra].explica}. Escolher o procedimento já ajusta o tipo.</p>
       <div className="grade g3">
-        <Campo rotulo="Médico que recebe">
+        <Campo rotulo={cobranca ? "Médico que deve à clínica" : "Médico que recebe"}>
           <select value={f.profissional_id} onChange={set("profissional_id")}>
             <option value="">Escolha…</option>{base.medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
           </select>
@@ -276,7 +283,7 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
             {!conta && <button className="sutil" onClick={() => setPac(null)}>trocar</button>}</div>
         ) : <BuscaPaciente aoEscolher={setPac} />}
       </div>
-      <div className="grade g3">
+      {!cobranca && <><div className="grade g3">
         <Campo rotulo="Valor total da cirurgia (R$)"><input inputMode="decimal" value={f.valor} onChange={set("valor")} placeholder="ex.: 4820,00" /></Campo>
         <Campo rotulo="Forma de pagamento">
           <select value={f.forma} onChange={set("forma")}>{Object.entries(FORMAS_REPASSE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
@@ -290,26 +297,30 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
         ) : <span />}
       </div>
       <Campo rotulo={f.forma === "credito" ? "Data da venda no cartão" : "Data do pagamento"}><input type="date" style={{ maxWidth: 180 }} value={f.data_pagamento} onChange={set("data_pagamento")} /></Campo>
+      </>}
       <Campo rotulo="Observações (opcional)"><input value={f.observacoes} onChange={set("observacoes")} /></Campo>
 
       <div className="painel" style={{ marginTop: 10 }}>
-        <h2 style={{ marginTop: 0 }}>Custos da cirurgia</h2>
-        <p className="muted pequeno" style={{ marginTop: 0 }}>Saem antes da divisão. Taxa de sala e insumos ficam para a clínica; auxiliar e instrumentação o Luciano transfere a quem recebe.</p>
-        <EditorCustos custos={custos} medicos={base.medicos} aoMudar={setCustos} />
+        <h2 style={{ marginTop: 0 }}>{cobranca ? "O que o médico deve à clínica" : "Custos da cirurgia"}</h2>
+        <p className="muted pequeno" style={{ marginTop: 0 }}>{cobranca ? "Taxa de sala, lente e o que mais ele deve. Quando ele pagar, marque no lançamento." : "Saem antes da divisão. Taxa de sala e insumos ficam para a clínica; auxiliar, anestesista e instrumentação o Luciano transfere a quem recebe."}</p>
+        <EditorCustos custos={custos} medicos={base.medicos} aoMudar={setCustos} cobranca={cobranca} />
       </div>
 
-      {prev && (
+      {cobranca && valor > 0 && <Aviso tipo="info">{nomePor(base.medicos, f.profissional_id) || "O médico"} fica devendo <b>{fmtMoeda(valor)}</b> à clínica.</Aviso>}
+      {prev && !cobranca && (
         <div className="painel" style={{ marginTop: 10 }}>
           <h2 style={{ marginTop: 0 }}>Prévia do cálculo</h2>
           <table className="tabela">
             <tbody>
               <tr><td>Valor total da venda</td><td style={num}>{fmtMoeda(valor)}</td></tr>
-              <tr><td>Imposto ({pct(base.cfg.imposto_pct)} do total)</td><td style={num}>− {fmtMoeda(prev.imposto)}</td></tr>
+              {f.regra === "geral" && <tr><td>Imposto ({pct(base.cfg.imposto_pct)} do total)</td><td style={num}>− {fmtMoeda(prev.imposto)}</td></tr>}
               {taxaPct! > 0 && <tr><td>Taxa do cartão ({pct(taxaPct!)} do total{f.forma === "credito" && n > 1 ? ", com antecipação" : ""})</td><td style={num}>− {fmtMoeda(prev.taxa)}</td></tr>}
               {custos.map((c, i) => <tr key={i}><td>{c.descricao || TIPOS_CUSTO[c.tipo]}{(() => { const q = custoDaClinica(c.tipo) ? "" : c.favorecido_profissional_id ? nomePor(base.medicos, c.favorecido_profissional_id) : c.favorecido_nome.trim(); return q && q !== c.descricao ? ` (${q})` : ""; })()}</td><td style={num}>− {fmtMoeda(custosNum[i] ?? 0)}</td></tr>)}
-              <tr><td className="muted">Honorários (o que sobra)</td><td style={num} className="muted">{fmtMoeda(prev.sobra)}</td></tr>
-              <tr><td>Clínica ({pct(base.cfg.centro_cirurgico_pct)} dos honorários)</td><td style={num}>− {fmtMoeda(prev.clinica)}</td></tr>
-              <tr><td><b>Médico ({pct(100 - base.cfg.centro_cirurgico_pct)} dos honorários)</b></td><td style={num}><b>{fmtMoeda(prev.medico)}</b></td></tr>
+              {f.regra === "geral" ? <>
+                <tr><td className="muted">Honorários (o que sobra)</td><td style={num} className="muted">{fmtMoeda(prev.sobra)}</td></tr>
+                <tr><td>Clínica ({pct(base.cfg.centro_cirurgico_pct)} dos honorários)</td><td style={num}>− {fmtMoeda(prev.clinica)}</td></tr>
+                <tr><td><b>Médico ({pct(100 - base.cfg.centro_cirurgico_pct)} dos honorários)</b></td><td style={num}><b>{fmtMoeda(prev.medico)}</b></td></tr>
+              </> : <tr><td><b>Médico (sem imposto e sem os 20%)</b></td><td style={num}><b>{fmtMoeda(prev.medico)}</b></td></tr>}
             </tbody>
           </table>
           {n > 1 && (
@@ -340,6 +351,7 @@ export function RepasseDetalhe() {
   const ps = r.repasse_parcelas ?? [];
   const ativo = r.status !== "cancelado";
   const entraram = ps.filter((p) => p.recebido_em);
+  const cob = r.regra === "cobranca";
   const cs = (r.repasse_custos ?? []).sort((a, b) => a.ordem - b.ordem);
   async function pagarCusto(c: Custo, pago: string | null) {
     setErro(""); setOkMsg("");
@@ -366,7 +378,7 @@ export function RepasseDetalhe() {
     <div>
       <div className="cabecalho">
         <div>
-          <div className="linha"><h1 style={{ margin: 0 }}>Repasse nº {r.numero}</h1><Etiqueta cor={STATUS[r.status].cor}>{STATUS[r.status].rotulo}</Etiqueta></div>
+          <div className="linha"><h1 style={{ margin: 0 }}>{cob ? "Cobrança" : "Repasse"} nº {r.numero}</h1>{r.regra && r.regra !== "geral" && <Etiqueta cor="roxo">{REGRAS[r.regra]?.rotulo}</Etiqueta>}<Etiqueta cor={STATUS[r.status].cor}>{STATUS[r.status].rotulo}</Etiqueta></div>
           <p className="sub" style={{ margin: "4px 0 0" }}>
             <b>{r.profissionais?.nome}</b> · {r.procedimento} · cirurgia em {fmtData(r.data_cirurgia)}
             {r.pacientes && <> · {r.paciente_id ? <Link to={`/pacientes/${r.paciente_id}`}>{nomeExibicao(r.pacientes)}</Link> : nomeExibicao(r.pacientes)} (pront. {r.pacientes.numero_prontuario})</>}
@@ -387,24 +399,42 @@ export function RepasseDetalhe() {
         <h2>Resumo</h2>
         <table className="tabela" style={{ maxWidth: 640 }}>
           <tbody>
+            {cob ? <>
+              {cs.map((c) => <tr key={c.id}><td>{c.descricao}</td><td style={num}>{fmtMoeda(c.valor)}</td></tr>)}
+              <tr><td><b>{r.profissionais?.nome} deve à clínica</b></td><td style={num}><b>{fmtMoeda(r.valor_total)}</b></td></tr>
+              <tr><td className="muted">Situação</td><td style={num} className="muted">{ps.every((p) => p.recebido_em) ? `pago em ${fmtData(ps[0]?.recebido_em)}` : "a receber"}</td></tr>
+            </> : <>
             <tr><td>Valor da cirurgia · {FORMAS_REPASSE[r.forma_pagamento]}{r.parcelas > 1 ? ` em ${r.parcelas}x` : ""}</td><td style={num}><b>{fmtMoeda(r.valor_total)}</b></td></tr>
-            <tr><td>Imposto ({pct(r.imposto_pct)} do total)</td><td style={num}>{fmtMoeda(r.imposto_total)}</td></tr>
+            {(r.regra ?? "geral") === "geral" && <tr><td>Imposto ({pct(r.imposto_pct)} do total)</td><td style={num}>{fmtMoeda(r.imposto_total)}</td></tr>}
             {r.taxa_interna_pct > 0 && <tr><td>Taxa do cartão ({pct(r.taxa_interna_pct)} do total)</td><td style={num}>{fmtMoeda(r.taxa_interna_total)}</td></tr>}
             {cs.map((c) => <tr key={c.id}><td>{c.descricao}{favorecido(c) && <span className="muted"> · {favorecido(c)}</span>}</td><td style={num}>{fmtMoeda(c.valor)}</td></tr>)}
-            {cs.length > 0 && <tr><td className="muted">Honorários (o que sobra)</td><td style={num} className="muted">{fmtMoeda(Number(r.centro_cirurgico_total) + Number(r.medico_total))}</td></tr>}
-            <tr><td>Clínica ({pct(r.centro_cirurgico_pct)} dos honorários)</td><td style={num}>{fmtMoeda(r.centro_cirurgico_total)}</td></tr>
-            <tr><td><b>Médico</b> ({pct(100 - r.centro_cirurgico_pct)} dos honorários)</td><td style={num}><b>{fmtMoeda(r.medico_total)}</b></td></tr>
+            {(r.regra ?? "geral") === "geral" && <>
+              {cs.length > 0 && <tr><td className="muted">Honorários (o que sobra)</td><td style={num} className="muted">{fmtMoeda(Number(r.centro_cirurgico_total) + Number(r.medico_total))}</td></tr>}
+              <tr><td>Clínica ({pct(r.centro_cirurgico_pct)} dos honorários)</td><td style={num}>{fmtMoeda(r.centro_cirurgico_total)}</td></tr>
+            </>}
+            <tr><td><b>Médico</b> {(r.regra ?? "geral") === "geral" ? `(${pct(100 - r.centro_cirurgico_pct)} dos honorários)` : "(sem imposto e sem os 20%)"}</td><td style={num}><b>{fmtMoeda(r.medico_total)}</b></td></tr>
             <tr><td className="muted">Parcelas que já entraram</td><td style={num} className="muted">{entraram.length} de {r.parcelas} · médico {fmtMoeda(soma(entraram, "medico"))}</td></tr>
             <tr><td className="muted">Já pago ao médico / falta pagar</td><td style={num} className="muted">
               {fmtMoeda(soma(ps.filter((p) => p.pago_medico_em), "medico"))} / {fmtMoeda(soma(ps.filter((p) => !p.pago_medico_em), "medico"))}</td></tr>
+            </>}
           </tbody>
         </table>
         {r.observacoes && <p className="muted pequeno">Obs.: {r.observacoes}</p>}
       </div>
 
-      {cs.some((c) => !custoDaClinica(c.tipo)) && (
+      {cob && ps[0] && (
+        <div className="painel">
+          <h2>Pagamento do médico à clínica</h2>
+          {ps[0].recebido_em ? (
+            <p className="linha">✅ {r.profissionais?.nome} pagou {fmtMoeda(r.valor_total)} em {fmtData(ps[0].recebido_em)}
+              {ativo && <button className="sutil pequeno" onClick={() => confirm("Desmarcar o pagamento?") && atualizar(ps[0], { recebido_em: null }, "Pagamento desmarcado.")}>desfazer</button>}</p>
+          ) : ativo ? <button className="primario" onClick={() => atualizar(ps[0], { recebido_em: isoDia(new Date()) }, "Pagamento do médico registrado.")}>Médico pagou hoje</button> : "—"}
+        </div>
+      )}
+
+      {!cob && cs.some((c) => !custoDaClinica(c.tipo)) && (
         <div className="painel rolagem">
-          <h2>A pagar: auxiliar e instrumentação</h2>
+          <h2>A pagar: auxiliar, anestesista e instrumentação</h2>
           <table className="tabela">
             <thead><tr><th>Custo</th><th>Quem recebe</th><th style={num}>Valor</th><th>Pago</th></tr></thead>
             <tbody>
@@ -419,7 +449,7 @@ export function RepasseDetalhe() {
         </div>
       )}
 
-      <div className="painel">
+      {!cob && <div className="painel">
         <h2>Parcelas</h2>
         {ativo && r.parcelas > 1 && (
           <p className="muted pequeno">Quando cada parcela cair na conta, clique em <b>"Entrou hoje"</b>. Depois de transferir ao médico, clique em <b>"Marcar pago hoje"</b>.</p>
@@ -465,7 +495,7 @@ export function RepasseDetalhe() {
             )}
           </table>
         </div>
-      </div>
+      </div>}
       {cancelar && <CancelarRepasse aoFechar={() => setCancelar(false)} aoConfirmar={cancelarRepasse} />}
     </div>
   );
@@ -490,7 +520,7 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
   const { dados, erro, carregando } = useCarregar(async () => {
     const q = supabase.from("repasse_parcelas")
       .select("*, repasses!inner(numero, procedimento, data_cirurgia, profissional_id, forma_pagamento, parcelas, status, profissionais!repasses_profissional_id_fkey(nome), pacientes(nome, nome_social))")
-      .not("recebido_em", "is", null).gte("recebido_em", f.de).lte("recebido_em", f.ate).neq("repasses.status", "cancelado")
+      .not("recebido_em", "is", null).gte("recebido_em", f.de).lte("recebido_em", f.ate).neq("repasses.status", "cancelado").neq("repasses.regra", "cobranca")
       .order("recebido_em").limit(5000);
     return ok(await (f.medico === "todos" ? q : q.eq("repasses.profissional_id", f.medico))) as LinhaRel[];
   }, [f.de, f.ate, f.medico]);
@@ -534,6 +564,7 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
         <button onClick={() => window.print()}>🖨️ Imprimir</button>
       </div>
       <Aviso>{erro}</Aviso>
+      <CobrancasMedicos />
       <CustosAPagar de={f.de} ate={f.ate} situacao={f.situacao} />
       {carregando && !dados ? <Carregando /> : grupos.length === 0 ? <div className="painel vazio">Nenhuma parcela entrou neste período.</div> : (
         <>
@@ -678,7 +709,7 @@ function Regras({ cfg, taxas, aoMudar }: { cfg: Config; taxas: TaxaCartao[]; aoM
 }
 
 // ------------------------------------------------------------------ editor de custos (lançamento e tabela de procedimentos)
-function EditorCustos({ custos, medicos, aoMudar }: { custos: CustoEdit[]; medicos: Medico[]; aoMudar: (c: CustoEdit[]) => void }) {
+function EditorCustos({ custos, medicos, aoMudar, cobranca = false }: { custos: CustoEdit[]; medicos: Medico[]; aoMudar: (c: CustoEdit[]) => void; cobranca?: boolean }) {
   const muda = (i: number, campo: keyof CustoEdit, v: string) => aoMudar(custos.map((c, j) => (j === i ? { ...c, [campo]: v } : c)));
   return (
     <div className="rolagem">
@@ -691,7 +722,7 @@ function EditorCustos({ custos, medicos, aoMudar }: { custos: CustoEdit[]; medic
                 {Object.entries(TIPOS_CUSTO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
               <td><input value={c.descricao} onChange={(e) => muda(i, "descricao", e.target.value)} aria-label="Descrição do custo" /></td>
               <td><input style={{ width: 100, textAlign: "right" }} inputMode="decimal" value={c.valor} onChange={(e) => muda(i, "valor", e.target.value)} aria-label="Valor do custo" /></td>
-              <td>{custoDaClinica(c.tipo) ? <span className="muted pequeno">fica para a clínica</span> : (
+              <td>{custoDaClinica(c.tipo) || cobranca ? <span className="muted pequeno">{cobranca ? "devido à clínica" : "fica para a clínica"}</span> : (
                 <div className="linha" style={{ gap: 4 }}>
                   <select style={{ width: 170 }} value={c.favorecido_profissional_id} onChange={(e) => muda(i, "favorecido_profissional_id", e.target.value)} aria-label="Profissional que recebe">
                     <option value="">Outra pessoa…</option>{medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
@@ -711,17 +742,17 @@ function EditorCustos({ custos, medicos, aoMudar }: { custos: CustoEdit[]; medic
 
 // ------------------------------------------------------------------ tabela de procedimentos (custos padrão)
 function Procedimentos({ procs, medicos, aoMudar }: { procs: Procedimento[]; medicos: Medico[]; aoMudar: () => void }) {
-  const [edit, setEdit] = useState<{ id: string | null; nome: string; profissional_id: string; valor: string; ativo: boolean; custos: CustoEdit[] } | null>(null);
+  const [edit, setEdit] = useState<{ id: string | null; regra: string; nome: string; profissional_id: string; valor: string; ativo: boolean; custos: CustoEdit[] } | null>(null);
   const [erro, setErro] = useState("");
   const [okMsg, setOkMsg] = useState("");
 
   function abrir(p: Procedimento | null) {
     setErro(""); setOkMsg("");
     setEdit(p ? {
-      id: p.id, nome: p.nome, profissional_id: p.profissional_id ?? "", valor: p.valor_sugerido ? String(p.valor_sugerido).replace(".", ",") : "", ativo: p.ativo,
+      id: p.id, regra: p.regra, nome: p.nome, profissional_id: p.profissional_id ?? "", valor: p.valor_sugerido ? String(p.valor_sugerido).replace(".", ",") : "", ativo: p.ativo,
       custos: p.repasse_procedimento_custos.map((c) => ({ tipo: c.tipo, descricao: c.descricao, valor: String(c.valor).replace(".", ","),
         favorecido_profissional_id: c.favorecido_profissional_id ?? "", favorecido_nome: c.favorecido_nome ?? "" })),
-    } : { id: null, nome: "", profissional_id: "", valor: "", ativo: true, custos: [] });
+    } : { id: null, regra: "geral", nome: "", profissional_id: "", valor: "", ativo: true, custos: [] });
   }
   async function salvar() {
     if (!edit) return;
@@ -730,7 +761,7 @@ function Procedimentos({ procs, medicos, aoMudar }: { procs: Procedimento[]; med
     const custos = edit.custos.map((c, i) => ({ c, v: numOuNulo(c.valor), i }));
     const ruim = custos.find((x) => !x.c.descricao.trim() || x.v === null || x.v < 0);
     if (ruim) return setErro(`Confira a descrição e o valor do custo da linha ${ruim.i + 1}.`);
-    const dados = { nome: edit.nome.trim(), profissional_id: edit.profissional_id || null, valor_sugerido: numOuNulo(edit.valor) || null, ativo: edit.ativo };
+    const dados = { regra: edit.regra, nome: edit.nome.trim(), profissional_id: edit.profissional_id || null, valor_sugerido: numOuNulo(edit.valor) || null, ativo: edit.ativo };
     let id = edit.id;
     if (id) {
       const r = await supabase.from("repasse_procedimentos").update(dados).eq("id", id);
@@ -765,7 +796,7 @@ function Procedimentos({ procs, medicos, aoMudar }: { procs: Procedimento[]; med
         <tbody>
           {procs.map((p) => (
             <tr key={p.id} style={p.ativo ? undefined : { opacity: 0.5 }}>
-              <td><b>{p.nome}</b>{!p.ativo && <span className="muted pequeno"> (inativo)</span>}</td>
+              <td><b>{p.nome}</b>{!p.ativo && <span className="muted pequeno"> (inativo)</span>}{p.regra && p.regra !== "geral" && <div><Etiqueta cor="roxo">{p.regra === "cobranca" ? "médico deve" : "parceiro"}</Etiqueta></div>}</td>
               <td>{p.profissional_id ? nomePor(medicos, p.profissional_id) : <span className="muted">qualquer</span>}</td>
               <td style={num}>{p.valor_sugerido ? fmtMoeda(p.valor_sugerido) : "—"}</td>
               <td className="pequeno">{p.repasse_procedimento_custos.length ? p.repasse_procedimento_custos.map((c) => `${c.descricao} ${fmtMoeda(c.valor)}`).join(" · ") : <span className="muted">sem custos</span>}</td>
@@ -785,9 +816,11 @@ function Procedimentos({ procs, medicos, aoMudar }: { procs: Procedimento[]; med
               <option value="">Qualquer médico</option>{medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}</select></Campo>
             <Campo rotulo="Valor sugerido (R$, opcional)"><input inputMode="decimal" value={edit.valor} onChange={(e) => setEdit({ ...edit, valor: e.target.value })} /></Campo>
           </div>
+          <Campo rotulo="Tipo de lançamento"><select value={edit.regra} onChange={(e) => setEdit({ ...edit, regra: e.target.value })}>
+            {Object.entries(REGRAS).map(([k, v]) => <option key={k} value={k}>{v.rotulo}</option>)}</select></Campo>
           <label className="linha pequeno"><input type="checkbox" checked={edit.ativo} onChange={(e) => setEdit({ ...edit, ativo: e.target.checked })} /> Ativo (aparece no lançamento)</label>
           <h2>Custos padrão</h2>
-          <EditorCustos custos={edit.custos} medicos={medicos} aoMudar={(c) => setEdit({ ...edit, custos: c })} />
+          <EditorCustos custos={edit.custos} medicos={medicos} aoMudar={(c) => setEdit({ ...edit, custos: c })} cobranca={edit.regra === "cobranca"} />
         </Modal>
       )}
     </div>
@@ -800,7 +833,7 @@ function CustosAPagar({ de, ate, situacao }: { de: string; ate: string; situacao
   const [erro, setErro] = useState("");
   const { dados, erro: e1, recarregar } = useCarregar(async () => ok(await supabase.from("repasse_custos")
     .select("*, profissionais(nome), repasses!inner(numero, procedimento, data_cirurgia, status, profissionais!repasses_profissional_id_fkey(nome))")
-    .not("tipo", "in", "(sala,insumo)").gte("repasses.data_cirurgia", de).lte("repasses.data_cirurgia", ate).neq("repasses.status", "cancelado")
+    .not("tipo", "in", "(sala,insumo)").neq("repasses.regra", "cobranca").gte("repasses.data_cirurgia", de).lte("repasses.data_cirurgia", ate).neq("repasses.status", "cancelado")
     .limit(5000)) as CustoRel[], [de, ate]);
   const linhas = (dados ?? []).filter((c) => situacao === "todas" || (situacao === "pagar" ? !c.pago_em : !!c.pago_em))
     .sort((a, b) => favorecido(a).localeCompare(favorecido(b)) || a.repasses.data_cirurgia.localeCompare(b.repasses.data_cirurgia));
@@ -814,7 +847,7 @@ function CustosAPagar({ de, ate, situacao }: { de: string; ate: string; situacao
   if (!linhas.length && !e1) return null;
   return (
     <div className="painel rolagem">
-      <h2>Auxiliares e instrumentação (cirurgias do período)</h2>
+      <h2>Auxiliares, anestesista e instrumentação (cirurgias do período)</h2>
       <Aviso>{erro || e1}</Aviso>
       <table className="tabela">
         <thead><tr><th>Quem recebe</th><th>Cirurgia</th><th>Repasse</th><th>Custo</th><th style={num}>Valor</th><th>Pago</th></tr></thead>
@@ -830,6 +863,115 @@ function CustosAPagar({ de, ate, situacao }: { de: string; ate: string; situacao
         <tfoot><tr><th colSpan={4}>Total · já pago {fmtMoeda(total(linhas.filter((c) => c.pago_em)))} · a pagar {fmtMoeda(total(linhas.filter((c) => !c.pago_em)))}</th>
           <th style={num}>{fmtMoeda(total(linhas))}</th><th></th></tr></tfoot>
       </table>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ cobranças: o que os médicos devem à clínica
+function CobrancasMedicos() {
+  const nav = useNavigate();
+  const { dados, erro } = useCarregar(async () => ok(await supabase.from("repasses")
+    .select("id, numero, procedimento, data_cirurgia, valor_total, profissionais!repasses_profissional_id_fkey(nome), repasse_parcelas(recebido_em)")
+    .eq("regra", "cobranca").eq("status", "aberto").order("data_cirurgia").limit(1000)) as unknown as
+    { id: string; numero: number; procedimento: string; data_cirurgia: string; valor_total: number; profissionais: { nome: string } | null }[], []);
+  if (!dados?.length && !erro) return null;
+  const total = (dados ?? []).reduce((s, c) => s + Number(c.valor_total), 0);
+  return (
+    <div className="painel rolagem">
+      <h2>A receber dos médicos (cobranças em aberto)</h2>
+      <Aviso>{erro}</Aviso>
+      <table className="tabela">
+        <thead><tr><th>Médico</th><th>Cirurgia</th><th>Nº</th><th style={num}>Deve</th></tr></thead>
+        <tbody>
+          {(dados ?? []).map((c) => (
+            <tr key={c.id} className="clicavel" onClick={() => nav(`/repasse/${c.id}`)}><td><b>{c.profissionais?.nome}</b></td>
+              <td>{fmtData(c.data_cirurgia)}<div className="muted pequeno">{c.procedimento}</div></td><td>{c.numero}</td><td style={num}>{fmtMoeda(c.valor_total)}</td></tr>
+          ))}
+        </tbody>
+        <tfoot><tr><th colSpan={3}>Total a receber</th><th style={num}>{fmtMoeda(total)}</th></tr></tfoot>
+      </table>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ catálogo de lentes intraoculares (migração 0072)
+interface Lente {
+  id: string; codigo: string; descricao: string; fabricante: string; linha: string | null; tipo_optico: string; torica: boolean;
+  pre_carregada: boolean; custo_compra: number | null; preco_venda: number | null; observacoes: string | null; ativo: boolean;
+}
+const TIPO_OPTICO: Record<string, string> = { monofocal: "Monofocal (simples)", foco_estendido: "Foco estendido", multifocal: "Multifocal / trifocal" };
+function LentesCatalogo() {
+  const [erro, setErro] = useState("");
+  const [okMsg, setOkMsg] = useState("");
+  const [vals, setVals] = useState<Record<string, { custo: string; venda: string }>>({});
+  const [nova, setNova] = useState<{ codigo: string; descricao: string; fabricante: string; tipo_optico: string; torica: boolean; custo: string } | null>(null);
+  const { dados, erro: e1, carregando, recarregar } = useCarregar(async () =>
+    ok(await supabase.from("lentes_catalogo").select("*").order("fabricante").order("custo_compra")) as Lente[], []);
+  useEffect(() => {
+    if (dados) setVals(Object.fromEntries(dados.map((l) => [l.id, {
+      custo: l.custo_compra === null ? "" : String(l.custo_compra).replace(".", ","), venda: l.preco_venda === null ? "" : String(l.preco_venda).replace(".", ","),
+    }])));
+  }, [dados]);
+  async function salvar() {
+    setErro(""); setOkMsg("");
+    for (const l of dados ?? []) {
+      const c = vals[l.id]?.custo.trim() ? numOuNulo(vals[l.id].custo) : null, v = vals[l.id]?.venda.trim() ? numOuNulo(vals[l.id].venda) : null;
+      if ((vals[l.id]?.custo.trim() && c === null) || (vals[l.id]?.venda.trim() && v === null)) return setErro(`Valor inválido em ${l.codigo}.`);
+      if (c === (l.custo_compra === null ? null : Number(l.custo_compra)) && v === (l.preco_venda === null ? null : Number(l.preco_venda))) continue;
+      const { error } = await supabase.from("lentes_catalogo").update({ custo_compra: c, preco_venda: v }).eq("id", l.id);
+      if (error) return setErro(`${l.codigo}: ${msgErro(error)}`);
+    }
+    setOkMsg("Valores salvos."); recarregar();
+  }
+  async function incluir() {
+    if (!nova) return;
+    setErro("");
+    if (!nova.codigo.trim() || !nova.descricao.trim()) return setErro("Informe o código e a descrição da lente.");
+    const { error } = await supabase.from("lentes_catalogo").insert({ codigo: nova.codigo.trim(), descricao: nova.descricao.trim(), fabricante: nova.fabricante.trim() || "Alcon",
+      tipo_optico: nova.tipo_optico, torica: nova.torica, custo_compra: numOuNulo(nova.custo) });
+    if (error) return setErro(msgErro(error));
+    setNova(null); setOkMsg("Lente incluída."); recarregar();
+  }
+  return (
+    <div className="painel rolagem">
+      <div className="linha"><h2 style={{ margin: 0 }}>Lentes intraoculares</h2><span style={{ marginLeft: "auto" }} />
+        <button onClick={() => setNova({ codigo: "", descricao: "", fabricante: "Alcon", tipo_optico: "monofocal", torica: false, custo: "" })}>➕ Nova lente</button>
+        <button className="primario" onClick={salvar}>Salvar valores</button></div>
+      <p className="muted pequeno">Custo de compra (com IPI, da tabela do fornecedor) e preço de venda ao paciente. <b>Monofocal</b> = lente simples (um foco, em geral longe; óculos para perto).
+        <b> Foco estendido</b> e <b>multifocal/trifocal</b> = lentes premium. <b>Tórica</b> corrige astigmatismo. "AutonoMe" = já vem carregada no injetor.</p>
+      <Aviso>{erro || e1}</Aviso>
+      <Aviso tipo="ok">{okMsg}</Aviso>
+      {carregando && !dados ? <Carregando /> : (
+        <table className="tabela">
+          <thead><tr><th>Código</th><th>Lente</th><th>Tipo</th><th style={num}>Custo de compra (R$)</th><th style={num}>Preço de venda (R$)</th></tr></thead>
+          <tbody>
+            {(dados ?? []).map((l) => (
+              <tr key={l.id}>
+                <td><b>{l.codigo}</b><div className="muted pequeno">{l.fabricante}</div></td>
+                <td>{l.descricao}{l.observacoes && <div className="muted pequeno">{l.observacoes}</div>}</td>
+                <td className="pequeno">{TIPO_OPTICO[l.tipo_optico]}{l.torica && <div><Etiqueta cor="azul">tórica</Etiqueta></div>}</td>
+                <td style={num}><input style={{ width: 110, textAlign: "right" }} inputMode="decimal" aria-label={`Custo de ${l.codigo}`} value={vals[l.id]?.custo ?? ""} onChange={(e) => setVals({ ...vals, [l.id]: { ...vals[l.id], custo: e.target.value } })} /></td>
+                <td style={num}><input style={{ width: 110, textAlign: "right" }} inputMode="decimal" placeholder="a definir" aria-label={`Preço de venda de ${l.codigo}`} value={vals[l.id]?.venda ?? ""} onChange={(e) => setVals({ ...vals, [l.id]: { ...vals[l.id], venda: e.target.value } })} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {nova && (
+        <Modal titulo="Nova lente" aoFechar={() => setNova(null)} rodape={<><button onClick={() => setNova(null)}>Cancelar</button><button className="primario" onClick={incluir}>Incluir</button></>}>
+          <div className="grade g3">
+            <Campo rotulo="Código"><input value={nova.codigo} onChange={(e) => setNova({ ...nova, codigo: e.target.value })} /></Campo>
+            <Campo rotulo="Fabricante"><input value={nova.fabricante} onChange={(e) => setNova({ ...nova, fabricante: e.target.value })} /></Campo>
+            <Campo rotulo="Custo de compra (R$)"><input inputMode="decimal" value={nova.custo} onChange={(e) => setNova({ ...nova, custo: e.target.value })} /></Campo>
+          </div>
+          <Campo rotulo="Descrição"><input value={nova.descricao} onChange={(e) => setNova({ ...nova, descricao: e.target.value })} /></Campo>
+          <div className="grade g3">
+            <Campo rotulo="Tipo"><select value={nova.tipo_optico} onChange={(e) => setNova({ ...nova, tipo_optico: e.target.value })}>
+              {Object.entries(TIPO_OPTICO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Campo>
+            <label className="linha pequeno"><input type="checkbox" checked={nova.torica} onChange={(e) => setNova({ ...nova, torica: e.target.checked })} /> Tórica</label>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
