@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { fmtNumeroTel, numeroParaDiscar, useTelefone, type Chamada } from "../lib/telefone";
+import { useCentral } from "../lib/central";
 import { fmtDataHora, idade, nomeExibicao } from "../lib/util";
 
 const ROTULO_ESTADO: Record<string, { texto: string; cor: string }> = {
@@ -59,6 +60,7 @@ function QuemE({ c }: { c: Chamada }) {
 
 export default function Telefone() {
   const tel = useTelefone();
+  const central = useCentral();
   const [aberto, setAberto] = useState(false);
   const [numero, setNumero] = useState("");
   const [teclado, setTeclado] = useState(false);
@@ -194,7 +196,11 @@ export default function Telefone() {
             <button className="tel-atender" type="submit" disabled={numeroParaDiscar(numero).length < 3}>Ligar</button>
           </form>
           <div className="linha" style={{ marginTop: 10, gap: 6 }}>
-            {tel.estado === "pausa"
+            {central?.atende ? (
+              tel.estado === "pausa"
+                ? <button className="mini" onClick={() => void central.mudar("disponivel")}>🟢 Ficar disponível</button>
+                : <button className="mini" onClick={() => void central.mudar("pausa")}>⏸ Pausa</button>
+            ) : tel.estado === "pausa"
               ? <button className="mini" onClick={() => tel.pausar(false)}>▶ Voltar a receber ligações</button>
               : <button className="mini" onClick={() => tel.pausar(true)}>⏸ Pausa (não receber ligações)</button>}
             <Link className="botao mini-l" to="/ligacoes" onClick={() => setAberto(false)}>Histórico</Link>

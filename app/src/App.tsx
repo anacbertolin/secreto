@@ -36,6 +36,7 @@ import Ligacoes from "./pages/Ligacoes";
 import ConfigTelefone from "./pages/ConfigTelefone";
 import Telefone from "./components/Telefone";
 import { TelefoneProvider } from "./lib/telefone";
+import { CentralProvider } from "./lib/central";
 import { useNaoLidas, podeVerSetor } from "./lib/whatsapp";
 import type { Profissional } from "./lib/auth";
 
@@ -149,6 +150,7 @@ export default function App() {
   let grupoAtual = "";
   return (
     <TelefoneProvider>
+    <CentralProvider>
     <div className="app">
       <div className="topo-movel">
         <img src="/logo-branco.png" alt={CLINICA.nome} style={{ height: 22 }} />
@@ -228,6 +230,7 @@ export default function App() {
       </main>
       <Telefone />
     </div>
+    </CentralProvider>
     </TelefoneProvider>
   );
 }

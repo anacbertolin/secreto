@@ -9,6 +9,7 @@ import {
   type Conversa, type Mensagem, type ModeloWA, type SetorWA,
 } from "../lib/whatsapp";
 import { BotaoLigar } from "../components/Telefone";
+import { BotoesStatus, STATUS_CENTRAL, fmtEsperando, useCentral, type StatusCentral } from "../lib/central";
 import { gravarAudio, type Gravacao } from "../lib/gravador";
 
 const ICONE_SITUACAO: Record<string, string> = { enviada: "✓", entregue: "✓✓", lida: "✓✓", falhou: "⚠️" };
@@ -41,7 +42,10 @@ export default function WhatsApp({ setor = "clinica" }: { setor?: SetorWA }) {
   const podeResponder = podeResponderSetor(eu, setor);
   const textos = SETORES[setor];
   const [params, setParams] = useSearchParams();
-  const [quem, setQuem] = useState<"todas" | "minhas" | "livres">("todas");
+  const central = useCentral();
+  const souDaFila = !!central?.atende && central.setor === setor && podeResponder;
+  const [quem, setQuem] = useState<"todas" | "minhas" | "livres">(souDaFila ? "livres" : "todas");
+  const [pegando, setPegando] = useState(false);
   const [abertaId, setAbertaId] = useState<string | null>(params.get("conversa"));
   const [filtro, setFiltro] = useState("");
   const [arquivadas, setArquivadas] = useState(false);
@@ -94,14 +98,16 @@ export default function WhatsApp({ setor = "clinica" }: { setor?: SetorWA }) {
 
   const todas = lista.dados ?? [];
   const f = filtro.trim().toLowerCase();
-  const visiveis = todas
-    .filter((c) => quem === "todas" || (quem === "minhas" ? c.responsavel_id === eu?.id : !c.responsavel_id))
+  const naFila = (c: Conversa) => !c.responsavel_id && !!c.fila_desde;
+  const fila = todas.filter(naFila).sort((a, b) => (a.fila_desde! < b.fila_desde! ? -1 : 1));
+  const visiveis = (quem === "livres" ? fila : todas
+    .filter((c) => quem === "todas" || c.responsavel_id === eu?.id))
     .filter((c) => !f || nomeConversa(c).toLowerCase().includes(f) || c.telefone.includes(f.replace(/\D/g, "") || "§"));
   const naoLidasDe = (lista: Conversa[]) => lista.filter((c) => c.nao_lidas > 0).length;
   const contagem = {
     todas: naoLidasDe(todas),
     minhas: naoLidasDe(todas.filter((c) => c.responsavel_id === eu?.id)),
-    livres: todas.filter((c) => !c.responsavel_id).length,
+    livres: fila.length,
   };
   const aberta = todas.find((c) => c.id === abertaId) ?? null;
 
@@ -123,6 +129,14 @@ export default function WhatsApp({ setor = "clinica" }: { setor?: SetorWA }) {
     }
   }
 
+  async function pegarProximo() {
+    if (!central) return;
+    setPegando(true);
+    const id = await central.pegarProximo();
+    setPegando(false);
+    if (id) { setQuem("minhas"); lista.recarregar(); abrir(id); }
+  }
+
   const configurado = setor === "orientacao" ? estado.dados?.orientacao_configurado : estado.dados?.configurado;
   return (
     <div>
@@ -140,6 +154,12 @@ export default function WhatsApp({ setor = "clinica" }: { setor?: SetorWA }) {
           <button onClick={() => setModelos(true)}>📝 Modelos</button>
         </div>
       </div>
+      {souDaFila && (
+        <div className="central-barra">
+          <BotoesStatus />
+          <EquipeStatus setor={setor} />
+        </div>
+      )}
       <Aviso>{erro || lista.erro}</Aviso>
       {estado.dados && !configurado && (
         <Aviso tipo="alerta">
@@ -162,9 +182,16 @@ export default function WhatsApp({ setor = "clinica" }: { setor?: SetorWA }) {
 
       <div className={"wa" + (aberta ? " com-conversa" : "")}>
         <div className="wa-lista painel">
+          {souDaFila && (
+            <button className="primario fila-pegar" disabled={pegando || fila.length === 0 || central?.status !== "disponivel"}
+              title={central?.status !== "disponivel" ? "Fique Disponível para pegar conversas" : "Abre a conversa de quem espera há mais tempo"}
+              onClick={() => void pegarProximo()}>
+              {fila.length === 0 ? "Fila vazia 👍" : central?.status !== "disponivel" ? "Você está em pausa" : `👉 Pegar o próximo (${fila.length} na fila)`}
+            </button>
+          )}
           <input placeholder="Buscar por nome ou número" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
           <div className="wa-filtros">
-            {([["todas", "Todas"], ["minhas", "Minhas"], ["livres", "Sem responsável"]] as const).map(([k, rot]) => (
+            {([["livres", "Na fila"], ["minhas", "Minhas"], ["todas", "Todas"]] as const).map(([k, rot]) => (
               <button key={k} className={quem === k ? "ativo" : ""} onClick={() => setQuem(k)}>
                 {rot}{contagem[k] > 0 && <span className="wa-badge" style={{ marginLeft: 5 }}>{contagem[k]}</span>}
               </button>
@@ -186,7 +213,8 @@ export default function WhatsApp({ setor = "clinica" }: { setor?: SetorWA }) {
                 {c.nao_lidas > 0 && <span className="wa-badge">{c.nao_lidas}</span>}
               </div>
               <div className="muted pequeno wa-nome">
-                {c.responsavel_id ? `👤 ${c.responsavel_id === eu?.id ? "Você" : nomeCurto(equipe.dados, c.responsavel_id)}` : "Ninguém assumiu"}
+                {c.responsavel_id ? `👤 ${c.responsavel_id === eu?.id ? "Você" : nomeCurto(equipe.dados, c.responsavel_id)}`
+                  : naFila(c) ? <span className="fila-espera">⏳ Esperando {fmtEsperando(c.fila_desde)}</span> : "Ninguém assumiu"}
               </div>
             </button>
           ))}
@@ -213,6 +241,38 @@ export default function WhatsApp({ setor = "clinica" }: { setor?: SetorWA }) {
           }} />
       )}
       {ausencia && <ForaDoHorario setor={setor} aoFechar={() => setAusencia(false)} />}
+    </div>
+  );
+}
+
+/** Quem da equipe está disponível, em pausa ou no almoço (só quem usa a fila deste setor) */
+function EquipeStatus({ setor }: { setor: SetorWA }) {
+  const [lista, setLista] = useState<{ nome: string; status: StatusCentral; orientacao: boolean }[]>([]);
+  useEffect(() => {
+    let vivo = true;
+    const ler = async () => {
+      const { data } = await supabase.from("central_status").select("status, profissionais(nome, orientacao_cirurgica, ativo)");
+      if (!vivo) return;
+      setLista(((data ?? []) as unknown as { status: StatusCentral; profissionais: { nome: string; orientacao_cirurgica: boolean; ativo: boolean } | null }[])
+        .filter((x) => x.profissionais?.ativo)
+        .map((x) => ({ nome: x.profissionais!.nome, status: x.status, orientacao: !!x.profissionais!.orientacao_cirurgica })));
+    };
+    void ler();
+    const canal = supabase.channel("central-equipe-" + setor)
+      .on("postgres_changes", { event: "*", schema: "public", table: "central_status" }, () => void ler())
+      .subscribe();
+    return () => { vivo = false; supabase.removeChannel(canal); };
+  }, [setor]);
+  const doSetor = lista.filter((x) => x.orientacao === (setor === "orientacao")).sort((a, b) => a.nome.localeCompare(b.nome));
+  if (doSetor.length === 0) return null;
+  return (
+    <div className="equipe-status">
+      {doSetor.map((x) => (
+        <span key={x.nome} className="equipe-chip" title={STATUS_CENTRAL[x.status].rotulo}>
+          <span className="tel-bolinha" style={{ background: STATUS_CENTRAL[x.status].cor }} /> {x.nome.split(" ")[0]}
+          <span className="muted"> · {STATUS_CENTRAL[x.status].rotulo}</span>
+        </span>
+      ))}
     </div>
   );
 }
