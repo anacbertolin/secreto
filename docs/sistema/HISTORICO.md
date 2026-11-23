@@ -1154,3 +1154,15 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
   navegador com dados simulados.
 - **Próximos passos combinados:** 3) etiqueta de origem/campanha (Google Ads) e vários números na mesma fila; 4) resultado ao
   encerrar + protocolo + relatório de conversões; 5) painel de supervisão; 6) respostas rápidas.
+
+---
+
+## 23/11/2026 — Ícone do sistema (atalho na área de trabalho)
+- Pedido da dona: o atalho do Chrome na área de trabalho aparecia só com um "C" (o sistema não tinha ícone de verdade;
+  o `index.html` ainda usava a bolinha verde antiga).
+- Novo ícone: o "olho" do logo da Consumed (anel + listras) em branco sobre quadrado azul (#0277bd → #00468a),
+  redesenhado em alta resolução. Arquivos em `app/public/`: `icone-192.png`, `icone-512.png`,
+  `icone-maskable-512.png`, `icone.png` (180, apple-touch-icon), `favicon.png`, `favicon.ico` e
+  `consumed-sistema.ico` (Windows, vários tamanhos, para trocar o ícone de um atalho à mão).
+- `app/public/manifest.webmanifest` (nome "Consumed Sistema", abre em janela própria) + links no `index.html`.
+  Conferido no Chrome: manifesto sem erros. Com isso o Chrome oferece "Instalar" o sistema como aplicativo.
