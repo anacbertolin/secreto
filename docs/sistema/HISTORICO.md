@@ -1202,3 +1202,7 @@ Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançame
 - Migração `0083_caixa_faturamento`: `interno.caixa_papel` passa a dar 'lancar' (abrir, lançar, fechar) e 'ver' também à
   função faturamento; `papelCaixa` em `Caixa.tsx` igual. Conferir/aprovar continuam pelas marcações da tela Equipe.
   Regra mantida: quem fechou o caixa não confere o próprio caixa.
+- Caixa → Novo recebimento (pedido da dona): o campo "O que foi feito" vinha escrito "Consulta" e a lista de sugestões só
+  mostrava o que combinava com o texto (parecia que só existia consulta). Agora são 3 botões — **Consulta · Exame ·
+  Procedimento** — mais "Qual?" opcional com sugestões por tipo (terapias entram em Procedimento). Grava em
+  `descricao` como "Exame — OCT" (ou só "Exame"). Sem mudança no banco.
