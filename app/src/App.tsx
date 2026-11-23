@@ -17,6 +17,7 @@ import { Equipe, Convenios, Locais, Horarios, CatalogoExames, Modelos } from "./
 import Faturamento, { ContaDetalhe, LoteDetalhe } from "./pages/Faturamento";
 import Procedimentos from "./pages/Procedimentos";
 import RepasseMedico, { RepasseDetalhe } from "./pages/Repasse";
+import Caixa, { CaixaDetalhe, papelCaixa } from "./pages/Caixa";
 import Relatorios from "./pages/Relatorios";
 import WhatsApp from "./pages/WhatsApp";
 import ImportarWhatsApp from "./pages/ImportarWhatsApp";
@@ -59,6 +60,7 @@ const MENU: ItemMenu[] = [
   { para: "/estoque", rotulo: "Estoque", icone: "📦", funcoes: ["medico", "enfermagem", "admin", "faturamento"] },
   { para: "/exames", rotulo: "Exames e laudos", icone: "🔬", funcoes: ["medico", "enfermagem"] },
   { para: "/faturamento", rotulo: "Faturamento", icone: "🧾", funcoes: ["faturamento", "recepcao", "admin"] },
+  { para: "/caixa", rotulo: "Caixa", icone: "💵", ve: (eu) => papelCaixa(eu).ver },
   { para: "/repasse", rotulo: "Repasse médico", icone: "💰", funcoes: ["faturamento", "admin"] },
   { para: "/exames/importar", rotulo: "Arquivos dos aparelhos", icone: "📥", funcoes: ["medico", "enfermagem"] },
   { para: "/relatorios", rotulo: "Relatórios", icone: "📊" },
@@ -77,6 +79,12 @@ const MENU: ItemMenu[] = [
 function Protegida({ funcoes, children }: { funcoes?: Funcao[]; children: ReactNode }) {
   const { pode } = useAuth();
   if (funcoes && !pode(...funcoes)) return <div className="painel vazio">Você não tem acesso a esta área.</div>;
+  return <>{children}</>;
+}
+
+function CaixaProtegido({ children }: { children: ReactNode }) {
+  const { eu } = useAuth();
+  if (!papelCaixa(eu).ver) return <div className="painel vazio">Você não tem acesso a esta área.</div>;
   return <>{children}</>;
 }
 
@@ -192,6 +200,8 @@ export default function App() {
           <Route path="/faturamento" element={<Protegida funcoes={["faturamento", "recepcao", "admin"]}><Faturamento /></Protegida>} />
           <Route path="/faturamento/conta/:id" element={<Protegida funcoes={["faturamento", "recepcao", "admin"]}><ContaDetalhe /></Protegida>} />
           <Route path="/faturamento/lote/:id" element={<Protegida funcoes={["faturamento", "admin"]}><LoteDetalhe /></Protegida>} />
+          <Route path="/caixa" element={<CaixaProtegido><Caixa /></CaixaProtegido>} />
+          <Route path="/caixa/:id" element={<CaixaProtegido><CaixaDetalhe /></CaixaProtegido>} />
           <Route path="/repasse" element={<Protegida funcoes={["faturamento", "admin"]}><RepasseMedico /></Protegida>} />
           <Route path="/repasse/:id" element={<Protegida funcoes={["faturamento", "admin"]}><RepasseDetalhe /></Protegida>} />
           <Route path="/relatorios" element={<Relatorios />} />

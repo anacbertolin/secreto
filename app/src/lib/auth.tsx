@@ -17,6 +17,9 @@ export interface Profissional {
   ativo: boolean;
   /** Atende o WhatsApp da Orientação Cirúrgica (migração 0052) */
   orientacao_cirurgica?: boolean;
+  /** Caixa da recepção (migração 0066): confere / dá a aprovação final */
+  caixa_conferir?: boolean;
+  caixa_aprovar?: boolean;
 }
 
 interface Ctx {

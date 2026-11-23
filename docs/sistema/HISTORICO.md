@@ -1103,3 +1103,34 @@ Pedido da dona: a Alessandra manda muitos áudios, fotos e documentos, e tudo pr
 - Detalhes, pendências e próximos passos em `docs/sistema/tiss-gerador.md`.
 - Mapeamento das telas do Micrologos: `docs/micrologos/mapeamento-telas/` (comece pelo RESUMÃO). Lacunas do sistema em
   `docs/micrologos/mapeamento-telas/LACUNAS-sistema-novo.md`.
+
+## 19–23/11/2026 — Caixa da Recepção (menu 💵 Caixa) — migração 0066
+### Pedido da dona (aba "Caixa da Recepção", aberta da aba DÚVIDAS em 18/11)
+Acabar com a folha de papel do caixa. **Separado do Repasse médico** (pedido explícito: não misturar).
+Análise das fotos de 17/11: no Micrologos o PIX entra como "Dinheiro"; lançamentos de R$ 0,01 = **cortesia** (confirmado pela dona em 18/11).
+### Decisões da dona (18–19/11)
+- Começar com o caixa **funcionando sozinho** (nome do paciente digitado), sem depender de agenda/prontuário; o Micrologos segue oficial.
+- **Um caixa só** para a clínica. Caminho: recepção do 1º andar abre/lança/fecha → leva ao administrativo → as meninas do
+  **telefone/WhatsApp** conferem → **Luciano ou Soraline (Sol)** aprovam.
+- Equipe (19/11): recepção 1º andar Luana, Tiago, Viviane, Maiara, Cláudia; telefone/WhatsApp Isabelle, Ingrid, Patrícia, Gleice (+1 nova);
+  administrativo Sol, Luciano, André, Vitória; pré-exame Juliane, Gabriela, Priscila; técnico de enfermagem Guilherme;
+  marcação presencial (1º andar) Alice. Nenhuma delas está cadastrada no sistema ainda (só Alessandra, Ana, Luciano e médicos).
+### O que entrou
+- Tabelas `caixas`, `caixa_atendimentos`, `caixa_pagamentos` (vários por atendimento, podem cair em outro dia = saldo pendente),
+  `caixa_saidas`. Formas: dinheiro, PIX, débito, crédito à vista, crédito parcelado (nº de parcelas). Cortesia com motivo e quem autorizou.
+- Nada é apagado: cancelar exige motivo. Só mexe em caixa **aberto**; fechado/conferido/aprovado só muda pelas funções
+  `caixa_abrir/fechar/conferir/devolver/aprovar` (a tabela `caixas` não aceita alteração direta). No máximo 1 caixa aberto.
+- Fechamento guarda esperado em dinheiro (fundo + dinheiro − saídas), contado e diferença. Quem fechou não confere o próprio caixa.
+  Conferente/aprovador pode **devolver para correção** (volta a aberto, com motivo).
+- Permissões: lançar/fechar = recepção e admin; conferir = marcação **"Confere o caixa"** (tela Equipe) ou admin;
+  aprovar = marcação **"Aprova o caixa"** ou admin; ver = todos esses. Colunas `profissionais.caixa_conferir/caixa_aprovar`.
+- Tela `/caixa` (aberto, pendências de conferência/aprovação, histórico) e `/caixa/:id` (totais por forma, atendimentos, saldos de
+  outros dias, saídas, caminho do caixa, impressão).
+### Testes
+- Banco (transação desfeita no fim): abrir; 2º caixa bloqueado; pagamento acima do valor bloqueado; pagamento em cortesia bloqueado;
+  esperado 200 + 100 − 50 = 250; fechar com 245 → diferença −5; lançar em caixa fechado bloqueado; alteração direta bloqueada;
+  aprovador não confere; admin confere; aprovador aprova. Build OK. Tela não testada com login (sem acesso de teste).
+### Pendências
+- Cadastrar a equipe na tela Equipe e marcar "Confere o caixa" (telefone/WhatsApp) e "Aprova o caixa" (Luciano, Sol).
+- Etapa 2 (opcional): comparar com o relatório do dia do Micrologos (precisa de um exemplo do arquivo); depois, botão "Receber" na agenda
+  quando a agenda do nosso sistema for usada; integração maquininha/PIX; conferência de notas fiscais.
