@@ -2,18 +2,36 @@ import { useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando } from "../components/ui";
-import { NovoAgendamento, DetalheAgendamento } from "../components/AgendamentoModais";
+import { NovoAgendamento, DetalheAgendamento, type ModoAgendamento } from "../components/AgendamentoModais";
+import { BuscaPaciente, type PacienteResumo } from "../components/ui";
+import { Lembretes } from "./WhatsApp";
+import { whatsapp } from "../lib/whatsapp";
 import { MiniCalendario, ResumoAgendamento } from "../components/AgendaTopo";
 import { Modal } from "../components/ui";
 import {
   listaAgendas, listaConvenios, listaLocais, nomeAgenda, ehAgendaOrientacao, colunaDoAgendamento, SELECT_AGENDA,
   type Agendamento, type Horario, type Bloqueio,
 } from "../lib/dados";
-import { STATUS_AGENDA, TIPOS_AGENDA, fmtDataLonga, fmtHora, inicioDoDia, isoDia, somaDias, nomeExibicao } from "../lib/util";
+import { STATUS_AGENDA, TIPOS_AGENDA, fmtData, fmtDataLonga, fmtHora, inicioDoDia, isoDia, somaDias, nomeExibicao } from "../lib/util";
 import { msgErro } from "../lib/supabase";
 
 // minutos por linha da grade: 15 (médicos); 10 quando só a agenda da Orientação Cirúrgica está na tela
 const PASSO_PADRAO = 15;
+
+// Filtro de período (pedido da dona, 23/11): manhã até 12h, tarde 12h–18h, noite depois das 18h
+const PERIODOS: Record<string, { rotulo: string; de: number; ate: number }> = {
+  dia: { rotulo: "Dia todo", de: 0, ate: 24 * 60 },
+  manha: { rotulo: "Manhã", de: 0, ate: 12 * 60 },
+  tarde: { rotulo: "Tarde", de: 12 * 60, ate: 18 * 60 },
+  noite: { rotulo: "Noite", de: 18 * 60, ate: 24 * 60 },
+};
+
+function lerPreferencia(chave: string, padrao: string) {
+  try { return localStorage.getItem("agenda." + chave) ?? padrao; } catch { return padrao; }
+}
+function gravarPreferencia(chave: string, valor: string) {
+  try { localStorage.setItem("agenda." + chave, valor); } catch { /* sem armazenamento */ }
+}
 
 function minutosDoDia(t: string) {
   const [h, m] = t.split(":").map(Number);
@@ -25,8 +43,19 @@ export default function Agenda() {
   const [dia, setDia] = useState(() => inicioDoDia(new Date()));
   // Médico abre na própria agenda; quem atende a orientação abre na agenda da Orientação Cirúrgica
   const [filtro, setFiltro] = useState<string>(eu?.funcao === "medico" ? eu.id : ehAgendaOrientacao(eu) ? "orientacao" : "todos");
-  const [novo, setNovo] = useState<null | { profissional_id?: string; inicio?: Date; duracao?: number; local_id?: string | null; encaixe?: boolean }>(null);
+  const [novo, setNovo] = useState<null | { profissional_id?: string; inicio?: Date; duracao?: number; local_id?: string | null; encaixe?: boolean; paciente?: PacienteResumo; tipo?: string }>(null);
   const [aberto, setAberto] = useState<Agendamento | null>(null);
+  const [modoAbrir, setModoAbrir] = useState<ModoAgendamento>("");
+  const [visao, setVisaoBruta] = useState<"grade" | "lista">(() => (lerPreferencia("visao", "grade") === "lista" ? "lista" : "grade"));
+  const setVisao = (v: "grade" | "lista") => { setVisaoBruta(v); gravarPreferencia("visao", v); };
+  const [periodo, setPeriodo] = useState("dia");
+  const [mostrarVagos, setMostrarVagos] = useState(false);
+  const [confirmacoes, setConfirmacoes] = useState(false);
+  const [aviso, setAviso] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const [busca, setBusca] = useState<{ paciente: PacienteResumo; ags: Agendamento[] } | null>(null);
+  const { pode } = useAuth();
+  const podeWhats = pode("recepcao", "admin");
   const [selecionado, setSelecionado] = useState<Agendamento | null>(null);
   const [versao, setVersao] = useState(0); // força o calendário de 3 meses a recontar a ocupação
   const [editObs, setEditObs] = useState<{ profissional_id: string; nome: string; texto: string } | null>(null);
@@ -79,6 +108,88 @@ export default function Agenda() {
   }
   const [mostrarCancelados, setMostrarCancelados] = useState(false);
 
+  function abrir(a: Agendamento, modo: ModoAgendamento = "") {
+    setModoAbrir(modo);
+    setAberto(a);
+  }
+
+  // ---------- Botões rápidos (agem no paciente selecionado, sem abrir o agendamento) ----------
+  async function mudar(campos: Record<string, unknown>, textoOk: string) {
+    if (!sel) return;
+    setAviso(null);
+    setOcupado(true);
+    const { error } = await supabase.from("agendamentos").update(campos).eq("id", sel.id);
+    setOcupado(false);
+    if (error) return setAviso({ tipo: "erro", texto: msgErro(error) });
+    setAviso({ tipo: "ok", texto: textoOk });
+    recarregar();
+  }
+  const consultaParticular = (a: Agendamento) => !a.convenio_id && a.tipo === "consulta";
+  function chegada() {
+    if (!sel) return;
+    // consulta particular: pergunta cartão ou dinheiro/Pix antes (migração 0087)
+    if (consultaParticular(sel)) return abrir(sel, "chegada");
+    mudar({ status: "chegou" }, `Chegada de ${nomeExibicao(sel.pacientes!)} às ${fmtHora(new Date().toISOString())}.`);
+  }
+  function mudarStatus(v: string) {
+    if (!sel || !v) return;
+    const nome = nomeExibicao(sel.pacientes!);
+    if (v === "cancelado") return abrir(sel, "cancelar");
+    if (v === "chegou") return chegada();
+    if (v.startsWith("confirmado:")) return mudar({ status: "confirmado", canal_confirmacao: v.split(":")[1] }, `${nome}: confirmado.`);
+    if (v === "agendado") return mudar({ status: "agendado", chegada_em: null }, `${nome}: voltou para Agendado.`);
+    mudar({ status: v }, `${nome}: ${STATUS_AGENDA[v]?.rotulo ?? v}.`);
+  }
+  function retorno() {
+    if (!sel) return;
+    const p = sel.pacientes!;
+    setNovo({
+      profissional_id: sel.profissional_id,
+      inicio: new Date(sel.inicio),
+      duracao: 15,
+      tipo: "retorno",
+      paciente: { ...p, cpf: null, plano_id: null } as unknown as PacienteResumo,
+    });
+  }
+  async function pedirConfirmacao() {
+    if (!sel) return;
+    const nome = nomeExibicao(sel.pacientes!);
+    if (!confirm(`Mandar pelo WhatsApp o pedido de confirmação para ${nome}?\n(${fmtData(sel.inicio)} às ${fmtHora(sel.inicio)})`)) return;
+    setAviso(null);
+    setOcupado(true);
+    try {
+      const r = await whatsapp<{ enviados: number; sem_autorizacao: number; nao_perguntado: number; sem_celular: number; falhas: string[]; total: number }>(
+        "lembretes", { agendamento_id: sel.id });
+      if (r.enviados) setAviso({ tipo: "ok", texto: `Pedido de confirmação enviado para ${nome}. Quando tocar em “Confirmar presença”, fica confirmado sozinho.` });
+      else if (!r.total) setAviso({ tipo: "erro", texto: "Só dá para pedir confirmação de agendamento que ainda está “Agendado”." });
+      else if (r.nao_perguntado) setAviso({ tipo: "erro", texto: `${nome} ainda não disse se aceita mensagens no WhatsApp. Marque no cadastro do paciente.` });
+      else if (r.sem_autorizacao) setAviso({ tipo: "erro", texto: `${nome} não aceita mensagens no WhatsApp.` });
+      else if (r.sem_celular) setAviso({ tipo: "erro", texto: `${nome} não tem celular válido no cadastro.` });
+      else setAviso({ tipo: "erro", texto: r.falhas.join(" ") || "Não foi possível enviar." });
+    } catch (e) {
+      setAviso({ tipo: "erro", texto: msgErro(e) });
+    }
+    setOcupado(false);
+  }
+
+  // ---------- Busca de paciente na agenda ----------
+  async function buscarPaciente(p: PacienteResumo) {
+    setAviso(null);
+    const desde = somaDias(inicioDoDia(new Date()), -90);
+    const r = await supabase.from("agendamentos").select(SELECT_AGENDA).eq("paciente_id", p.id)
+      .gte("inicio", desde.toISOString()).order("inicio").limit(40);
+    if (r.error) return setAviso({ tipo: "erro", texto: msgErro(r.error) });
+    setBusca({ paciente: p, ags: (r.data ?? []) as Agendamento[] });
+  }
+  function irPara(a: Agendamento) {
+    setDia(inicioDoDia(new Date(a.inicio)));
+    if (!colunas.some((c) => c.id === colDe(a.profissional_id))) setFiltro("todos");
+    setPeriodo("dia");
+    setSelecionado(a);
+    setBusca(null);
+  }
+  const diaConfirmacoes = isoDia(dia > inicioDoDia(new Date()) ? dia : somaDias(inicioDoDia(new Date()), 1));
+
   // Faixa de horas exibida: do primeiro ao último horário de atendimento (padrão 7h–19h)
   const { iniMin, fimMin } = useMemo(() => {
     const hs = (doDia.dados?.horarios ?? []).filter((h) => colunas.some((c) => c.id === h.profissional_id));
@@ -95,8 +206,10 @@ export default function Agenda() {
     return { iniMin: Math.floor(a / PASSO) * PASSO, fimMin: Math.ceil(b / PASSO) * PASSO };
   }, [doDia.dados, colunas, PASSO]);
 
+  const per = PERIODOS[periodo];
   const linhas: number[] = [];
-  for (let m = iniMin; m < fimMin; m += PASSO) linhas.push(m);
+  for (let m = iniMin; m < fimMin; m += PASSO) if (m >= per.de && m < per.ate) linhas.push(m);
+  const minDe = (iso: string) => { const i = new Date(iso); return i.getHours() * 60 + i.getMinutes(); };
 
   function horarioDe(profId: string, min: number) {
     return doDia.dados?.horarios.find(
@@ -122,6 +235,32 @@ export default function Agenda() {
   const ags = (doDia.dados?.ags ?? []).filter((a) => colunas.some((c) => c.id === colDe(a.profissional_id)));
   const total = ags.filter((a) => a.status !== "cancelado").length;
 
+  // Visão em lista (como a grade do Micrologos): agendamentos do período + horários vagos, se pedido
+  type LinhaLista = { min: number; col: string; ag?: Agendamento; vago?: { duracao: number; local_id: string | null } };
+  const lista: LinhaLista[] = useMemo(() => {
+    const r: LinhaLista[] = ags
+      .filter((a) => (mostrarCancelados || a.status !== "cancelado") && minDe(a.inicio) >= per.de && minDe(a.inicio) < per.ate)
+      .map((a) => ({ min: minDe(a.inicio), col: colDe(a.profissional_id), ag: a }));
+    if (mostrarVagos) {
+      for (const c of colunas) {
+        for (const h of (doDia.dados?.horarios ?? []).filter((x) => x.profissional_id === c.id)) {
+          const passo = Math.max(5, h.duracao_min || PASSO);
+          for (let m = minutosDoDia(h.hora_inicio); m + passo <= minutosDoDia(h.hora_fim); m += passo) {
+            if (m < per.de || m >= per.ate || bloqueado(c.id, m)) continue;
+            const ocupado = ags.some((a) => a.status !== "cancelado" && colDe(a.profissional_id) === c.id && minDe(a.inicio) >= m && minDe(a.inicio) < m + passo);
+            if (!ocupado) r.push({ min: m, col: c.id, vago: { duracao: passo, local_id: h.local_id } });
+          }
+        }
+      }
+    }
+    const ordemCol = (id: string) => colunas.findIndex((c) => c.id === id);
+    return r.sort((a, b) => a.min - b.min || ordemCol(a.col) - ordemCol(b.col));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doDia.dados, colunas, periodo, mostrarVagos, mostrarCancelados]);
+  const nomeCol = (id: string) => { const m = medicos.find((x) => x.id === id); return m ? nomeAgenda(m) : ""; };
+  const nomeConv = (id?: string | null) => base.dados?.convenios.find((c) => c.id === id)?.nome ?? "";
+  const ativoSel = sel && !["cancelado", "faltou", "atendido"].includes(sel.status);
+
   return (
     <div>
       <div className="cabecalho">
@@ -139,7 +278,11 @@ export default function Agenda() {
             {medicos.map((m) => <option key={m.id} value={ehAgendaOrientacao(m) ? "orientacao" : m.id}>{nomeAgenda(m)}</option>)}
           </select>
           <button className="primario" onClick={() => setNovo({ profissional_id: filtro === "todos" ? undefined : filtro === "orientacao" ? colunas[0]?.id : filtro, inicio: new Date(dia.getTime() + 8 * 3600000) })}>➕ Agendar</button>
+          {podeWhats && <button onClick={() => setConfirmacoes(true)} title="Manda pelo WhatsApp o pedido de confirmação para todos os agendados do dia">📲 Confirmações do dia</button>}
         </div>
+      </div>
+      <div className="agenda-busca">
+        <BuscaPaciente aoEscolher={buscarPaciente} placeholder="🔎 Buscar paciente na agenda (nome, prontuário, CPF ou telefone)" />
       </div>
       <Aviso>{base.erro || doDia.erro}</Aviso>
       {base.dados && (
@@ -165,6 +308,35 @@ export default function Agenda() {
           </div>
         </div>
       )}
+      {base.dados && (
+        <div className="painel barra-rapida">
+          <span className="pequeno muted barra-rapida-quem">
+            {sel ? <><b>{nomeExibicao(sel.pacientes!)}</b> · {fmtHora(sel.inicio)} · {STATUS_AGENDA[sel.status]?.rotulo}</> : "Selecione um paciente na agenda (um clique) para usar os botões"}
+          </span>
+          <button onClick={() => setNovo({ profissional_id: sel ? sel.profissional_id : filtro === "todos" ? undefined : filtro === "orientacao" ? colunas[0]?.id : filtro, inicio: sel ? new Date(sel.inicio) : new Date(dia.getTime() + 8 * 3600000) })}>➕ Incluir</button>
+          <button disabled={!sel} title="Encaixar outro paciente no mesmo horário e médico do selecionado"
+            onClick={() => sel && setNovo({ profissional_id: sel.profissional_id, inicio: new Date(sel.inicio), duracao: 15, encaixe: true })}>⤵️ Encaixar</button>
+          <button disabled={ocupado || !sel || !["agendado", "confirmado"].includes(sel.status)} onClick={chegada}>🛎️ Chegada</button>
+          <button disabled={ocupado || !sel || !["chegou", "em_atendimento"].includes(sel.status)} title="Precisa ter chegado antes" onClick={() => mudar({ status: "atendido" }, `${nomeExibicao(sel!.pacientes!)}: atendido.`)}>✅ Atendido</button>
+          <button disabled={!sel} title="Marcar o retorno deste paciente" onClick={retorno}>🔁 Retorno</button>
+          <select className="barra-status" disabled={ocupado || !sel} value="" onChange={(e) => mudarStatus(e.target.value)}>
+            <option value="">Status…</option>
+            <option value="agendado">Agendado</option>
+            <option value="confirmado:telefone">Confirmado (telefone)</option>
+            <option value="confirmado:whatsapp">Confirmado (WhatsApp)</option>
+            <option value="confirmado:presencial">Confirmado (presencial)</option>
+            <option value="chegou">Na espera (chegou)</option>
+            <option value="atendido">Atendido</option>
+            <option value="faltou">Faltou</option>
+            <option value="cancelado">Cancelar…</option>
+          </select>
+          <button disabled={!sel} onClick={() => document.getElementById("resumo-notas")?.focus()}>📝 Nota</button>
+          {podeWhats && <button disabled={ocupado || !sel || sel.status !== "agendado" || sel.tipo === "orientacao"} title="Manda pelo WhatsApp o pedido para o paciente confirmar" onClick={pedirConfirmacao}>📲 Pedir confirmação</button>}
+          <button disabled={!sel} onClick={() => sel && abrir(sel, ativoSel ? "remarcar" : "")}>🔁 Remarcar</button>
+          <button disabled={!sel} onClick={() => sel && abrir(sel)}>Abrir…</button>
+        </div>
+      )}
+      {aviso && <Aviso tipo={aviso.tipo === "ok" ? "ok" : undefined}>{aviso.texto}</Aviso>}
       {base.carregando || (doDia.carregando && !doDia.dados) ? <Carregando /> : medicos.length === 0 ? (
         <div className="painel vazio">
           Nenhum médico cadastrado ainda. A administração cadastra a equipe em <b>Cadastros → Equipe</b> e os horários em <b>Horários e bloqueios</b>.
@@ -172,9 +344,59 @@ export default function Agenda() {
       ) : (
         <div className="painel" style={{ padding: 0 }}>
           <div className="linha pequeno muted" style={{ padding: "10px 14px", borderBottom: "1px solid var(--borda)" }}>
-            Clique num horário livre para agendar · áreas listradas = fora do horário do médico (dá para encaixar mesmo assim)
+            <span className="grupo-botoes">
+              <button className={visao === "grade" ? "primario mini" : "mini"} onClick={() => setVisao("grade")}>▦ Grade</button>
+              <button className={visao === "lista" ? "primario mini" : "mini"} onClick={() => setVisao("lista")}>☰ Lista</button>
+            </span>
+            <span className="grupo-botoes">
+              {Object.entries(PERIODOS).map(([k, v]) => (
+                <button key={k} className={periodo === k ? "primario mini" : "mini"} onClick={() => setPeriodo(k)}>{v.rotulo}</button>
+              ))}
+            </span>
+            {visao === "grade"
+              ? <span>Clique num horário livre para agendar · listrado = fora do horário do médico</span>
+              : <label className="check"><input type="checkbox" checked={mostrarVagos} onChange={(e) => setMostrarVagos(e.target.checked)} /> mostrar horários vagos</label>}
             <label className="check" style={{ marginLeft: "auto" }}><input type="checkbox" checked={mostrarCancelados} onChange={(e) => setMostrarCancelados(e.target.checked)} /> mostrar cancelados</label>
           </div>
+          {visao === "lista" ? (
+            <div className="agenda-wrap">
+              <table className="tabela agenda-lista">
+                <thead>
+                  <tr><th>Hora</th><th>Paciente</th>{colunas.length > 1 && <th>Agenda</th>}<th>Convênio</th><th>Status / chegada</th><th>Notas</th></tr>
+                </thead>
+                <tbody>
+                  {lista.length === 0 && <tr><td colSpan={6} className="muted">Nada neste período.</td></tr>}
+                  {lista.map((l) => {
+                    const hora = `${String(Math.floor(l.min / 60)).padStart(2, "0")}:${String(l.min % 60).padStart(2, "0")}`;
+                    if (!l.ag) {
+                      return (
+                        <tr key={"v" + l.col + l.min} className="vago" onClick={() => setNovo({ profissional_id: l.col, inicio: new Date(dia.getTime() + l.min * 60000), duracao: l.vago!.duracao, local_id: l.vago!.local_id })}>
+                          <td>{hora}</td><td className="muted">— vago (clique para agendar) —</td>{colunas.length > 1 && <td>{nomeCol(l.col)}</td>}<td /><td /><td />
+                        </tr>
+                      );
+                    }
+                    const a = l.ag;
+                    const st = STATUS_AGENDA[a.status];
+                    return (
+                      <tr key={a.id} className={"st-" + st.cor + (sel?.id === a.id ? " sel" : "")} onClick={() => setSelecionado(a)} onDoubleClick={() => abrir(a)}>
+                        <td><b>{fmtHora(a.inicio)}</b></td>
+                        <td>
+                          {nomeExibicao(a.pacientes!)}
+                          <div className="pequeno muted">
+                            {a.tipo === "orientacao" ? "Orientação" : TIPOS_AGENDA[a.tipo]}{a.primeira_vez && " · 1ª vez"}{a.encaixe && " · encaixe"} · Pront. {a.pacientes!.numero_prontuario}
+                          </div>
+                        </td>
+                        {colunas.length > 1 && <td>{nomeCol(l.col)}</td>}
+                        <td>{nomeConv(a.convenio_id) || "Particular"}</td>
+                        <td><span className={"etiqueta " + st.cor}>{st.rotulo}</span>{a.chegada_em && <div className="pequeno muted">chegou {fmtHora(a.chegada_em)}</div>}</td>
+                        <td className="nota-lista">{a.observacoes ? `📝 ${a.observacoes}` : ""}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
           <div className="agenda-wrap">
             <div className="agenda" style={{ gridTemplateColumns: `64px repeat(${colunas.length}, minmax(200px, 1fr))` }}>
               <div className="col-cab" />
@@ -216,13 +438,14 @@ export default function Agenda() {
                           const st = STATUS_AGENDA[a.status];
                           return (
                             <button key={a.id} className={"ag-item " + st.cor + (sel?.id === a.id ? " sel" : "")}
-                              onClick={() => setSelecionado(a)} onDoubleClick={() => setAberto(a)}>
+                              onClick={() => setSelecionado(a)} onDoubleClick={() => abrir(a)}>
                               <b>{fmtHora(a.inicio)}</b> {nomeExibicao(a.pacientes!)}
                               <div className="pequeno muted">
                                 {a.tipo === "orientacao"
-                                  ? <>{a.observacoes ? `📝 ${a.observacoes}` : "Sem notas"} · {st.rotulo}</>
+                                  ? <>{st.rotulo}</>
                                   : <>{TIPOS_AGENDA[a.tipo]}{a.primeira_vez && " · 1ª vez"}{a.encaixe && " · encaixe"} · {st.rotulo}</>}
                               </div>
+                              {a.observacoes && <div className="ag-nota">📝 {a.observacoes}</div>}
                             </button>
                           );
                         })}
@@ -233,6 +456,7 @@ export default function Agenda() {
               ))}
             </div>
           </div>
+          )}
         </div>
       )}
       {novo && base.dados && (
@@ -251,9 +475,36 @@ export default function Agenda() {
           medicos={base.dados.medicos}
           convenios={base.dados.convenios}
           locais={base.dados.locais}
+          modoInicial={modoAbrir}
           aoFechar={() => setAberto(null)}
           aoAlterar={() => { setAberto(null); recarregar(); }}
         />
+      )}
+      {confirmacoes && <Lembretes dataInicial={diaConfirmacoes} aoFechar={() => setConfirmacoes(false)} aoEnviar={recarregar} />}
+      {busca && (
+        <Modal titulo={`Agendamentos — ${nomeExibicao(busca.paciente)}`} aoFechar={() => setBusca(null)}
+          rodape={<><button onClick={() => setBusca(null)}>Fechar</button>
+            <button className="primario" onClick={() => { const p = busca.paciente; setBusca(null); setNovo({ paciente: p, inicio: new Date(dia.getTime() + 8 * 3600000), profissional_id: filtro === "todos" ? undefined : filtro === "orientacao" ? colunas[0]?.id : filtro }); }}>➕ Agendar este paciente</button></>}>
+          <p className="muted pequeno" style={{ marginTop: 0 }}>Últimos 90 dias e próximos agendamentos. Clique para ir ao dia na agenda.</p>
+          {busca.ags.length === 0 ? <p>Nenhum agendamento encontrado.</p> : (
+            <table className="tabela">
+              <tbody>
+                {busca.ags.map((a) => {
+                  const st = STATUS_AGENDA[a.status];
+                  const futuro = new Date(a.inicio) >= inicioDoDia(new Date());
+                  return (
+                    <tr key={a.id} className="clicavel" onClick={() => irPara(a)} style={futuro ? undefined : { opacity: 0.7 }}>
+                      <td><b>{fmtData(a.inicio)}</b> {fmtHora(a.inicio)}</td>
+                      <td>{nomeCol(colDe(a.profissional_id))}</td>
+                      <td>{TIPOS_AGENDA[a.tipo]}</td>
+                      <td><span className={"etiqueta " + st.cor}>{st.rotulo}</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </Modal>
       )}
       {editObs && (
         <Modal titulo={`Observação do dia — ${editObs.nome}`} aoFechar={() => setEditObs(null)}
