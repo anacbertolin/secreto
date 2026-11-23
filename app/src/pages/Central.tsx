@@ -178,14 +178,14 @@ export default function Central() {
           <>
             {atende && <Equipe pessoas={equipe.dados ?? []} euId={eu?.id} livres={livres.length} />}
             <div className="ct-abas">
+              <button className={aba === "interno" ? "ativa" : ""} onClick={() => setAba("interno")}>
+                Interno {interno.total > 0 && <span className="ct-bolha verde" style={{ background: "#d92d20" }}>{interno.total}</span>}
+              </button>
               {atende && (
                 <button className={aba === "canais" ? "ativa" : ""} onClick={() => setAba("canais")}>
                   Canais {fila.length + minhas.length > 0 && <span className="ct-bolha verde">{fila.length + minhas.length}</span>}
                 </button>
               )}
-              <button className={aba === "interno" ? "ativa" : ""} onClick={() => setAba("interno")}>
-                Interno {interno.total > 0 && <span className="ct-bolha verde" style={{ background: "#d92d20" }}>{interno.total}</span>}
-              </button>
               {atende && <button className={aba === "telefone" ? "ativa" : ""} onClick={() => setAba("telefone")}>Telefone</button>}
             </div>
 
