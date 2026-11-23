@@ -68,3 +68,44 @@ Marcadores: ✅ confirmado pela dona · ❓ ainda a levantar.
 | Gravação com "Ouvir" | ❌ (depende da central telefônica) | com a URA/Telecall |
 | Instagram / Messenger na mesma fila | ❌ | depois (exige conta da Meta) |
 | Interface toda em português | ✅ | manter |
+
+## Telas vistas nas fotos da dona (23/11/2026, 16 fotos da equipe em uso) ✅
+Fotos tiradas do Talklogos em uso pelas atendentes (dados de pacientes não registrados aqui). Tema escuro; janela do
+aplicativo "Talklogos – Plataforma de Multicanalidade".
+
+### Coluna da esquerda (sempre visível)
+- Topo: **status** ("Online" com seta para trocar), cadeado, bandeira, zoom (90 %), **Buscar**.
+- Filtro **"Todos Interesses"** e carrossel da **equipe com foto** e bolinha de status, com abas **Todos / Livres /
+  Ocupados** e o botão **"Painel Total"**.
+- Abas **Interno** (chat da equipe), **Grupos**, **Canais** (com contadores) e **MLPhone** (telefone).
+- **Meus Atendimentos (N)**: ícones dos canais (Instagram, Messenger, WhatsApp), filtros **Todos / Não Respondidos**,
+  paginação Primeira / Voltar / Avançar / Última. Cada cartão mostra o contato, o **número oficial por onde chegou**
+  ("WhatsApp Oficial 21…"), o começo da última mensagem e a etiqueta **"Atendendo"**.
+- **Conversas (N)**: todas as conversas.
+
+### Telefone (aba MLPhone, dentro da mesma coluna)
+- **Suas Ligações (N)**: cartão da ligação com número, nome do paciente vinculado (ou "Não possui transação
+  programada"), hora, botões **Atender** / **Desligar** e **Esperar**, e etiqueta **Chamando** / **Falando**.
+- **Ligações Gerais (N)**: ligações da central que estão tocando para os outros.
+- Discador "Digite o número para ligar" + botão verde, **volume da chamada** e **Histórico (N)**.
+- Ao atender, o centro da tela vira a **tela da ligação**: "Chamada Recebida", iniciais do contato, número, **nome do
+  paciente + nº do prontuário**, "Aguardando a ligação ser aceita…", e a barra de botões: **Mudo, Áudio, Teclado,
+  Gravar, Espera, Transferir, Adicionar** (conferência), **Agendar Clinic**, **Agendar Talk**, **Associar**, **+ Lead**.
+- Equipamento: **fone USB Intelbras** com botão de mudo e volume no fio.
+
+### Conversa aberta (centro)
+- Cabeçalho: ícone do canal, nome do contato (número), **"Em conversa desde dd/mm/aaaa hh:mm com <atendente>"**, botão
+  vermelho **Encerrar Conversa** e botão azul **Opções** (menu: **Associar, Agendar, Agendamentos, Confirmações
+  automáticas, Gerar Lead**). Ícones de vídeo, ligar, convidar participante e informações.
+- Linha "Paciente <nome>" logo abaixo (paciente vinculado).
+- Mensagens: aviso "A conversa foi iniciada pelo usuário X"; a mensagem da atendente leva o **nome dela** no topo do
+  balão. Rodapé com saldo de créditos/mensagens gratuitas da Meta.
+- Campo "Digite aqui…" com **relógio (programar envio)**, microfone (áudio), GIF e emoji.
+- Painel da direita com abas **Participantes / Arquivos / Frases** (Frases = respostas rápidas; Arquivos = enviar
+  arquivo com legenda opcional).
+- **Transferir ou Convidar** (janela): aba Transferir ("Transferir para quem?" → lista das atendentes) e aba Convidar
+  (colocar outra pessoa na mesma conversa).
+
+### O que ainda não apareceu nas fotos ❓
+Painel de supervisão ("Painel Total" aberto), menu de voz (URA), status além de "Online", relatórios e a tela de
+Atendimentos (histórico/protocolo).
