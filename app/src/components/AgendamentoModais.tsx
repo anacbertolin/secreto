@@ -6,6 +6,7 @@ import { EscolhaConsultaParticular } from "./ConsultaParticular";
 import type { Profissional } from "../lib/auth";
 import type { Agendamento, Convenio, Local } from "../lib/dados";
 import { nomePor, nomeAgenda, ehAgendaOrientacao } from "../lib/dados";
+import { useAuth } from "../lib/auth";
 import {
   STATUS_AGENDA, TIPOS_AGENDA, fmtData, fmtHora, fmtTelefone, idade, isoDia, nomeExibicao, soNumeros, cpfValido,
 } from "../lib/util";
@@ -89,6 +90,7 @@ export function NovoAgendamento(props: {
   const [salvando, setSalvando] = useState(false);
   // Agenda da Orientação Cirúrgica: só registro (sem tipo, sala, 1ª consulta; Notas em destaque)
   const orientacao = ehAgendaOrientacao(props.medicos.find((m) => m.id === f.profissional_id));
+  const { eu } = useAuth();
 
   useEffect(() => {
     if (paciente) setF((x) => ({ ...x, convenio_id: paciente.convenio_id ?? "" }));
@@ -103,7 +105,8 @@ export function NovoAgendamento(props: {
     setSalvando(true);
     const { error } = await supabase.from("agendamentos").insert({
       paciente_id: paciente.id,
-      profissional_id: f.profissional_id,
+      // Orientação Cirúrgica: quem atende a orientação lança no próprio nome (a coluna da agenda é uma só)
+      profissional_id: orientacao && ehAgendaOrientacao(eu) ? eu!.id : f.profissional_id,
       inicio: inicio.toISOString(),
       fim: fim.toISOString(),
       tipo: orientacao ? "orientacao" : f.tipo,
@@ -273,7 +276,7 @@ export function DetalheAgendamento(props: {
       </div>
       <dl className="grade g2" style={{ margin: "16px 0" }}>
         <div><dt className="muted pequeno">Quando</dt><dd style={{ margin: 0 }}>{fmtData(a.inicio)} às {fmtHora(a.inicio)} ({dur} min)</dd></div>
-        <div><dt className="muted pequeno">{orientacao ? "Agenda" : "Profissional"}</dt><dd style={{ margin: 0 }}>{orientacao ? `Orientação Cirúrgica (${nomePor(props.medicos, a.profissional_id).split(" ")[0]})` : nomePor(props.medicos, a.profissional_id)}</dd></div>
+        <div><dt className="muted pequeno">{orientacao ? "Agenda" : "Profissional"}</dt><dd style={{ margin: 0 }}>{orientacao ? "Orientação Cirúrgica" : nomePor(props.medicos, a.profissional_id)}</dd></div>
         <div><dt className="muted pequeno">Tipo</dt><dd style={{ margin: 0 }}>{TIPOS_AGENDA[a.tipo]}{a.primeira_vez && " · 1ª vez"}{a.encaixe && " · encaixe"}</dd></div>
         <div><dt className="muted pequeno">Convênio</dt><dd style={{ margin: 0 }}>{nomePor(props.convenios, a.convenio_id) || "Particular"}</dd></div>
         {a.local_id && <div><dt className="muted pequeno">Sala</dt><dd style={{ margin: 0 }}>{nomePor(props.locais, a.local_id)}</dd></div>}

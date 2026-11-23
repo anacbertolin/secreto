@@ -1384,3 +1384,7 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
   agendamento. **0095:** `agendamentos.atualizado_por` (gatilho `quem_alterou`).
 - **Observação do dia** por coluna (tabela `agenda_obs_dia`, RLS para quem vê a agenda, auditada): "＋ obs. do dia" no topo.
 - Só a coluna da Orientação na tela → grade de 10 em 10 min; com médicos, 15 min.
+- **Correção (23/11, noite):** havia duas pessoas marcadas como "Atende a Orientação cirúrgica" (Alessandra e Andrea
+  Camilo) e a Agenda mostrava duas colunas "Orientação Cirúrgica". Agora é **uma coluna só** (`listaAgendas` devolve uma
+  coluna com `membros`; `colunaDoAgendamento` junta os agendamentos). A "dona" da coluna é quem tem horários
+  cadastrados (hoje a Alessandra). Quem atende a orientação lança no próprio nome (fica registrado quem lançou).
