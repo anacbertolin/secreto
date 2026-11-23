@@ -1418,3 +1418,11 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
   (item pendente resolvido). Continua dependendo do número da clínica ligado à Meta e do modelo `lembrete_consulta`
   aprovado; até lá, os botões mostram o aviso "ainda não foi ligado".
 - Sem mudança de banco.
+### 23/11/2026 — Orientação cirúrgica com o mesmo layout da Central de atendimento
+- Pedido da dona: a parte de WhatsApp da aba Orientação cirúrgica deve ficar igual à Central de atendimento.
+- `/orientacao-cirurgica` agora abre a tela da Central (`Central.tsx`, prop `setor="orientacao"`), dentro do sistema com o menu ao lado, como `/central`.
+  - Quem atende a orientação: igual à Central (status, equipe, fila, Pegar o próximo, Meus atendimentos, Interno, Telefone).
+  - Médicos e admin (que só veem): modo consulta — fila e "Em atendimento (com quem)", conversa sem responder, histórico em Atendimentos.
+  - `?paciente=` (botão 🩹 da ficha) abre a conversa do paciente; se não houver, vai às Ferramentas para começar uma.
+- A tela antiga (pesquisar mensagens, modelos, fora do horário, importar, começar conversa) ficou em
+  `/orientacao-cirurgica/ferramentas` (botão 🧰 Ferramentas), com "↩ Voltar ao atendimento".

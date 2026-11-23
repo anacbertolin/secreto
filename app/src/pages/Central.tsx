@@ -3,14 +3,14 @@
 //   [menu] [status · equipe · Canais/Telefone · fila · meus atendimentos] [conversa] [ficha do paciente]
 // O telefone entra na aba "Telefone" quando a Telecall liberar os ramais.
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, type PacienteResumo } from "../components/ui";
 import { NovoAgendamento } from "../components/AgendamentoModais";
 import { listaConvenios, listaLocais, listaProfissionais } from "../lib/dados";
 import { fmtData, isoDia } from "../lib/util";
-import { SELECT_CONVERSA, fmtNumeroWA, podeResponderSetor, type Conversa } from "../lib/whatsapp";
+import { SELECT_CONVERSA, fmtNumeroWA, podeResponderSetor, podeVerSetor, type Conversa, type SetorWA } from "../lib/whatsapp";
 import { STATUS_CENTRAL, fmtEsperando, useCentral, type StatusCentral } from "../lib/central";
 import { fmtNumeroTel, useTelefone } from "../lib/telefone";
 import { BotaoLigar } from "../components/Telefone";
@@ -29,16 +29,28 @@ function quando(d: string | null | undefined): string {
   return isoDia(x) === isoDia(new Date()) ? x.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : fmtData(d).slice(0, 5);
 }
 
-export default function Central() {
+/**
+ * setorFixo: a aba "Orientação cirúrgica" (/orientacao-cirurgica) usa esta mesma tela, sempre no número da
+ * orientação (pedido da dona, 23/11/2026). Quem atende a orientação trabalha igual à Central; médicos e admin
+ * acompanham as conversas só para consulta (sem pegar da fila nem responder).
+ */
+export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) {
   const { eu } = useAuth();
   const central = useCentral();
-  const setor = central?.setor ?? "clinica";
+  const navegar = useNavigate();
+  const [params] = useSearchParams();
+  const setor: SetorWA = setorFixo ?? central?.setor ?? "clinica";
   const podeResponder = podeResponderSetor(eu, setor);
   // Quem atende vê fila, WhatsApp e telefone; médicos, enfermagem e faturamento usam só a conversa interna
-  const atende = !!central?.atende && podeResponder;
+  const atende = !!central?.atende && central.setor === setor && podeResponder;
+  // Na aba da Orientação, médicos e admin veem as conversas para consulta
+  const consulta = !atende && !!setorFixo && podeVerSetor(eu, setor);
+  const veCanais = atende || consulta;
+  const ferramentas = setor === "orientacao" ? "/orientacao-cirurgica/ferramentas" : "/whatsapp";
+  const titulo = setor === "orientacao" ? "Orientação cirúrgica" : "Central de atendimento";
   const [visao, setVisao] = useState<Visao>("conversas");
-  const [aba, setAba] = useState<Aba>(atende ? "canais" : "interno");
-  const [abertaId, setAbertaId] = useState<string | null>(null);
+  const [aba, setAba] = useState<Aba>(veCanais ? "canais" : "interno");
+  const [abertaId, setAbertaId] = useState<string | null>(params.get("conversa"));
   const [internaId, setInternaId] = useState<string | null>(null);
   const interno = useInternoNaoLidas(eu?.id);
   const [busca, setBusca] = useState("");
@@ -69,6 +81,18 @@ export default function Central() {
       .filter((x) => setor === "orientacao" ? x.orientacao_cirurgica : !x.orientacao_cirurgica && ["recepcao", "admin"].includes(x.funcao))
       .map((x) => ({ ...x, status: status.get(x.id) ?? null }));
   }, [setor]);
+  // Vindo da ficha do paciente (?paciente=...): abre a conversa dele; se não houver, vai às Ferramentas para começar uma
+  const pacienteParam = params.get("paciente");
+  useEffect(() => {
+    if (!pacienteParam) return;
+    void supabase.from("whatsapp_conversas").select("id").eq("setor", setor).eq("paciente_id", pacienteParam)
+      .order("ultima_mensagem_em", { ascending: false, nullsFirst: false }).limit(1)
+      .then(({ data }) => {
+        if (data?.[0]) setAbertaId(data[0].id as string);
+        else navegar(`${ferramentas}?paciente=${pacienteParam}`, { replace: true });
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pacienteParam, setor]);
   const base = useCarregar(async () => {
     const [medicos, convenios, locais] = await Promise.all([listaProfissionais(["medico"]), listaConvenios(), listaLocais()]);
     return { medicos, convenios, locais };
@@ -96,13 +120,15 @@ export default function Central() {
   const naoRespondida = (c: Conversa) => !!c.ultima_recebida_em && c.ultima_recebida_em >= (c.ultima_mensagem_em ?? c.ultima_recebida_em);
   const f = busca.trim().toLowerCase();
   const filtra = (l: Conversa[]) => l.filter((c) => !f || nomeConversa(c).toLowerCase().includes(f) || c.telefone.includes(f.replace(/\D/g, "") || "§"));
+  const comEquipe = todas.filter((c) => !!c.responsavel_id);
+  const comEquipeVisivel = filtra(comEquipe);
   const minhasVisiveis = filtra(minhas).filter((c) => !soNaoRespondidos || naoRespondida(c));
   const filaVisivel = filtra(fila);
   const historico = filtra(encerradas.dados ?? []);
 
   // Começo da última mensagem de cada conversa visível (como no cartão do Talklogos)
-  const ids = useMemo(() => [...filaVisivel, ...minhasVisiveis, ...historico].map((c) => c.id).slice(0, 80).join(","),
-    [filaVisivel, minhasVisiveis, historico]);
+  const ids = useMemo(() => [...filaVisivel, ...(consulta ? comEquipeVisivel : minhasVisiveis), ...historico].map((c) => c.id).slice(0, 80).join(","),
+    [filaVisivel, minhasVisiveis, comEquipeVisivel, historico, consulta]);
   const [previas, setPrevias] = useState<Record<string, Previa>>({});
   useEffect(() => {
     if (!ids) return;
@@ -127,7 +153,7 @@ export default function Central() {
     if (id) { lista.recarregar(); setInternaId(null); setAbertaId(id); }
   }
 
-  function Cartao({ c, tipo }: { c: Conversa; tipo: "fila" | "meu" | "historico" }) {
+  function Cartao({ c, tipo }: { c: Conversa; tipo: "fila" | "meu" | "equipe" | "historico" }) {
     const pv = previas[c.id];
     return (
       <button className={"ct-cartao" + (c.id === abertaId && !internaId ? " ativo" : "")} onClick={() => { setInternaId(null); setAbertaId(c.id); }}>
@@ -142,6 +168,7 @@ export default function Central() {
             <span className={"ct-previa" + (pv?.direcao === "recebida" ? " dele" : "")}>{pv ? (pv.direcao === "enviada" ? "Você: " : "") + pv.texto : ""}</span>
             {tipo === "fila" && <span className="ct-tag espera">⏳ {fmtEsperando(c.fila_desde)}</span>}
             {tipo === "meu" && (naoRespondida(c) ? <span className="ct-tag nao-resp">Não respondido</span> : <span className="ct-tag atendendo">Atendendo</span>)}
+            {tipo === "equipe" && <span className="ct-tag atendendo">{nomeDe(c.responsavel_id) ?? "Atendendo"}</span>}
             {tipo === "historico" && <span className="ct-tag cinza">{c.responsavel_id ? nomeDe(c.responsavel_id) ?? "Encerrada" : "Encerrada"}</span>}
             {c.nao_lidas > 0 && tipo !== "historico" && <span className="wa-badge">{c.nao_lidas}</span>}
           </span>
@@ -158,12 +185,12 @@ export default function Central() {
         <button className={visao === "conversas" ? "ativo" : ""} onClick={() => setVisao("conversas")} title="Conversas">
           <span className="ct-icone">💬{fila.length > 0 && <span className="ct-bolha">{fila.length}</span>}</span>Conversas
         </button>
-        {atende && (
+        {veCanais && (
           <button className={visao === "atendimentos" ? "ativo" : ""} onClick={() => setVisao("atendimentos")} title="Atendimentos encerrados">
             <span className="ct-icone">📋</span>Atendimentos
           </button>
         )}
-        {atende && <Link to={setor === "orientacao" ? "/orientacao-cirurgica" : "/whatsapp"} title="Lembretes de consulta, modelos, fora do horário, pesquisar e importar conversas"><span className="ct-icone">🧰</span>Ferramentas</Link>}
+        {veCanais && <Link to={ferramentas} title={setor === "orientacao" ? "Pesquisar mensagens, modelos, fora do horário e importar conversas" : "Lembretes de consulta, modelos, fora do horário, pesquisar e importar conversas"}><span className="ct-icone">🧰</span>Ferramentas</Link>}
       </nav>
 
       {/* ---------- Coluna do meio ---------- */}
@@ -175,14 +202,14 @@ export default function Central() {
 
         {visao === "conversas" ? (
           <>
-            {atende && <Equipe pessoas={equipe.dados ?? []} euId={eu?.id} livres={livres.length} />}
+            {veCanais && <Equipe pessoas={equipe.dados ?? []} euId={eu?.id} livres={livres.length} />}
             <div className="ct-abas">
               <button className={aba === "interno" ? "ativa" : ""} onClick={() => setAba("interno")}>
                 Interno {interno.total > 0 && <span className="ct-bolha verde" style={{ background: "#d92d20" }}>{interno.total}</span>}
               </button>
-              {atende && (
+              {veCanais && (
                 <button className={aba === "canais" ? "ativa" : ""} onClick={() => setAba("canais")}>
-                  Canais {fila.length + minhas.length > 0 && <span className="ct-bolha verde">{fila.length + minhas.length}</span>}
+                  Canais {fila.length + (consulta ? comEquipe.length : minhas.length) > 0 && <span className="ct-bolha verde">{fila.length + (consulta ? comEquipe.length : minhas.length)}</span>}
                 </button>
               )}
               {atende && <button className={aba === "telefone" ? "ativa" : ""} onClick={() => setAba("telefone")}>Telefone</button>}
@@ -190,6 +217,17 @@ export default function Central() {
 
             {aba === "interno" ? (
               <InternoLista busca={busca} abertaId={internaId} naoLidas={interno.porConversa} aoAbrir={(id) => setInternaId(id)} />
+            ) : aba === "canais" && consulta ? (
+              <div className="ct-rolagem">
+                <div className="ct-aviso-tel">👀 Só para consulta: quem responde por este número é a equipe da {titulo}.</div>
+                <h3 className="ct-secao">Fila de espera ({fila.length})</h3>
+                {filaVisivel.length === 0 ? <div className="ct-vazio">Ninguém esperando.</div>
+                  : filaVisivel.map((c) => <Cartao key={c.id} c={c} tipo="fila" />)}
+                <h3 className="ct-secao">Em atendimento ({comEquipe.length})</h3>
+                {lista.carregando && !lista.dados ? <Carregando /> : comEquipeVisivel.length === 0
+                  ? <div className="ct-vazio">Nenhuma conversa em atendimento.</div>
+                  : comEquipeVisivel.map((c) => <Cartao key={c.id} c={c} tipo="equipe" />)}
+              </div>
             ) : aba === "canais" && atende ? (
               <div className="ct-rolagem">
                 <button className="ct-pegar" disabled={fila.length === 0 || central.status !== "disponivel"} onClick={() => void pegarProximo()}>
@@ -239,12 +277,14 @@ export default function Central() {
         ) : (
           <div className="ct-boas-vindas">
             <div className="ct-boas-icone">💬</div>
-            <h2>Central de atendimento</h2>
+            <h2>{titulo}</h2>
             {atende ? (
               <>
                 <p>{fila.length > 0 ? `${fila.length} paciente${fila.length > 1 ? "s" : ""} esperando na fila.` : "Ninguém esperando agora."}</p>
                 <p className="muted">Escolha uma conversa ao lado ou clique em <b>Pegar o próximo</b>.</p>
               </>
+            ) : consulta ? (
+              <p className="muted">Escolha uma conversa ao lado para acompanhar. Para pesquisar o que foi dito, use <b>🧰 Ferramentas</b>.</p>
             ) : <p className="muted">Converse com a equipe pela aba <b>Interno</b>.</p>}
           </div>
         )}

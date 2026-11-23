@@ -147,6 +147,7 @@ export default function WhatsApp({ setor = "clinica" }: { setor?: SetorWA }) {
         </div>
         <div className="linha">
           <AvisosComputador />
+          {setor === "orientacao" && <Link className="botao" to="/orientacao-cirurgica">↩ Voltar ao atendimento</Link>}
           <button onClick={() => setPesquisar(true)}>🔎 Pesquisar mensagens</button>
           {(podeResponder || pode("admin")) && <button onClick={() => setAusencia(true)}>🌙 Fora do horário</button>}
           {(podeResponder || pode("admin")) && <Link className="botao" to={`/whatsapp/importar?setor=${setor}`}>📥 Importar conversas antigas</Link>}

@@ -191,7 +191,7 @@ export default function App() {
           <button onClick={sair}>Sair</button>
         </div>
       </aside>
-      <main className={"conteudo" + (loc.pathname === "/central" ? " sem-margem" : "")}>
+      <main className={"conteudo" + (loc.pathname === "/central" || loc.pathname === "/orientacao-cirurgica" ? " sem-margem" : "")}>
         <Routes>
           <Route path="/" element={<Inicio />} />
           <Route path="/agenda" element={<Agenda />} />
@@ -218,7 +218,11 @@ export default function App() {
           <Route path="/repasse/:id" element={<Protegida funcoes={["faturamento", "admin"]}><RepasseDetalhe /></Protegida>} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/whatsapp" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><WhatsApp key="clinica" /></Protegida>} />
+          {/* Orientação cirúrgica: mesma tela da Central, sempre no número da orientação (pedido da dona, 23/11) */}
           <Route path="/orientacao-cirurgica" element={
+            podeVerSetor(eu, "orientacao") ? <Central key="orientacao" setor="orientacao" /> : <div className="painel vazio">Você não tem acesso a esta área.</div>
+          } />
+          <Route path="/orientacao-cirurgica/ferramentas" element={
             podeVerSetor(eu, "orientacao") ? <WhatsApp key="orientacao" setor="orientacao" /> : <div className="painel vazio">Você não tem acesso a esta área.</div>
           } />
           <Route path="/whatsapp/importar" element={<ImportarWhatsApp />} />
@@ -229,7 +233,7 @@ export default function App() {
           <Route path="/cadastros/convenios" element={<Protegida funcoes={["recepcao", "admin", "faturamento"]}><Convenios /></Protegida>} />
           <Route path="/cadastros/locais" element={<Protegida funcoes={["recepcao", "admin"]}><Locais /></Protegida>} />
           <Route path="/cadastros/exames" element={<Protegida funcoes={["recepcao", "admin"]}><CatalogoExames /></Protegida>} />
-          <Route path="/central" element={<Central />} />
+          <Route path="/central" element={<Central key="central" />} />
           <Route path="/ligacoes" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><Ligacoes /></Protegida>} />
           <Route path="/cadastros/telefone" element={<Protegida funcoes={["admin"]}><ConfigTelefone /></Protegida>} />
           <Route path="/cadastros/memed" element={<Protegida funcoes={["admin"]}><ConfigMemed /></Protegida>} />
