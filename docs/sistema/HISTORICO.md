@@ -1302,3 +1302,6 @@ Fascectomia 2.244,00 · Fascectomia + TREC 4.644,00 · Vital 500,00 · Campo Gra
 Conferido no banco local e no real (transação desfeita); tela com dados simulados.
 ### Ideias oferecidas à dona (sem resposta)
 - Ligar a lente ao Estoque (custo real e baixa automática); relatório "o que fica para a clínica no mês".
+- **Correção da dona (23/11, mesmo dia):** Clínica Vital = **taxa de sala R$ 1.100** (fica para a clínica) + **R$ 500 para o
+  médico que operou** → valor sugerido **R$ 1.600**. Ajustado direto na tabela de procedimentos (dado, não estrutura);
+  nenhum lançamento da Vital existia ainda. Pergunta em aberto: na cobrança de Campo Grande incide imposto? (hoje: não).
