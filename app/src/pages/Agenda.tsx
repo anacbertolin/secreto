@@ -6,7 +6,7 @@ import { NovoAgendamento, DetalheAgendamento } from "../components/AgendamentoMo
 import { MiniCalendario, ResumoAgendamento } from "../components/AgendaTopo";
 import { Modal } from "../components/ui";
 import {
-  listaAgendas, listaConvenios, listaLocais, nomeAgenda, ehAgendaOrientacao, SELECT_AGENDA,
+  listaAgendas, listaConvenios, listaLocais, nomeAgenda, ehAgendaOrientacao, colunaDoAgendamento, SELECT_AGENDA,
   type Agendamento, type Horario, type Bloqueio,
 } from "../lib/dados";
 import { STATUS_AGENDA, TIPOS_AGENDA, fmtDataLonga, fmtHora, inicioDoDia, isoDia, somaDias, nomeExibicao } from "../lib/util";
@@ -24,7 +24,7 @@ export default function Agenda() {
   const { eu } = useAuth();
   const [dia, setDia] = useState(() => inicioDoDia(new Date()));
   // Médico abre na própria agenda; quem atende a orientação abre na agenda da Orientação Cirúrgica
-  const [filtro, setFiltro] = useState<string>(eu?.funcao === "medico" || ehAgendaOrientacao(eu) ? eu!.id : "todos");
+  const [filtro, setFiltro] = useState<string>(eu?.funcao === "medico" ? eu.id : ehAgendaOrientacao(eu) ? "orientacao" : "todos");
   const [novo, setNovo] = useState<null | { profissional_id?: string; inicio?: Date; duracao?: number; local_id?: string | null; encaixe?: boolean }>(null);
   const [aberto, setAberto] = useState<Agendamento | null>(null);
   const [selecionado, setSelecionado] = useState<Agendamento | null>(null);
@@ -54,7 +54,11 @@ export default function Agenda() {
   }, [dia.getTime()]);
 
   const medicos = base.dados?.medicos ?? [];
-  const colunas = filtro === "todos" ? medicos : medicos.filter((m) => m.id === filtro);
+  const colunas = filtro === "todos" ? medicos
+    : filtro === "orientacao" ? medicos.filter((m) => ehAgendaOrientacao(m))
+    : medicos.filter((m) => m.id === filtro);
+  // agendamento de qualquer pessoa da orientação aparece na coluna única da Orientação Cirúrgica
+  const colDe = (profissionalId: string) => colunaDoAgendamento(medicos, profissionalId);
   const PASSO = colunas.length > 0 && colunas.every((c) => ehAgendaOrientacao(c)) ? 10 : PASSO_PADRAO;
   // o resumo acompanha as alterações do dia (ex.: depois de marcar a chegada)
   const sel = selecionado ? (doDia.dados?.ags.find((a) => a.id === selecionado.id) ?? null) : null;
@@ -107,7 +111,7 @@ export default function Agenda() {
   }
   function agsNaCelula(profId: string, min: number) {
     return (doDia.dados?.ags ?? []).filter((a) => {
-      if (a.profissional_id !== profId) return false;
+      if (colDe(a.profissional_id) !== profId) return false;
       if (!mostrarCancelados && a.status === "cancelado") return false;
       const i = new Date(a.inicio);
       const m = i.getHours() * 60 + i.getMinutes();
@@ -115,7 +119,7 @@ export default function Agenda() {
     });
   }
 
-  const ags = (doDia.dados?.ags ?? []).filter((a) => colunas.some((c) => c.id === a.profissional_id));
+  const ags = (doDia.dados?.ags ?? []).filter((a) => colunas.some((c) => c.id === colDe(a.profissional_id)));
   const total = ags.filter((a) => a.status !== "cancelado").length;
 
   return (
@@ -132,23 +136,23 @@ export default function Agenda() {
           <input type="date" style={{ width: 160 }} value={isoDia(dia)} onChange={(e) => e.target.value && setDia(new Date(e.target.value + "T00:00:00"))} />
           <select style={{ width: 220 }} value={filtro} onChange={(e) => setFiltro(e.target.value)}>
             <option value="todos">Todas as agendas</option>
-            {medicos.map((m) => <option key={m.id} value={m.id}>{nomeAgenda(m)}</option>)}
+            {medicos.map((m) => <option key={m.id} value={ehAgendaOrientacao(m) ? "orientacao" : m.id}>{nomeAgenda(m)}</option>)}
           </select>
-          <button className="primario" onClick={() => setNovo({ profissional_id: filtro !== "todos" ? filtro : undefined, inicio: new Date(dia.getTime() + 8 * 3600000) })}>➕ Agendar</button>
+          <button className="primario" onClick={() => setNovo({ profissional_id: filtro === "todos" ? undefined : filtro === "orientacao" ? colunas[0]?.id : filtro, inicio: new Date(dia.getTime() + 8 * 3600000) })}>➕ Agendar</button>
         </div>
       </div>
       <Aviso>{base.erro || doDia.erro}</Aviso>
       {base.dados && (
         <div className="agenda-topo">
           <div className="painel" style={{ padding: 10 }}>
-            <MiniCalendario dia={dia} aoEscolher={(d) => { setDia(inicioDoDia(d)); setSelecionado(null); }} colunas={colunas.map((c) => c.id)} versao={versao} />
+            <MiniCalendario dia={dia} aoEscolher={(d) => { setDia(inicioDoDia(d)); setSelecionado(null); }} colunas={colunas.flatMap((c) => c.membros ?? [c.id])} versao={versao} />
           </div>
           <div className="painel" style={{ padding: 10 }}>
             <ResumoAgendamento
               ag={sel}
               nomeDe={nomeDe}
               convenio={(id) => base.dados!.convenios.find((c) => c.id === id)?.nome ?? ""}
-              agenda={(id) => { const m = medicos.find((x) => x.id === id); return m ? nomeAgenda(m) : ""; }}
+              agenda={(id) => { const m = medicos.find((x) => x.id === colDe(id)); return m ? nomeAgenda(m) : ""; }}
               aoAbrir={() => sel && setAberto(sel)}
             />
           </div>
@@ -170,7 +174,7 @@ export default function Agenda() {
               {colunas.map((c) => (
                 <div key={c.id} className="col-cab">
                   {nomeAgenda(c)}
-                  {ehAgendaOrientacao(c) && <div className="pequeno muted" style={{ fontWeight: 400 }}>{c.nome.split(" ")[0]} · só registro, sem faturamento</div>}
+                  {ehAgendaOrientacao(c) && <div className="pequeno muted" style={{ fontWeight: 400 }}>só registro, sem faturamento</div>}
                   <button className="obs-dia" title="Observação do dia desta agenda"
                     onClick={() => setEditObs({ profissional_id: c.id, nome: nomeAgenda(c), texto: doDia.dados?.obsDia.get(c.id) ?? "" })}>
                     {doDia.dados?.obsDia.get(c.id) ? <>📌 {doDia.dados.obsDia.get(c.id)}</> : <span className="muted">＋ obs. do dia</span>}

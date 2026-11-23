@@ -36,15 +36,32 @@ export async function listaProfissionais(funcoes?: string[]): Promise<Profission
   return (data ?? []) as Profissional[];
 }
 
-/** Colunas da Agenda: os médicos e a Orientação Cirúrgica (quem atende a orientação e não é médico). */
-export async function listaAgendas(): Promise<Profissional[]> {
-  const { data, error } = await supabase.from("profissionais").select("*").eq("ativo", true).order("nome");
+/** Profissional mostrado como coluna da agenda. Na Orientação Cirúrgica, `membros` são todos que atendem a orientação. */
+export type AgendaColuna = Profissional & { membros?: string[] };
+
+/**
+ * Colunas da Agenda: os médicos e UMA coluna "Orientação Cirúrgica" (todos que atendem a orientação e não são médicos
+ * aparecem juntos nela). A coluna usa como "dona" quem tem horários cadastrados (senão, o primeiro pelo nome).
+ */
+export async function listaAgendas(): Promise<AgendaColuna[]> {
+  const [{ data, error }, { data: hs }] = await Promise.all([
+    supabase.from("profissionais").select("*").eq("ativo", true).order("nome"),
+    supabase.from("horarios_profissional").select("profissional_id").eq("ativo", true),
+  ]);
   if (error) throw error;
   const todos = (data ?? []) as Profissional[];
+  const orient = todos.filter((p) => ehAgendaOrientacao(p));
+  const comHorario = new Set((hs ?? []).map((h: { profissional_id: string }) => h.profissional_id));
+  const dona = orient.find((p) => comHorario.has(p.id)) ?? orient[0];
   return [
     ...todos.filter((p) => p.funcao === "medico"),
-    ...todos.filter((p) => ehAgendaOrientacao(p)),
+    ...(dona ? [{ ...dona, membros: orient.map((p) => p.id) }] : []),
   ];
+}
+
+/** Id da coluna onde o agendamento aparece (agendamentos de qualquer pessoa da orientação vão para a coluna dela) */
+export function colunaDoAgendamento(colunas: AgendaColuna[], profissionalId: string): string {
+  return colunas.find((c) => c.id === profissionalId || c.membros?.includes(profissionalId))?.id ?? profissionalId;
 }
 
 /** Esta "agenda" é a da Orientação Cirúrgica? (só registro: não fatura, não entra na recepção nem na fila do médico) */
