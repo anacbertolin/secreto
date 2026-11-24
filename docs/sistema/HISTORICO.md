@@ -1544,3 +1544,19 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
   telas no navegador com dados simulados (Alessandra → Luciano).
 - Próximo: entrada do pagamento da Alessandra no Caixa? (perguntar); lentes no estoque + nota fiscal (substituir o Invistto;
   ver com o Luciano como ele faz hoje).
+
+## 24/11/2026 — Caixa da Orientação Cirúrgica, separado do caixa da recepção (migração 0098)
+Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) entra no caixa, mas num caixa SEPARADO da recepção.
+- `caixas.setor` = `recepcao` (tudo o que já existia) ou `orientacao`. Um caixa aberto **por setor** (índice `caixas_um_aberto_por_setor`).
+  `caixa_abrir(p_fundo, p_setor default 'recepcao')`; `caixa_devolver` confere outro aberto só no mesmo setor.
+- Permissões por setor: `interno.caixa_pode(p, setor)` / `interno.caixa_pode_caixa(p, caixa_id)` (RLS das 4 tabelas do caixa).
+  Orientação: lança/vê quem tem a marcação Orientação Cirúrgica + faturamento + admin; quem confere/aprova vê os dois.
+  A recepção não vê o caixa da orientação. (Obs.: a Alessandra está com função "recepção", então ela vê os dois.)
+- Pagamento não pode cair no caixa do outro setor (gatilho `setor_venda`).
+- Cada venda de `orientacao_vendas` entra sozinha no caixa da orientação aberto (gatilho `caixa` em orientacao_vendas;
+  `caixa_atendimentos.venda_id`). Sem caixa aberto a venda não é registrada. Crédito 1x → crédito à vista; 2x+ → parcelado.
+  Correção (depois de devolvida) cancela o pagamento antigo e lança o novo; cancelar a venda cancela no caixa.
+  Se o caixa daquele dia já foi fechado, mudar valor/forma ou cancelar exige devolver o caixa antes.
+  Lançamentos vindos de venda não são alterados pela tela do caixa (só pela tela de vendas).
+- Tela Caixa: botões Recepção / Orientação Cirúrgica (quem vê os dois); tela de Vendas mostra se o caixa da orientação está aberto.
+- Testado no banco local (abertura por setor, isolamento, venda → caixa, correção, cancelamento, caixa fechado, repasse).
