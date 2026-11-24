@@ -109,7 +109,13 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
   const [cancelar, setCancelar] = useState(false);
   const [motivo, setMotivo] = useState("");
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
-  const procs = base.procs.filter((p) => !p.profissional_id || !f.profissional_id || p.profissional_id === f.profissional_id);
+  // TODOS os procedimentos, agrupados por médico (o médico escolhido primeiro). A Alessandra registra de todos os cirurgiões.
+  const nomeMedico = (id: string | null) => (id ? base.medicos.find((m) => m.id === id)?.nome ?? "Outro médico" : "Qualquer médico");
+  const gruposProc = (() => {
+    const ids = [...new Set(base.procs.map((p) => p.profissional_id ?? ""))];
+    ids.sort((x, y) => (x === f.profissional_id ? -1 : y === f.profissional_id ? 1 : !x ? 1 : !y ? -1 : nomeMedico(x).localeCompare(nomeMedico(y))));
+    return ids.map((id) => ({ rotulo: nomeMedico(id || null), itens: base.procs.filter((p) => (p.profissional_id ?? "") === id) }));
+  })();
   const proc = base.procs.find((p) => p.id === f.procedimento_id);
   const lentes = f.tipo === "lente" ? base.lentes : base.lentes.filter((l) => l.premium);
 
@@ -188,8 +194,15 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
           </Campo>
           {f.tipo === "cirurgia" && (
             <Campo rotulo="Procedimento">
-              <select value={f.procedimento_id} onChange={(e) => setF({ ...f, procedimento_id: e.target.value, lente_id: "" })}>
-                <option value="">Escolha…</option>{procs.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+              <select value={f.procedimento_id} onChange={(e) => {
+                const escolhido = base.procs.find((p) => p.id === e.target.value);
+                // escolheu o procedimento antes do médico: já preenche o médico dele
+                setF({ ...f, procedimento_id: e.target.value, lente_id: "", profissional_id: f.profissional_id || escolhido?.profissional_id || "" });
+              }}>
+                <option value="">Escolha…</option>
+                {gruposProc.map((g) => (
+                  <optgroup key={g.rotulo} label={g.rotulo}>{g.itens.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}</optgroup>
+                ))}
               </select>
             </Campo>
           )}
