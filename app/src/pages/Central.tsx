@@ -14,11 +14,11 @@ import { SELECT_CONVERSA, whatsapp, fmtNumeroWA, podeResponderSetor, podeVerSeto
 import { STATUS_CENTRAL, fmtEsperando, useCentral, type StatusCentral } from "../lib/central";
 import { fmtNumeroTel, useTelefone } from "../lib/telefone";
 import { BotaoLigar } from "../components/Telefone";
-import { Chat, FichaPaciente, iniciais, nomeConversa } from "./WhatsApp";
+import { Chat, FichaPaciente, ForaDoHorario, Lembretes, Modelos, Pesquisa, iniciais, nomeConversa } from "./WhatsApp";
 import { InternoChat, InternoLista } from "../components/Interno";
 import { useInternoNaoLidas } from "../lib/interno";
 
-type Visao = "conversas" | "atendimentos";
+type Visao = "conversas" | "atendimentos" | "ferramentas";
 type Aba = "canais" | "interno" | "telefone";
 
 interface Previa { texto: string; direcao: "recebida" | "enviada"; quando: string }
@@ -58,6 +58,10 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
   const [diaHistorico, setDiaHistorico] = useState(isoDia(new Date()));
   const [agendar, setAgendar] = useState<Conversa | null>(null);
   const [nova, setNova] = useState(false);
+  // Ferramentas abertas dentro da própria tela (pedido da dona, 24/11: antes o botão saía da tela)
+  const [ferr, setFerr] = useState<"" | "pesquisa" | "modelos" | "ausencia" | "lembretes">("");
+  const [destaque, setDestaque] = useState<string | null>(null);
+  const [avulsa, setAvulsa] = useState<Conversa | null>(null);
   const [, setTique] = useState(0);
 
   // Conversas abertas (fila + em atendimento) do setor da pessoa
@@ -146,7 +150,7 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
       });
   }, [ids]);
 
-  const aberta = [...todas, ...(encerradas.dados ?? [])].find((c) => c.id === abertaId) ?? null;
+  const aberta = [...todas, ...(encerradas.dados ?? []), ...(avulsa ? [avulsa] : [])].find((c) => c.id === abertaId) ?? null;
   const nomeDe = (id: string | null) => equipe.dados?.find((x) => x.id === id)?.nome.split(" ")[0];
 
   async function pegarProximo() {
@@ -196,7 +200,12 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
             <span className="ct-icone">✏️</span>Nova conversa
           </button>
         )}
-        {veCanais && <Link to={ferramentas} title={setor === "orientacao" ? "Pesquisar mensagens, modelos, fora do horário e importar conversas" : "Lembretes de consulta, modelos, fora do horário, pesquisar e importar conversas"}><span className="ct-icone">🧰</span>Ferramentas</Link>}
+        {veCanais && (
+          <button className={visao === "ferramentas" ? "ativo" : ""} onClick={() => setVisao("ferramentas")}
+            title={setor === "orientacao" ? "Pesquisar mensagens, modelos, fora do horário e importar conversas" : "Lembretes de consulta, modelos, fora do horário, pesquisar e importar conversas"}>
+            <span className="ct-icone">🧰</span>Ferramentas
+          </button>
+        )}
       </nav>
 
       {/* ---------- Coluna do meio ---------- */}
@@ -262,6 +271,22 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
               <PainelTelefone setor={setor} aoAbrirConversa={(id) => { setInternaId(null); setAbertaId(id); }} />
             )}
           </>
+        ) : visao === "ferramentas" ? (
+          <div className="ct-rolagem ct-ferramentas">
+            <h3 className="ct-secao">Ferramentas</h3>
+            <button onClick={() => setFerr("pesquisa")}>🔎 Pesquisar mensagens<span className="pequeno muted">O que foi dito, inclusive nos áudios</span></button>
+            <button onClick={() => setFerr("modelos")}>📝 Modelos de mensagem<span className="pequeno muted">Mensagens aprovadas pela Meta</span></button>
+            {(podeResponder || eu?.funcao === "admin") && (
+              <button onClick={() => setFerr("ausencia")}>🌙 Fora do horário<span className="pequeno muted">Resposta automática fora do expediente</span></button>
+            )}
+            {setor === "clinica" && (eu?.funcao === "recepcao" || eu?.funcao === "admin") && (
+              <button onClick={() => setFerr("lembretes")}>📨 Lembretes de consulta<span className="pequeno muted">Avisar os pacientes do dia</span></button>
+            )}
+            {(podeResponder || eu?.funcao === "admin") && (
+              <Link className="botao" to={`/whatsapp/importar?setor=${setor}`}>📥 Importar conversas antigas<span className="pequeno muted">Abre outra tela</span></Link>
+            )}
+            <Link className="botao" to={ferramentas}>🗂️ Ver todas as conversas (tela antiga)<span className="pequeno muted">Abre outra tela, com arquivadas</span></Link>
+          </div>
         ) : (
           <div className="ct-rolagem">
             <h3 className="ct-secao">Atendimentos encerrados</h3>
@@ -280,7 +305,7 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
         {internaId ? (
           <InternoChat key={internaId} conversaId={internaId} aoVoltar={() => setInternaId(null)} />
         ) : aberta ? (
-          <Chat key={aberta.id} conversa={aberta} podeResponder={podeResponder} quemResponde="" central={{ aoAgendar: () => setAgendar(aberta) }}
+          <Chat key={aberta.id} conversa={aberta} podeResponder={podeResponder} destaque={destaque} quemResponde="" central={{ aoAgendar: () => setAgendar(aberta) }}
             aoMudar={() => { lista.recarregar(); encerradas.recarregar(); }} aoVoltar={() => setAbertaId(null)} />
         ) : (
           <div className="ct-boas-vindas">
@@ -299,6 +324,21 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
       </section>
 
       {aberta && !internaId && <FichaPaciente key={aberta.id} conversa={aberta} />}
+
+      {ferr === "pesquisa" && (
+        <Pesquisa setor={setor} aoFechar={() => setFerr("")}
+          aoEscolher={async (conversaId, mensagemId) => {
+            setFerr("");
+            if (![...todas, ...(encerradas.dados ?? [])].some((c) => c.id === conversaId)) {
+              const { data } = await supabase.from("whatsapp_conversas").select(SELECT_CONVERSA).eq("id", conversaId).maybeSingle();
+              setAvulsa((data as Conversa) ?? null);
+            }
+            setInternaId(null); setDestaque(mensagemId); setAbertaId(conversaId);
+          }} />
+      )}
+      {ferr === "modelos" && <Modelos setor={setor} aoFechar={() => setFerr("")} />}
+      {ferr === "ausencia" && <ForaDoHorario setor={setor} aoFechar={() => setFerr("")} />}
+      {ferr === "lembretes" && <Lembretes aoFechar={() => setFerr("")} aoEnviar={() => lista.recarregar()} />}
 
       {nova && (
         <NovaConversa setor={setor} aoFechar={() => setNova(false)}

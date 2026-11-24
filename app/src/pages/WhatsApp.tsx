@@ -934,7 +934,7 @@ const MODELOS_DO_SETOR: Record<SetorWA, string[]> = {
 };
 const PARAMETROS: Record<string, string> = { paciente: "primeiro nome do paciente", data: "dia da semana e data", hora: "horário", medico: "nome do médico", dia_semana: "dia da semana" };
 
-function Modelos(props: { setor: SetorWA; aoFechar: () => void }) {
+export function Modelos(props: { setor: SetorWA; aoFechar: () => void }) {
   const { pode } = useAuth();
   const admin = pode("admin");
   const lista = useCarregar(async () => ok(await supabase.from("whatsapp_modelos").select("*")
@@ -1008,7 +1008,7 @@ function Trecho({ texto, termo }: { texto: string; termo: string }) {
 }
 
 /** Pesquisa no texto das mensagens e no texto dos áudios (transcrição) */
-function Pesquisa(props: { setor: SetorWA; aoFechar: () => void; aoEscolher: (conversaId: string, mensagemId: string) => void }) {
+export function Pesquisa(props: { setor: SetorWA; aoFechar: () => void; aoEscolher: (conversaId: string, mensagemId: string) => void }) {
   const [termo, setTermo] = useState("");
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
@@ -1077,7 +1077,7 @@ const DIAS_SEMANA: [string, string][] = [["1", "Segunda"], ["2", "Terça"], ["3"
 interface Ausencia { setor: SetorWA; ligado: boolean; texto: string; horarios: Record<string, [string, string]> }
 
 /** Resposta automática quando o paciente escreve fora do horário */
-function ForaDoHorario(props: { setor: SetorWA; aoFechar: () => void }) {
+export function ForaDoHorario(props: { setor: SetorWA; aoFechar: () => void }) {
   const { eu } = useAuth();
   const dados = useCarregar(async () =>
     ok(await supabase.from("whatsapp_ausencia").select("setor, ligado, texto, horarios").eq("setor", props.setor).maybeSingle()) as Ausencia | null,
