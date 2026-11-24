@@ -1568,3 +1568,9 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
 - Procedimentos novos (dados, 24/11, pedido do Dr. Gelson): "Facectomia (Dra. Luiza)" e "Facectomia (Dr. Max)" — regra geral,
   R$ 5.500, anestesista 350, sala 1.100, lente Rayner 190; "Facectomia + TREC (Dr. Max)" — igual à do Dr. Pedro (R$ 10.500,
   sala 1.800, lente 190, anestesista 800) SEM instrumentação de fora. PIX: catarata → médico 2.428; glaucoma Max → médico 4.908.
+- (24/11, decisão do Dr. Gelson) Procedimento + médico: cada procedimento aparece UMA vez nas listas (Vendas da orientação e
+  Novo repasse). A versão "padrão" não tem médico; a EXCEÇÃO de um médico é um registro com o MESMO nome e o médico
+  (`varianteProcedimento` em `app/src/lib/repasse.ts`: exceção do médico → padrão → a única existente). Trocar o médico no
+  repasse aplica a versão dele. Tabela de regras mostra padrão e "↳ exceção". Dados: "Facectomia" e "Facectomia + TREC"
+  padrão (sem instrumentação) + exceção Dr. Pedro (instrumentação 100 / 200); "Facectomia (Dra. Luiza)" e "(Dr. Max)" desativadas
+  (iguais ao padrão). Procedimentos de um médico só (pálpebra, retina) continuam com o médico e valem para quem for escolhido.
