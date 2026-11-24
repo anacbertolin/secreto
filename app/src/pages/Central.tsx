@@ -219,7 +219,9 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
               <InternoLista busca={busca} abertaId={internaId} naoLidas={interno.porConversa} aoAbrir={(id) => setInternaId(id)} />
             ) : aba === "canais" && consulta ? (
               <div className="ct-rolagem">
-                <div className="ct-aviso-tel">👀 Só para consulta: quem responde por este número é a equipe da {titulo}.</div>
+                <div className="ct-aviso-tel">{podeResponder
+                  ? <>🔑 Você é da administração: acompanha todas as conversas e pode responder, mas não entra na fila.</>
+                  : <>👀 Só para consulta: quem responde por este número é a equipe da {titulo}.</>}</div>
                 <h3 className="ct-secao">Fila de espera ({fila.length})</h3>
                 {filaVisivel.length === 0 ? <div className="ct-vazio">Ninguém esperando.</div>
                   : filaVisivel.map((c) => <Cartao key={c.id} c={c} tipo="fila" />)}

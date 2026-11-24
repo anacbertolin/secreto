@@ -118,10 +118,10 @@ export default function WhatsApp({ setor = "clinica" }: { setor?: SetorWA }) {
     setParams({}, { replace: true });
   }
 
-  async function comecarComPaciente(pacienteId: string) {
+  async function comecarComPaciente(pacienteId: string, finalidade?: string) {
     setErro("");
     try {
-      const r = await whatsapp<{ conversa_id: string }>("retomar", { paciente_id: pacienteId, setor });
+      const r = await whatsapp<{ conversa_id: string }>("retomar", { paciente_id: pacienteId, setor, finalidade });
       lista.recarregar();
       abrir(r.conversa_id);
     } catch (e) {
@@ -178,6 +178,9 @@ export default function WhatsApp({ setor = "clinica" }: { setor?: SetorWA }) {
           Este paciente ainda não tem conversa pelo WhatsApp.{" "}
           <button className="mini primario" onClick={() => comecarComPaciente(semConversa)}>Enviar a primeira mensagem</button>{" "}
           <span className="pequeno">(usa o modelo “{setor === "orientacao" ? "retomar orientação" : "retomar conversa"}”, aprovado pela Meta)</span>
+          {setor === "orientacao" && (
+            <>{" "}<button className="mini" onClick={() => comecarComPaciente(semConversa, "aviso_novo_numero_orientacao")}>📣 Avisar do número novo</button></>
+          )}
         </Aviso>
       )}
 
@@ -445,12 +448,13 @@ export function Chat(props: {
   const anexoAudio = !!anexo && anexo.type.startsWith("audio/");
   const fotoSoDoc = anexoFoto && (anexo!.size > 5 * 1024 * 1024 || !["image/jpeg", "image/png"].includes(anexo!.type));
 
-  async function retomar() {
-    if (!confirm("Enviar ao paciente a mensagem-modelo pedindo para ele responder? (A Meta cobra alguns centavos por ela.)")) return;
+  async function retomar(finalidade?: string) {
+    const oque = finalidade === "aviso_novo_numero_orientacao" ? "o aviso de que este é o novo número da Orientação Cirúrgica" : "a mensagem-modelo pedindo para ele responder";
+    if (!confirm(`Enviar ao paciente ${oque}? (A Meta cobra alguns centavos por ela.)`)) return;
     setEnviando(true);
     setErro("");
     try {
-      await whatsapp("retomar", { conversa_id: c.id });
+      await whatsapp("retomar", { conversa_id: c.id, finalidade });
       if (!c.responsavel_id && eu) mudar({ responsavel_id: eu.id });
     } catch (e) {
       setErro(msgErro(e));
@@ -619,9 +623,12 @@ export function Chat(props: {
         <div className="aviso alerta">
           Passaram mais de 24 horas desde a última mensagem do paciente. Pela regra da Meta, agora só dá para mandar
           uma mensagem-modelo aprovada. Quando o paciente responder, a conversa volta a ficar livre.{" "}
-          <button className="mini" disabled={enviando || c.pacientes?.whatsapp_autorizado === false} onClick={retomar}>
+          <button className="mini" disabled={enviando || c.pacientes?.whatsapp_autorizado === false} onClick={() => retomar()}>
             Chamar o paciente de novo
           </button>
+          {c.setor === "orientacao" && (
+            <>{" "}<button className="mini" disabled={enviando} onClick={() => retomar("aviso_novo_numero_orientacao")}>📣 Avisar do número novo</button></>
+          )}
         </div>
       )}
 
@@ -919,10 +926,11 @@ const FINALIDADES: Record<string, string> = {
   lembrete_consulta: "Lembrete de consulta (com botões Confirmar / Preciso remarcar)",
   retomar_conversa: "Retomar conversa (para escrever depois de 24 h)",
   retomar_orientacao: "Retomar conversa da orientação cirúrgica (para escrever depois de 24 h)",
+  aviso_novo_numero_orientacao: "Aviso do número novo da orientação cirúrgica",
 };
 const MODELOS_DO_SETOR: Record<SetorWA, string[]> = {
   clinica: ["lembrete_consulta", "retomar_conversa"],
-  orientacao: ["retomar_orientacao"],
+  orientacao: ["retomar_orientacao", "aviso_novo_numero_orientacao"],
 };
 const PARAMETROS: Record<string, string> = { paciente: "primeiro nome do paciente", data: "dia da semana e data", hora: "horário", medico: "nome do médico", dia_semana: "dia da semana" };
 

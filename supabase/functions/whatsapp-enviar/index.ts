@@ -2,13 +2,14 @@
 // Dois números na mesma conta da Meta (setor da conversa):
 //   clinica    → número da clínica. Toda a equipe vê; só recepção e admin ENVIAM (decisão da dona, 15/11/2026).
 //   orientacao → número da Orientação Cirúrgica (16/11/2026). Veem: quem atende a orientação
-//                (profissionais.orientacao_cirurgica), médicos e admin. ENVIA só quem atende a orientação.
+//                (profissionais.orientacao_cirurgica), médicos e admin. ENVIAM quem atende a orientação e a admin (0096).
 //
 // Ações (POST, corpo JSON com "acao"):
 //   estado     → o WhatsApp já está configurado? (sem segredos na resposta)
 //   texto      → { conversa_id, texto }  resposta livre (só até 24 h depois da última mensagem do paciente)
 //   retomar    → { conversa_id } ou { paciente_id, setor? }  envia o modelo "retomar_conversa"
-//                (ou "retomar_orientacao" no número da orientação) — fora das 24 h
+//                (ou "retomar_orientacao" no número da orientação) — fora das 24 h;
+//                { finalidade: "aviso_novo_numero_orientacao" } escolhe o aviso do número novo
 //   lembretes  → { data: "AAAA-MM-DD", simular?: true }  lembrete com botões para os agendamentos do dia
 //                ou { agendamento_id, simular?: true }  só para um paciente (botão da Agenda; pode repetir)
 //                A Orientação Cirúrgica (tipo 'orientacao', só registro) nunca recebe lembrete.
@@ -158,8 +159,9 @@ Deno.serve(async (req) => {
   const ve = (setor: Setor) => setor === "orientacao"
     ? eu_prof.orientacao_cirurgica === true || ["medico", "admin"].includes(eu_prof.funcao)
     : ["medico", "enfermagem", "recepcao", "admin", "faturamento"].includes(eu_prof.funcao);
+  // A administração também responde a orientação (migração 0096, pedido da dona em 24/11)
   const atende = (setor: Setor) => setor === "orientacao"
-    ? eu_prof.orientacao_cirurgica === true
+    ? eu_prof.orientacao_cirurgica === true || eu_prof.funcao === "admin"
     : ["recepcao", "admin"].includes(eu_prof.funcao);
   const semPermissao = (setor: Setor) => resposta({
     erro: setor === "orientacao"
@@ -293,10 +295,17 @@ Deno.serve(async (req) => {
     // Na orientação, a recusa de mensagens ("SAIR") do número da clínica não impede o acompanhamento da cirurgia
     const respeitaRecusa = setor === "clinica";
 
-    const finalidade = setor === "orientacao" ? "retomar_orientacao" : "retomar_conversa";
+    // Modelo: o padrão do número, ou outro modelo permitido para ele (ex.: aviso do número novo da orientação)
+    const permitidos: Record<Setor, string[]> = {
+      clinica: ["retomar_conversa"],
+      orientacao: ["retomar_orientacao", "aviso_novo_numero_orientacao"],
+    };
+    const pedido = typeof corpo.finalidade === "string" ? corpo.finalidade : "";
+    if (pedido && !permitidos[setor].includes(pedido)) return resposta({ erro: "Modelo não permitido para este número." }, 400);
+    const finalidade = pedido || permitidos[setor][0];
     const modelo = await lerModelo(db, finalidade);
     if (!modelo?.ativo) {
-      return resposta({ erro: `O modelo “${finalidade.replace("_", " ")}” ainda não foi aprovado/ligado (botão Modelos).` }, 409);
+      return resposta({ erro: `O modelo “${finalidade.replaceAll("_", " ")}” ainda não foi aprovado/ligado (botão Modelos).` }, 409);
     }
 
     if (!conversaId && pacienteId) {
