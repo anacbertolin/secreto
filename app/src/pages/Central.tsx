@@ -4,13 +4,13 @@
 // O telefone entra na aba "Telefone" quando a Telecall liberar os ramais.
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { supabase, msgErro } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
-import { useCarregar, ok, Aviso, Carregando, type PacienteResumo } from "../components/ui";
+import { useCarregar, ok, Aviso, Carregando, Modal, BuscaPaciente, type PacienteResumo } from "../components/ui";
 import { NovoAgendamento } from "../components/AgendamentoModais";
 import { listaConvenios, listaLocais, listaProfissionais } from "../lib/dados";
 import { fmtData, isoDia } from "../lib/util";
-import { SELECT_CONVERSA, fmtNumeroWA, podeResponderSetor, podeVerSetor, type Conversa, type SetorWA } from "../lib/whatsapp";
+import { SELECT_CONVERSA, whatsapp, fmtNumeroWA, podeResponderSetor, podeVerSetor, type Conversa, type SetorWA } from "../lib/whatsapp";
 import { STATUS_CENTRAL, fmtEsperando, useCentral, type StatusCentral } from "../lib/central";
 import { fmtNumeroTel, useTelefone } from "../lib/telefone";
 import { BotaoLigar } from "../components/Telefone";
@@ -57,6 +57,7 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
   const [soNaoRespondidos, setSoNaoRespondidos] = useState(false);
   const [diaHistorico, setDiaHistorico] = useState(isoDia(new Date()));
   const [agendar, setAgendar] = useState<Conversa | null>(null);
+  const [nova, setNova] = useState(false);
   const [, setTique] = useState(0);
 
   // Conversas abertas (fila + em atendimento) do setor da pessoa
@@ -190,6 +191,11 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
             <span className="ct-icone">📋</span>Atendimentos
           </button>
         )}
+        {veCanais && podeResponder && (
+          <button onClick={() => setNova(true)} title="Mandar a primeira mensagem para um paciente (ou um número)">
+            <span className="ct-icone">✏️</span>Nova conversa
+          </button>
+        )}
         {veCanais && <Link to={ferramentas} title={setor === "orientacao" ? "Pesquisar mensagens, modelos, fora do horário e importar conversas" : "Lembretes de consulta, modelos, fora do horário, pesquisar e importar conversas"}><span className="ct-icone">🧰</span>Ferramentas</Link>}
       </nav>
 
@@ -293,6 +299,16 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
       </section>
 
       {aberta && !internaId && <FichaPaciente key={aberta.id} conversa={aberta} />}
+
+      {nova && (
+        <NovaConversa setor={setor} aoFechar={() => setNova(false)}
+          aoAbrir={async (id) => {
+            setNova(false);
+            // Quem começou a conversa fica responsável por ela
+            if (eu) await supabase.from("whatsapp_conversas").update({ responsavel_id: eu.id }).eq("id", id);
+            lista.recarregar(); setInternaId(null); setAbertaId(id);
+          }} />
+      )}
 
       {agendar && base.dados && (
         <NovoAgendamento {...base.dados}
@@ -478,5 +494,93 @@ function PainelTelefone({ setor, aoAbrirConversa }: { setor: string; aoAbrirConv
         );
       })}
     </div>
+  );
+}
+
+/**
+ * Começar uma conversa nova (pedido da dona, 24/11/2026). Pela regra da Meta, a primeira mensagem para quem não
+ * escreveu nas últimas 24 h tem de ser um modelo aprovado; depois que o paciente responde, a conversa fica livre.
+ */
+const MODELOS_NOVA: Record<SetorWA, { finalidade: string; rotulo: string }[]> = {
+  clinica: [{ finalidade: "retomar_conversa", rotulo: "Pedir para o paciente responder" }],
+  orientacao: [
+    { finalidade: "retomar_orientacao", rotulo: "Acompanhamento da orientação (pede para o paciente responder)" },
+    { finalidade: "aviso_novo_numero_orientacao", rotulo: "Aviso do número novo da Orientação Cirúrgica" },
+  ],
+};
+
+function NovaConversa({ setor, aoFechar, aoAbrir }: { setor: SetorWA; aoFechar: () => void; aoAbrir: (id: string) => void }) {
+  const [paciente, setPaciente] = useState<PacienteResumo | null>(null);
+  const [telefone, setTelefone] = useState("");
+  const [nome, setNome] = useState("");
+  const [finalidade, setFinalidade] = useState(MODELOS_NOVA[setor][0].finalidade);
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState("");
+  const modelos = useCarregar(async () => ok(await supabase.from("whatsapp_modelos").select("finalidade, corpo, ativo")
+    .in("finalidade", MODELOS_NOVA[setor].map((m) => m.finalidade))) as { finalidade: string; corpo: string; ativo: boolean }[], [setor]);
+  const escolhido = modelos.dados?.find((m) => m.finalidade === finalidade);
+  const primeiroNome = (paciente ? (paciente.nome_social || paciente.nome) : nome).trim().split(/\s+/)[0] ?? "";
+  const nomeBonito = primeiroNome ? primeiroNome.charAt(0).toUpperCase() + primeiroNome.slice(1).toLowerCase() : "tudo bem";
+  const previa = escolhido?.corpo.replace("{{1}}", nomeBonito) ?? "";
+  const digitos = telefone.replace(/\D/g, "");
+  const temNumero = paciente ? !!(digitos || paciente.telefone) : digitos.length >= 10;
+
+  async function enviar() {
+    setErro("");
+    setEnviando(true);
+    try {
+      const r = await whatsapp<{ conversa_id: string }>("retomar", {
+        setor, finalidade, paciente_id: paciente?.id ?? null,
+        telefone: digitos || null, nome: paciente ? null : nome.trim() || null,
+      });
+      aoAbrir(r.conversa_id);
+    } catch (e) {
+      setErro(msgErro(e));
+    }
+    setEnviando(false);
+  }
+
+  return (
+    <Modal titulo="✏️ Nova conversa" aoFechar={aoFechar}
+      rodape={<>
+        <button onClick={aoFechar}>Cancelar</button>
+        <button className="primario" disabled={enviando || !temNumero || !escolhido?.ativo} onClick={() => void enviar()}>
+          {enviando ? "Enviando…" : "Enviar a primeira mensagem"}
+        </button>
+      </>}>
+      <p className="pequeno muted" style={{ marginTop: 0 }}>
+        Pela regra do WhatsApp, a primeira mensagem tem de ser um <b>modelo aprovado pela Meta</b>. Quando o paciente
+        responder, a conversa fica livre para escrever, mandar áudio, foto e documento.
+      </p>
+      <label>Paciente
+        {paciente ? (
+          <div className="linha">
+            <b>{paciente.nome_social || paciente.nome}</b>
+            <span className="muted pequeno">Pront. {paciente.numero_prontuario}{paciente.telefone ? ` · ${paciente.telefone}` : " · sem telefone no cadastro"}</span>
+            <button className="mini" onClick={() => setPaciente(null)}>Trocar</button>
+          </div>
+        ) : <BuscaPaciente autoFocus aoEscolher={setPaciente} placeholder="Nome, CPF, telefone ou nº do prontuário…" />}
+      </label>
+      <label>{paciente ? "Outro celular (deixe vazio para usar o do cadastro)" : "…ou só o celular, com DDD"}
+        <input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(21) 99999-9999" inputMode="tel" />
+      </label>
+      {!paciente && (
+        <label>Nome da pessoa (opcional)
+          <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Como aparece na conversa" />
+        </label>
+      )}
+      <label>Mensagem
+        <select value={finalidade} onChange={(e) => setFinalidade(e.target.value)}>
+          {MODELOS_NOVA[setor].map((m) => {
+            const ativo = modelos.dados?.find((x) => x.finalidade === m.finalidade)?.ativo;
+            return <option key={m.finalidade} value={m.finalidade} disabled={!ativo}>{m.rotulo}{ativo ? "" : " (aguardando aprovação da Meta)"}</option>;
+          })}
+        </select>
+      </label>
+      {previa && <div className="aviso info" style={{ whiteSpace: "pre-wrap" }}>{previa}</div>}
+      {escolhido && !escolhido.ativo && <Aviso tipo="alerta">Este modelo ainda não foi aprovado/ligado.</Aviso>}
+      <p className="pequeno muted">A Meta cobra alguns centavos por esta mensagem.</p>
+      {erro && <Aviso>{erro}</Aviso>}
+    </Modal>
   );
 }
