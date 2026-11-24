@@ -61,7 +61,8 @@ export function podeVerSetor(eu: Profissional | null, setor: SetorWA): boolean {
 }
 export function podeResponderSetor(eu: Profissional | null, setor: SetorWA): boolean {
   if (!eu) return false;
-  if (setor === "orientacao") return eu.orientacao_cirurgica === true;
+  // A administração também responde a orientação (migração 0096, pedido da dona em 24/11)
+  if (setor === "orientacao") return eu.orientacao_cirurgica === true || eu.funcao === "admin";
   return eu.funcao === "recepcao" || eu.funcao === "admin";
 }
 

@@ -1426,3 +1426,17 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
   - `?paciente=` (botão 🩹 da ficha) abre a conversa do paciente; se não houver, vai às Ferramentas para começar uma.
 - A tela antiga (pesquisar mensagens, modelos, fora do horário, importar, começar conversa) ficou em
   `/orientacao-cirurgica/ferramentas` (botão 🧰 Ferramentas), com "↩ Voltar ao atendimento".
+
+### 24/11/2026 — Administração responde a Orientação + modelos ligados (migração 0096)
+- Meta (conferido pelo Claude do Chrome): cartão MasterCard padrão da conta "Consumed Orientação Cirúrgica", sem aviso;
+  foto de perfil "SETOR CIRÚRGICO" trocada; `retomar_orientacao` APROVADO (ligado no sistema);
+  `aviso_novo_numero_orientacao` enviado como Utilidade, EM ANÁLISE (já cadastrado no sistema, desligado — ligar em
+  WhatsApp → Ferramentas → 📝 Modelos quando a Meta aprovar).
+- Desde 01/10/2026 a Meta cobra também as respostas dentro da janela de 24 h (antes grátis).
+- Pedido da dona: a admin pode responder no número da orientação para avaliar o funcionamento.
+  Banco (0096): `whatsapp_conversas.quem_atende_altera` aceita admin na orientação. Funções `whatsapp-enviar` (v14) e
+  `whatsapp-transcrever` (v11): admin envia/transcreve na orientação. `podeResponderSetor` idem.
+  A admin NÃO entra na fila da orientação (`interno.atende_orientacao()` não mudou); na aba Orientação ela fica no modo
+  consulta com resposta liberada.
+- `retomar` aceita `finalidade` (na orientação: `retomar_orientacao` ou `aviso_novo_numero_orientacao`); botões
+  "📣 Avisar do número novo" na conversa (fora das 24 h) e ao começar conversa com paciente.

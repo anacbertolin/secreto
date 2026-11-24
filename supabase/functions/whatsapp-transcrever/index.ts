@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       .eq("id", String(corpo.mensagem_id ?? "")).maybeSingle();
     // deno-lint-ignore no-explicit-any
     const setor = (m as any)?.whatsapp_conversas?.setor ?? "clinica";
-    const pode = !!p?.ativo && (setor === "orientacao" ? p.orientacao_cirurgica === true : ["recepcao", "admin"].includes(p.funcao));
+    const pode = !!p?.ativo && (setor === "orientacao" ? p.orientacao_cirurgica === true || p.funcao === "admin" : ["recepcao", "admin"].includes(p.funcao));
     if (!pode) {
       return resposta({ erro: setor === "orientacao"
         ? "Só quem atende a Orientação Cirúrgica pede transcrição destes áudios."
