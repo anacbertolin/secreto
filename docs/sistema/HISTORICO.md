@@ -1462,3 +1462,8 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
   alergias/medicamentos/antecedentes e linha do tempo (atendimentos completos, prontuário da Micrologos, laudos,
   cirurgias, injeções), com período opcional, aviso LGPD e campo de recibo assinado pelo paciente. Cada impressão vai
   para a auditoria ("Imprimiu o prontuário…").
+- Tela "🔍 Acessos ao prontuário" (`/acessos`, só admin; `pages/Acessos.tsx`) + aba "🔍 Acessos" na ficha do paciente
+  (só admin): lista do `log_auditoria` com quem abriu, imprimiu ou registrou algo no prontuário (aberturas = LEITURA;
+  alterações = INSERT/UPDATE/DELETE nas tabelas clínicas). Filtros por período, pessoa e tipo. Sem mudança no banco.
+- Pendentes oferecidos à dona (aguardando decisão): sair sozinho após inatividade (ela teme atrapalhar a recepção) e
+  verificação em duas etapas para a administração.

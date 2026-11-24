@@ -11,6 +11,7 @@ import type { PacienteResumo } from "../components/ui";
 import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Etiqueta } from "../components/ui";
 import { HistoricoSaude } from "../components/Clinico";
+import { ListaAcessos } from "./Acessos";
 import { ItemLegado, DocumentosPaciente, type RegistroLegado } from "../components/Legado";
 import { NovoAgendamento } from "../components/AgendamentoModais";
 import { listaProfissionais, listaConvenios, listaLocais, nomePor, type Agendamento } from "../lib/dados";
@@ -104,6 +105,7 @@ export default function PacienteFicha() {
         <button className={aba === "agenda" ? "ativa" : ""} onClick={() => setAba("agenda")}>Agendamentos</button>
         {pode("recepcao", "faturamento", "admin") && <button className={aba === "contas" ? "ativa" : ""} onClick={() => setAba("contas")}>Contas</button>}
         <button className={aba === "dados" ? "ativa" : ""} onClick={() => setAba("dados")}>Dados cadastrais</button>
+        {pode("admin") && <button className={aba === "acessos" ? "ativa" : ""} onClick={() => setAba("acessos")}>🔍 Acessos</button>}
       </div>
 
       {aba === "prontuario" && veProntuario && (
@@ -115,6 +117,7 @@ export default function PacienteFicha() {
       {aba === "evolucao" && veProntuario && <div className="painel"><EvolucaoPaciente pacienteId={id!} /></div>}
       {aba === "cirurgias" && veProntuario && <CirurgiasPaciente pacienteId={id!} paciente={p as unknown as PacienteResumo} />}
       {aba === "exames" && veProntuario && <ExamesPaciente pacienteId={id!} />}
+      {aba === "acessos" && pode("admin") && <div className="painel"><ListaAcessos pacienteId={id!} /></div>}
       {aba === "documentos" && veProntuario && <DocumentosPaciente pacienteId={id!} podeAnexar={clinico} />}
       {aba === "agenda" && (
         <div className="painel rolagem">
