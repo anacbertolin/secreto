@@ -1,6 +1,7 @@
 // Página pública (sem login): Política de Privacidade da clínica (LGPD).
 // Exigida pela Meta para publicar o aplicativo do WhatsApp oficial (17–18/11/2026).
 // Texto preparado pelo Claude e APROVADO pela dona em 19/11/2026 — mudanças de conteúdo só com ela.
+// 24/11/2026 (pedido da dona): encarregada de dados = Ana Bertolin; fornecedores e países listados; proteções atualizadas.
 import type { ReactNode } from "react";
 import { CLINICA } from "../lib/marca";
 
@@ -9,7 +10,9 @@ const CANAL = {
   email: "" as string,
   telefone: CLINICA.telefone,
 };
-const ATUALIZADA_EM = "18 de novembro de 2026";
+const ATUALIZADA_EM = "24 de novembro de 2026";
+/** Encarregada pelo tratamento de dados pessoais (LGPD, art. 41) — definida pela dona em 24/11/2026 */
+const ENCARREGADA = "Ana Bertolin";
 
 function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
@@ -87,12 +90,16 @@ export default function Privacidade() {
             <li><b>Seu convênio</b>, para autorização e cobrança do atendimento.</li>
             <li><b>Meta (WhatsApp)</b>, que transmite as mensagens trocadas pelo WhatsApp oficial da clínica.</li>
             <li><b>Supabase</b>, onde ficam guardados o sistema e os dados da clínica, em servidores em São Paulo (Brasil).</li>
-            <li><b>Serviços de tecnologia</b> que nos ajudam no atendimento, como transcrição de áudios, receita digital e telefonia.</li>
+            <li><b>Railway</b>, que hospeda as telas do sistema e o site (não guarda dados de pacientes).</li>
+            <li><b>OpenAI</b>, que transforma os áudios do WhatsApp em texto. <b>Esse processamento é feito nos Estados Unidos</b>.</li>
+            <li><b>Anthropic (Claude)</b>, assistente que lê as conversas do WhatsApp, com nome, telefone e documentos mascarados, para ajudar a marcar consultas. Processamento nos Estados Unidos.</li>
+            <li><b>Memed</b>, para a receita digital, e o serviço de <b>telefonia</b> da clínica.</li>
             <li><b>Autoridades</b>, quando a lei exigir.</li>
           </ul>
           <p>
-            Alguns desses serviços (como a Meta e o serviço de transcrição de áudios) podem processar dados fora do Brasil.
-            Nesses casos, escolhemos empresas que adotam padrões de proteção compatíveis com a LGPD.
+            Alguns desses serviços (Meta, OpenAI e Anthropic) processam dados fora do Brasil, principalmente nos Estados
+            Unidos. Nesses casos, a transferência segue o art. 33 da LGPD, com empresas que adotam padrões de proteção
+            compatíveis com a lei, e enviamos só o necessário.
           </p>
         </Secao>
 
@@ -107,7 +114,9 @@ export default function Privacidade() {
         <Secao titulo="7. Como protegemos">
           <p>
             O acesso ao sistema é feito com usuário e senha individuais, e cada pessoa da equipe vê apenas o que precisa para a
-            sua função. Os dados ficam em servidores protegidos, e os acessos ficam registrados.
+            sua função; a administração usa também verificação em duas etapas. Os dados ficam em servidores protegidos, com
+            criptografia, e cada abertura, impressão ou alteração do prontuário fica registrada (quem e quando). A equipe assina
+            termo de confidencialidade.
           </p>
         </Secao>
 
@@ -126,7 +135,15 @@ export default function Privacidade() {
           </p>
         </Secao>
 
-        <Secao titulo="9. Mudanças nesta política">
+        <Secao titulo="9. Encarregada pelo tratamento de dados (LGPD)">
+          <p>
+            A encarregada pela proteção de dados da clínica é <b>{ENCARREGADA}</b>. Ela recebe pedidos, dúvidas e reclamações
+            sobre os seus dados e fala com a Autoridade Nacional de Proteção de Dados. Contato: {contato}, aos cuidados da
+            encarregada de dados.
+          </p>
+        </Secao>
+
+        <Secao titulo="10. Mudanças nesta política">
           <p>
             Podemos atualizar esta política. A data da última atualização fica sempre no topo desta página.
           </p>
