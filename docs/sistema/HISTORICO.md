@@ -1560,3 +1560,5 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
   Lançamentos vindos de venda não são alterados pela tela do caixa (só pela tela de vendas).
 - Tela Caixa: botões Recepção / Orientação Cirúrgica (quem vê os dois); tela de Vendas mostra se o caixa da orientação está aberto.
 - Testado no banco local (abertura por setor, isolamento, venda → caixa, correção, cancelamento, caixa fechado, repasse).
+- (0099) Pedido do Dr. Gelson: a Alessandra fica SÓ com o caixa da orientação. Regra: quem tem função "recepção" E a marcação
+  Orientação Cirúrgica não abre/lança/vê o caixa da recepção (`interno.caixa_papel`). Conferir/aprovar não mudaram.
