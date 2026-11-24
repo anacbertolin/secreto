@@ -170,6 +170,8 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
   const [pac, setPac] = useState<PacienteResumo | { id: string; nome: string; nome_social: string | null; numero_prontuario: number } | null>(null);
   const [conta, setConta] = useState<string | null>(null);
   const [custos, setCustos] = useState<CustoEdit[]>([]);
+  // troca da lente simples por premium (regra do Dr. Gelson, 24/11): valor + (venda da premium − custo da simples); custo da lente = custo da premium
+  const [premium, setPremium] = useState<{ id: string; acrescimo: number; linha: CustoEdit; indice: number } | null>(null);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
@@ -215,7 +217,31 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
   }, [cobranca, valor, n, taxaPct, base.cfg, custosTotal, f.regra]);
   const procsDoMedico = base.procedimentos.filter((p) => p.ativo && (!p.profissional_id || !f.profissional_id || p.profissional_id === f.profissional_id));
 
+  const iLente = custos.findIndex((c) => c.tipo === "insumo" && /lente/i.test(c.descricao));
+  function trocarPremium(id: string) {
+    let novosCustos = [...custos];
+    let v = numOuNulo(f.valor) ?? 0;
+    if (premium) { // desfaz a troca anterior
+      v -= premium.acrescimo;
+      novosCustos[premium.indice] = premium.linha;
+    }
+    const l = base.lentes.find((x) => x.id === id);
+    const i = premium ? premium.indice : iLente;
+    if (!l || i < 0) {
+      setPremium(null); setCustos(novosCustos); setF((x) => ({ ...x, valor: String(Math.round(v * 100) / 100).replace(".", ",") }));
+      return;
+    }
+    const simples = numOuNulo(novosCustos[i].valor) ?? 0;
+    const acrescimo = Math.round((Number(l.preco_venda ?? 0) - simples) * 100) / 100;
+    const linha = novosCustos[i];
+    novosCustos[i] = { ...linha, descricao: `Lente ${l.descricao} (${l.codigo})`, valor: String(l.custo_compra ?? 0).replace(".", ",") };
+    setPremium({ id, acrescimo, linha, indice: i });
+    setCustos(novosCustos);
+    setF((x) => ({ ...x, valor: String(Math.round((v + acrescimo) * 100) / 100).replace(".", ",") }));
+  }
+
   function escolherProcedimento(id: string) {
+    setPremium(null);
     const p = base.procedimentos.find((x) => x.id === id);
     setF((x) => ({
       ...x, procedimento_id: id, regra: p?.regra ?? x.regra,
@@ -233,6 +259,7 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
   function escolherLente(id: string) {
     const l = base.lentes.find((x) => x.id === id);
     if (!l) return;
+    setPremium(null);
     setF((x) => ({ ...x, regra: "geral", procedimento_id: "", procedimento: `Lente ${l.descricao} (${l.codigo})`,
       valor: l.preco_venda ? String(l.preco_venda).replace(".", ",") : x.valor }));
     setCustos([{ tipo: "insumo", descricao: `Lente ${l.codigo} (custo de compra)`, valor: String(l.custo_compra ?? 0).replace(".", ","), favorecido_profissional_id: "", favorecido_nome: "" }]);
@@ -294,6 +321,16 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
           </select>
         </Campo>
       )}
+      {!cobranca && (iLente >= 0 || premium) && (
+        <Campo rotulo="Trocar a lente por premium (Alcon)">
+          <select value={premium?.id ?? ""} onChange={(e) => trocarPremium(e.target.value)}>
+            <option value="">Não, lente simples</option>
+            {base.lentes.filter((l) => l.fabricante !== "Rayner" && l.fabricante !== "Hoya" && l.preco_venda).map((l) =>
+              <option key={l.id} value={l.id}>{l.descricao} · venda {fmtMoeda(l.preco_venda)}</option>)}
+          </select>
+        </Campo>
+      )}
+      {premium && <p className="muted pequeno" style={{ marginTop: -6 }}>Valor da cirurgia + {fmtMoeda(premium.acrescimo)} (venda da lente premium − custo da lente simples). O custo da lente passa a ser o da premium.</p>}
       <Campo rotulo="Descrição do procedimento"><input value={f.procedimento} onChange={set("procedimento")} placeholder="ex.: Blefaroplastia superior AO" /></Campo>
       <div className="campo">
         Paciente (opcional)

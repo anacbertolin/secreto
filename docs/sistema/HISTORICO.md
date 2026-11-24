@@ -1509,3 +1509,16 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
     ("vai sair por 2.000, pode botar 3.000") → 2.420,00.
 - Em aberto: de qual médico são as de retina; "Fascectomia" do Dr. Pedro parece ser a mesma Facectomia (com instrumentação 100);
   regra da diferença da lente premium; se o anestesista dos procedimentos do Dr. Pedro também é o Fábio.
+
+### 24/11 — Quem fala é o Dr. Gelson (cirurgião de retina) e ajustes
+- A conta do Claude é da Ana Carolina; nesta conversa quem passa as regras é o **Dr. Gelson** (marido, cirurgião de retina;
+  só ele faz retina). Vitrectomia (com/sem faco), injeção antiangiogênica e Ozurdex ligadas ao Dr. Gelson.
+- "Fascectomia" do Dr. Pedro = **facectomia**; ele paga R$ 100 de instrumentação a alguém de fora → procedimento renomeado
+  "Facectomia (Dr. Pedro, com instrumentação de fora)" (e "Facectomia + TREC (Dr. Pedro)"). A Facectomia geral não tem
+  instrumentação.
+- **Anestesista é sempre o Fábio** (menos a Dra. Gisele, que não tem anestesista): custos de anestesista com favorecido
+  "Fábio (anestesista)".
+- **Facectomia com lente premium (jeito A, confirmado):** valor = valor da cirurgia + (preço de venda da premium − custo da
+  lente simples, 190); o custo da lente passa a ser o da premium. Ex.: Facectomia 5.500 + PanOptix → 20.310; custos 350 +
+  1.100 + 4.198,95; médico 9.291,64 (PIX). Tela: no lançamento, "Trocar a lente por premium (Alcon)" (aparece quando o
+  procedimento tem lente; desfaz ao voltar para "lente simples").
