@@ -26,6 +26,8 @@ interface Ctx {
   session: Session | null;
   eu: Profissional | null;
   carregando: boolean;
+  /** Tem verificação em duas etapas ativada e ainda não digitou o código nesta sessão (migração 0089) */
+  precisaCodigo: boolean;
   pode: (...f: Funcao[]) => boolean;
   sair: () => Promise<void>;
   recarregar: () => Promise<void>;
@@ -37,9 +39,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [eu, setEu] = useState<Profissional | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const [precisaCodigo, setPrecisaCodigo] = useState(false);
 
   async function carregarPerfil(s: Session | null) {
     if (!s?.user?.email) {
+      setEu(null);
+      setPrecisaCodigo(false);
+      return;
+    }
+    // duas etapas: senha certa, mas falta o código do autenticador
+    const { data: nivel } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    const falta = !!nivel && nivel.nextLevel === "aal2" && nivel.currentLevel !== "aal2";
+    setPrecisaCodigo(falta);
+    if (falta) {
       setEu(null);
       return;
     }
@@ -60,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const { data: sub } = supabase.auth.onAuthStateChange((evento, s) => {
       setSession(s);
-      if (evento === "SIGNED_IN" || evento === "SIGNED_OUT" || evento === "USER_UPDATED") {
+      if (evento === "SIGNED_IN" || evento === "SIGNED_OUT" || evento === "USER_UPDATED" || evento === "MFA_CHALLENGE_VERIFIED") {
         // fora do callback para não travar o cliente
         setTimeout(() => carregarPerfil(s), 0);
       }
@@ -72,12 +84,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     eu,
     carregando,
+    precisaCodigo,
     pode: (...f) => !!eu && f.includes(eu.funcao),
     sair: async () => {
       await supabase.auth.signOut();
       setEu(null);
     },
-    recarregar: () => carregarPerfil(session),
+    recarregar: async () => carregarPerfil((await supabase.auth.getSession()).data.session),
   };
   return <AuthCtx.Provider value={valor}>{children}</AuthCtx.Provider>;
 }

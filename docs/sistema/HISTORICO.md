@@ -1467,3 +1467,13 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
   alterações = INSERT/UPDATE/DELETE nas tabelas clínicas). Filtros por período, pessoa e tipo. Sem mudança no banco.
 - Pendentes oferecidos à dona (aguardando decisão): sair sozinho após inatividade (ela teme atrapalhar a recepção) e
   verificação em duas etapas para a administração.
+
+## 24/11/2026 — Verificação em duas etapas para a administração
+- Pedido da dona (única admin): código do aplicativo autenticador (TOTP, Supabase Auth MFA) além da senha.
+- Migração `0089_admin_duas_etapas`: `interno.mfa_ok()` (sessão aal2, ou nenhum fator verificado ainda);
+  `interno.tem_funcao` e `interno.caixa_papel` só dão poderes de ADMIN com `mfa_ok()`. Outras funções não mudam.
+  Testado: faturamento e admin sem código ativado continuam iguais.
+- Função Edge `equipe-acesso` (v11): admin com fator verificado precisa de token aal2 para criar/redefinir senhas.
+- Telas (`pages/DuasEtapas.tsx`): "Minha conta e senha" → "🔐 Verificação em duas etapas" (só admin) com QR code +
+  chave manual + confirmação do código; depois do login, se tiver fator e sessão aal1, aparece a tela do código
+  (`useAuth().precisaCodigo`). Celular perdido: remover o fator em `auth.mfa_factors` (suporte técnico) e reativar.
