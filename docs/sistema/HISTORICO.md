@@ -1574,3 +1574,8 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
   repasse aplica a versão dele. Tabela de regras mostra padrão e "↳ exceção". Dados: "Facectomia" e "Facectomia + TREC"
   padrão (sem instrumentação) + exceção Dr. Pedro (instrumentação 100 / 200); "Facectomia (Dra. Luiza)" e "(Dr. Max)" desativadas
   (iguais ao padrão). Procedimentos de um médico só (pálpebra, retina) continuam com o médico e valem para quem for escolhido.
+- (0101) Cancelar repasse que veio de venda da Orientação: função `repasse_cancelar(p_repasse, p_motivo, p_cancelar_venda)`
+  (faturamento/admin) + gatilho `cancela_venda` em repasses. Na tela, o Luciano escolhe: "só corrigir" → a venda volta para
+  "Para conferir" (dinheiro continua no caixa); "paciente desistiu" → venda cancelada e valor sai do caixa da Orientação.
+  Bloqueia se já há parcela paga ao médico ou custo pago, e (para desistência) se o caixa do dia já foi fechado.
+  Cancelar um repasse com venda por outro caminho devolve a venda para conferência (padrão seguro).
