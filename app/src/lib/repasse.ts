@@ -54,3 +54,17 @@ export const REGRAS: Record<string, { rotulo: string; explica: string }> = {
   direto: { rotulo: "Parceiro (sem imposto e sem os 20%)", explica: "valor − custos = médico (ex.: Clínica Vital)" },
   cobranca: { rotulo: "Cobrança ao médico", explica: "o paciente pagou ao médico lá fora; o médico deve os custos à clínica (ex.: Campo Grande)" },
 };
+
+/** Procedimento + médico → a versão certa (decisão do Dr. Gelson, 24/11): cada procedimento aparece UMA vez;
+ *  se o médico tem exceção cadastrada (mesmo nome, com o médico), vale a dele; senão a padrão (sem médico);
+ *  se só existe a de um médico (ex.: pálpebra da Dra. Gisele), vale essa. */
+export function varianteProcedimento<T extends { nome: string; profissional_id: string | null }>(procs: T[], nome: string, medico: string): T | undefined {
+  const mesmos = procs.filter((p) => p.nome.toLowerCase() === nome.toLowerCase());
+  return mesmos.find((p) => !!medico && p.profissional_id === medico) ?? mesmos.find((p) => !p.profissional_id) ?? mesmos[0];
+}
+/** nomes únicos, em ordem alfabética */
+export function nomesProcedimentos(procs: { nome: string }[]): string[] {
+  const vistos = new Map<string, string>();
+  for (const p of procs) if (!vistos.has(p.nome.toLowerCase())) vistos.set(p.nome.toLowerCase(), p.nome);
+  return [...vistos.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}

@@ -9,6 +9,7 @@ import { fmtData, fmtMoeda, isoDia, nomeExibicao, numOuNulo } from "../lib/util"
 import { nomePor } from "../lib/dados";
 import {
   FORMAS_REPASSE, REGRAS, TIPOS_CUSTO, calcularRepasse, custoDaClinica, partesPorParcela, taxaInternaPct, type RegrasRepasse, type TaxaCartao,
+  varianteProcedimento, nomesProcedimentos,
 } from "../lib/repasse";
 
 // ------------------------------------------------------------------ tipos
@@ -256,7 +257,22 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
     const t = calcularRepasse(valor, base.cfg, taxaPct, custosTotal, f.regra);
     return { ...t, medParc: partesPorParcela(t.medico, n) };
   }, [cobranca, valor, n, taxaPct, base.cfg, custosTotal, f.regra]);
-  const procsDoMedico = base.procedimentos.filter((p) => p.ativo && (!p.profissional_id || !f.profissional_id || p.profissional_id === f.profissional_id));
+  // cada procedimento aparece UMA vez; o médico define a versão (exceções dele) — lib/repasse.ts
+  const procsAtivos = base.procedimentos.filter((p) => p.ativo);
+  const nomesProc = nomesProcedimentos(procsAtivos);
+  const procAtual = base.procedimentos.find((p) => p.id === f.procedimento_id);
+  function escolherNome(nome: string) {
+    const v = nome ? varianteProcedimento(procsAtivos, nome, f.profissional_id) : undefined;
+    escolherProcedimento(v?.id ?? "");
+  }
+  function escolherMedico(id: string) {
+    setF((x) => ({ ...x, profissional_id: id }));
+    // trocou o médico com procedimento escolhido: aplica a versão dele (ex.: Dr. Pedro com instrumentação)
+    if (procAtual) {
+      const v = varianteProcedimento(procsAtivos, procAtual.nome, id);
+      if (v && v.id !== procAtual.id) escolherProcedimento(v.id, id);
+    }
+  }
 
   const iLente = custos.findIndex((c) => c.tipo === "insumo" && /lente/i.test(c.descricao));
   function trocarPremium(id: string) {
@@ -281,13 +297,13 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
     setF((x) => ({ ...x, valor: String(Math.round((v + acrescimo) * 100) / 100).replace(".", ",") }));
   }
 
-  function escolherProcedimento(id: string) {
+  function escolherProcedimento(id: string, medico?: string) {
     setPremium(null);
     const p = base.procedimentos.find((x) => x.id === id);
     setF((x) => ({
       ...x, procedimento_id: id, regra: p?.regra ?? x.regra,
       procedimento: p ? p.nome : x.procedimento,
-      profissional_id: x.profissional_id || p?.profissional_id || "",
+      profissional_id: medico ?? (x.profissional_id || p?.profissional_id || ""),
       valor: p?.valor_sugerido && !numOuNulo(x.valor) ? String(p.valor_sugerido).replace(".", ",") : x.valor,
     }));
     setCustos((p?.repasse_procedimento_custos ?? []).map((c) => ({
@@ -343,15 +359,17 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
       <p className="muted pequeno" style={{ marginTop: -6 }}>{REGRAS[f.regra].explica}. Escolher o procedimento já ajusta o tipo.</p>
       <div className="grade g3">
         <Campo rotulo={cobranca ? "Médico que deve à clínica" : "Médico que recebe"}>
-          <select value={f.profissional_id} onChange={set("profissional_id")}>
+          <select value={f.profissional_id} onChange={(e) => escolherMedico(e.target.value)}>
             <option value="">Escolha…</option>{base.medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
           </select>
         </Campo>
         <Campo rotulo="Procedimento (tabela)">
-          <select value={f.procedimento_id} onChange={(e) => escolherProcedimento(e.target.value)}>
+          <select value={procAtual?.nome ?? ""} onChange={(e) => escolherNome(e.target.value)}>
             <option value="">Outro / digitar…</option>
-            {procsDoMedico.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+            {nomesProc.map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
+          {procAtual?.profissional_id && procsAtivos.some((p) => p.nome === procAtual.nome && p.id !== procAtual.id) &&
+            <div className="muted pequeno">Com as particularidades deste médico</div>}
         </Campo>
         <Campo rotulo="Data da cirurgia"><input type="date" value={f.data_cirurgia} onChange={set("data_cirurgia")} /></Campo>
       </div>
@@ -886,22 +904,26 @@ function Procedimentos({ procs, medicos, aoMudar }: { procs: Procedimento[]; med
     <div className="painel rolagem">
       <div className="linha"><h2 style={{ margin: 0 }}>Procedimentos e custos padrão</h2><span style={{ marginLeft: "auto" }} />
         <button onClick={() => abrir(null)}>➕ Novo procedimento</button></div>
-      <p className="muted pequeno">Ao lançar um repasse e escolher o procedimento, estes custos já vêm preenchidos (dá para ajustar na hora). Mudanças aqui não alteram repasses já lançados.</p>
+      <p className="muted pequeno">Cada procedimento tem a regra padrão (vale para todos os médicos). Se um médico tem particularidade, cadastre o MESMO nome com o médico escolhido: é a exceção dele. Ao lançar um repasse e escolher o procedimento e o médico, estes custos já vêm preenchidos (dá para ajustar na hora). Mudanças aqui não alteram repasses já lançados.</p>
       <Aviso>{erro}</Aviso>
       <Aviso tipo="ok">{okMsg}</Aviso>
       <table className="tabela">
         <thead><tr><th>Procedimento</th><th>Médico</th><th style={num}>Valor sugerido</th><th>Custos</th><th style={num}>Total custos</th><th></th></tr></thead>
         <tbody>
-          {procs.map((p) => (
+          {[...procs].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR") || (a.profissional_id ? 1 : 0) - (b.profissional_id ? 1 : 0)).map((p, i, lista) => {
+            // mesmo nome logo acima = exceção de um médico (o padrão vem primeiro)
+            const excecao = i > 0 && lista[i - 1].nome.toLowerCase() === p.nome.toLowerCase();
+            return (
             <tr key={p.id} style={p.ativo ? undefined : { opacity: 0.5 }}>
-              <td><b>{p.nome}</b>{!p.ativo && <span className="muted pequeno"> (inativo)</span>}{p.regra && p.regra !== "geral" && <div><Etiqueta cor="roxo">{p.regra === "cobranca" ? "médico deve" : "parceiro"}</Etiqueta></div>}</td>
-              <td>{p.profissional_id ? nomePor(medicos, p.profissional_id) : <span className="muted">qualquer</span>}</td>
+              <td style={excecao ? { paddingLeft: 28 } : undefined}>{excecao ? <span className="muted">↳ exceção</span> : <b>{p.nome}</b>}{!p.ativo && <span className="muted pequeno"> (inativo)</span>}{p.regra && p.regra !== "geral" && <div><Etiqueta cor="roxo">{p.regra === "cobranca" ? "médico deve" : "parceiro"}</Etiqueta></div>}</td>
+              <td>{p.profissional_id ? nomePor(medicos, p.profissional_id) : <span className="muted">padrão (todos)</span>}</td>
               <td style={num}>{p.valor_sugerido ? fmtMoeda(p.valor_sugerido) : "—"}</td>
               <td className="pequeno">{p.repasse_procedimento_custos.length ? p.repasse_procedimento_custos.map((c) => `${c.descricao} ${fmtMoeda(c.valor)}`).join(" · ") : <span className="muted">sem custos</span>}</td>
               <td style={num}>{fmtMoeda(p.repasse_procedimento_custos.reduce((s, c) => s + Number(c.valor), 0))}</td>
               <td><button className="pequeno" onClick={() => abrir(p)}>Editar</button></td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
       {edit && (

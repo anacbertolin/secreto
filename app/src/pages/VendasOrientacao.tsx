@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { supabase, msgErro } from "../lib/supabase";
 import { useCarregar, ok, Aviso, Carregando, Etiqueta, Modal, Campo, BuscaPaciente } from "../components/ui";
 import { fmtData, fmtMoeda, isoDia, nomeExibicao, numOuNulo } from "../lib/util";
-import { FORMAS_REPASSE } from "../lib/repasse";
+import { FORMAS_REPASSE, varianteProcedimento, nomesProcedimentos } from "../lib/repasse";
 import { SEL_VENDA, type VendaOrientacao } from "./Repasse";
 
 interface ProcOrientacao { id: string; nome: string; profissional_id: string | null; valor_sugerido: number | null; tem_lente: boolean }
@@ -100,7 +100,8 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
   const editavel = !venda || venda.status === "aguardando" || venda.status === "devolvida";
   const [pac, setPac] = useState<Pac | null>(venda?.pacientes ?? null);
   const [f, setF] = useState({
-    tipo: venda?.tipo ?? "cirurgia", profissional_id: venda?.profissional_id ?? "", procedimento_id: venda?.procedimento_id ?? "",
+    tipo: venda?.tipo ?? "cirurgia", profissional_id: venda?.profissional_id ?? "",
+    proc_nome: base.procs.find((p) => p.id === venda?.procedimento_id)?.nome ?? "",
     procedimento: venda?.procedimento ?? "", lente_id: venda?.lente_id ?? "", valor: venda ? String(venda.valor_total).replace(".", ",") : "",
     forma: venda?.forma_pagamento ?? "pix", parcelas: String(venda?.parcelas ?? 1), data_pagamento: venda?.data_pagamento ?? isoDia(new Date()),
     data_cirurgia: venda?.data_cirurgia ?? "", observacoes: venda?.observacoes ?? "",
@@ -109,26 +110,22 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
   const [cancelar, setCancelar] = useState(false);
   const [motivo, setMotivo] = useState("");
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
-  // TODOS os procedimentos, agrupados por médico (o médico escolhido primeiro). A Alessandra registra de todos os cirurgiões.
-  const nomeMedico = (id: string | null) => (id ? base.medicos.find((m) => m.id === id)?.nome ?? "Outro médico" : "Qualquer médico");
-  const gruposProc = (() => {
-    const ids = [...new Set(base.procs.map((p) => p.profissional_id ?? ""))];
-    ids.sort((x, y) => (x === f.profissional_id ? -1 : y === f.profissional_id ? 1 : !x ? 1 : !y ? -1 : nomeMedico(x).localeCompare(nomeMedico(y))));
-    return ids.map((id) => ({ rotulo: nomeMedico(id || null), itens: base.procs.filter((p) => (p.profissional_id ?? "") === id) }));
-  })();
-  const proc = base.procs.find((p) => p.id === f.procedimento_id);
+  // cada procedimento aparece UMA vez; o médico escolhido define a versão (exceções dele) — lib/repasse.ts
+  const nomesProc = nomesProcedimentos(base.procs);
+  const proc = f.proc_nome ? varianteProcedimento(base.procs, f.proc_nome, f.profissional_id) : undefined;
+  const procId = proc?.id ?? "";
   const lentes = f.tipo === "lente" ? base.lentes : base.lentes.filter((l) => l.premium);
 
   // valor sugerido (procedimento + diferença da lente premium, ou preço da lente) — sempre editável
   useEffect(() => {
-    if (!editavel || (venda && f.procedimento_id === venda.procedimento_id && f.lente_id === (venda.lente_id ?? ""))) return;
-    const pp = f.tipo === "lente" ? null : f.procedimento_id || null;
+    if (!editavel || (venda && procId === (venda.procedimento_id ?? "") && f.lente_id === (venda.lente_id ?? ""))) return;
+    const pp = f.tipo === "lente" ? null : procId || null;
     if (!pp && !f.lente_id) return;
     void supabase.rpc("orientacao_valor", { p_procedimento: pp, p_lente: f.lente_id || null }).then(({ data }) => {
       if (data !== null && data !== undefined) setF((x) => ({ ...x, valor: String(data).replace(".", ",") }));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f.tipo, f.procedimento_id, f.lente_id]);
+  }, [f.tipo, procId, f.lente_id]);
 
   function descricao() {
     const l = base.lentes.find((x) => x.id === f.lente_id);
@@ -141,11 +138,11 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
     const valor = numOuNulo(f.valor);
     if (!pac) return setErro("Escolha o paciente.");
     if (!f.profissional_id) return setErro("Escolha o médico.");
-    if (f.tipo === "cirurgia" && !f.procedimento_id && !f.procedimento.trim()) return setErro("Escolha o procedimento.");
+    if (f.tipo === "cirurgia" && !procId && !f.procedimento.trim()) return setErro("Escolha o procedimento.");
     if (f.tipo === "lente" && !f.lente_id) return setErro("Escolha a lente.");
     if (!valor || valor <= 0) return setErro("Informe o valor que o paciente pagou.");
     const dados = {
-      tipo: f.tipo, paciente_id: pac.id, profissional_id: f.profissional_id, procedimento_id: f.tipo === "lente" ? null : f.procedimento_id || null,
+      tipo: f.tipo, paciente_id: pac.id, profissional_id: f.profissional_id, procedimento_id: f.tipo === "lente" ? null : procId || null,
       procedimento: descricao() || f.procedimento.trim(), lente_id: f.lente_id || null, valor_total: valor, forma_pagamento: f.forma,
       parcelas: f.forma === "credito" ? Number(f.parcelas) : 1, data_pagamento: f.data_pagamento, data_cirurgia: f.data_cirurgia || null,
       observacoes: f.observacoes.trim() || null,
@@ -194,15 +191,13 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
           </Campo>
           {f.tipo === "cirurgia" && (
             <Campo rotulo="Procedimento">
-              <select value={f.procedimento_id} onChange={(e) => {
-                const escolhido = base.procs.find((p) => p.id === e.target.value);
-                // escolheu o procedimento antes do médico: já preenche o médico dele
-                setF({ ...f, procedimento_id: e.target.value, lente_id: "", profissional_id: f.profissional_id || escolhido?.profissional_id || "" });
+              <select value={f.proc_nome} onChange={(e) => {
+                const v = varianteProcedimento(base.procs, e.target.value, f.profissional_id);
+                // procedimento que só um médico faz (ex.: pálpebra): já preenche o médico
+                setF({ ...f, proc_nome: e.target.value, lente_id: "", profissional_id: f.profissional_id || v?.profissional_id || "" });
               }}>
                 <option value="">Escolha…</option>
-                {gruposProc.map((g) => (
-                  <optgroup key={g.rotulo} label={g.rotulo}>{g.itens.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}</optgroup>
-                ))}
+                {nomesProc.map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
             </Campo>
           )}
