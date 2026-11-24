@@ -17,6 +17,7 @@ import { Equipe, Convenios, Locais, Horarios, CatalogoExames, Modelos } from "./
 import Faturamento, { ContaDetalhe, LoteDetalhe } from "./pages/Faturamento";
 import Procedimentos from "./pages/Procedimentos";
 import RepasseMedico, { RepasseDetalhe } from "./pages/Repasse";
+import VendasOrientacao from "./pages/VendasOrientacao";
 import Caixa, { CaixaDetalhe, papelCaixa } from "./pages/Caixa";
 import Relatorios from "./pages/Relatorios";
 import Acessos from "./pages/Acessos";
@@ -72,6 +73,7 @@ const MENU: ItemMenu[] = [
   { para: "/faturamento", rotulo: "Faturamento", icone: "🧾", funcoes: ["faturamento", "recepcao", "admin"] },
   { para: "/caixa", rotulo: "Caixa", icone: "💵", ve: (eu) => papelCaixa(eu).ver },
   { para: "/repasse", rotulo: "Repasse médico", icone: "💰", funcoes: ["faturamento", "admin"] },
+  { para: "/orientacao-cirurgica/vendas", rotulo: "Vendas da orientação", icone: "💳", ve: (eu) => eu?.orientacao_cirurgica === true || eu?.funcao === "admin" },
   { para: "/exames/importar", rotulo: "Arquivos dos aparelhos", icone: "📥", funcoes: ["medico", "enfermagem"] },
   { para: "/relatorios", rotulo: "Relatórios", icone: "📊" },
   { para: "/acessos", rotulo: "Acessos ao prontuário", icone: "🔍", funcoes: ["admin"] },
@@ -226,6 +228,9 @@ export default function App() {
           {/* Orientação cirúrgica: mesma tela da Central, sempre no número da orientação (pedido da dona, 23/11) */}
           <Route path="/orientacao-cirurgica" element={
             podeVerSetor(eu, "orientacao") ? <Central key="orientacao" setor="orientacao" /> : <div className="painel vazio">Você não tem acesso a esta área.</div>
+          } />
+          <Route path="/orientacao-cirurgica/vendas" element={
+            eu?.orientacao_cirurgica === true || eu?.funcao === "admin" ? <VendasOrientacao /> : <div className="painel vazio">Você não tem acesso a esta área.</div>
           } />
           <Route path="/orientacao-cirurgica/ferramentas" element={
             podeVerSetor(eu, "orientacao") ? <WhatsApp key="orientacao" setor="orientacao" /> : <div className="painel vazio">Você não tem acesso a esta área.</div>

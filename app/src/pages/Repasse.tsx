@@ -36,6 +36,14 @@ interface Repasse {
   repasse_custos?: Custo[];
 }
 interface Config extends RegrasRepasse { id: string }
+/** venda registrada pela Orientação Cirúrgica (migração 0097) */
+export interface VendaOrientacao {
+  id: string; numero: number; tipo: string; paciente_id: string; profissional_id: string; procedimento_id: string | null; procedimento: string;
+  lente_id: string | null; data_cirurgia: string | null; data_pagamento: string; valor_total: number; forma_pagamento: string; parcelas: number;
+  observacoes: string | null; status: string; motivo: string | null; criado_em: string;
+  pacientes?: { id: string; nome: string; nome_social: string | null; numero_prontuario: number } | null;
+  profissionais?: { nome: string } | null; criador?: { nome: string } | null;
+}
 interface Medico { id: string; nome: string }
 
 const STATUS: Record<string, { rotulo: string; cor: string }> = {
@@ -68,6 +76,7 @@ export default function RepasseMedico() {
   const [params, setParams] = useSearchParams();
   const aba = params.get("aba") ?? "lancamentos";
   const base = useCarregar(carregarBase, []);
+  const pend = useCarregar(async () => (await supabase.from("orientacao_vendas").select("id", { count: "exact", head: true }).eq("status", "aguardando")).count ?? 0, [aba]);
   return (
     <div>
       <div className="cabecalho">
@@ -78,12 +87,14 @@ export default function RepasseMedico() {
       </div>
       <Aviso>{base.erro}</Aviso>
       <div className="abas">
+        <button className={aba === "conferir" ? "ativa" : ""} onClick={() => setParams({ aba: "conferir" })}>Para conferir{(pend.dados ?? 0) > 0 && <span className="etiqueta amarelo" style={{ marginLeft: 6 }}>{pend.dados}</span>}</button>
         <button className={aba === "lancamentos" ? "ativa" : ""} onClick={() => setParams({ aba: "lancamentos" })}>Lançamentos</button>
         <button className={aba === "medicos" ? "ativa" : ""} onClick={() => setParams({ aba: "medicos" })}>Relatório por médico</button>
         <button className={aba === "regras" ? "ativa" : ""} onClick={() => setParams({ aba: "regras" })}>Regras e taxas</button>
         <button className={aba === "lentes" ? "ativa" : ""} onClick={() => setParams({ aba: "lentes" })}>Lentes</button>
       </div>
       {base.dados && aba === "lancamentos" && <Lancamentos base={base.dados} />}
+      {base.dados && aba === "conferir" && <ParaConferir base={base.dados} aoMudar={pend.recarregar} />}
       {base.dados && aba === "medicos" && <RelatorioMedicos medicos={base.dados.medicos} />}
       {base.dados && aba === "regras" && <Regras cfg={base.dados.cfg} taxas={base.dados.taxas} aoMudar={base.recarregar} />}
       {aba === "lentes" && <LentesCatalogo />}
@@ -162,8 +173,8 @@ function Lancamentos({ base }: { base: Awaited<ReturnType<typeof carregarBase>> 
 }
 
 // ------------------------------------------------------------------ novo repasse (com prévia do cálculo)
-function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
-  base: Awaited<ReturnType<typeof carregarBase>>; contaId: string | null; aoFechar: () => void; aoCriar: (id: string) => void;
+function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
+  base: Awaited<ReturnType<typeof carregarBase>>; contaId: string | null; venda?: VendaOrientacao | null; aoFechar: () => void; aoCriar: (id: string) => void;
 }) {
   const hoje = isoDia(new Date());
   const [f, setF] = useState({ regra: "geral", profissional_id: "", procedimento_id: "", procedimento: "", data_cirurgia: hoje, data_pagamento: hoje, valor: "", forma: "pix", parcelas: "12", observacoes: "" });
@@ -174,6 +185,36 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
   const [premium, setPremium] = useState<{ id: string; acrescimo: number; linha: CustoEdit; indice: number } | null>(null);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
+
+  // Vindo de uma venda da Orientação Cirúrgica: preenche tudo (o Luciano confere)
+  useEffect(() => {
+    if (!venda) return;
+    if (venda.pacientes) setPac(venda.pacientes);
+    const p = base.procedimentos.find((x) => x.id === venda.procedimento_id);
+    const l = base.lentes.find((x) => x.id === venda.lente_id);
+    let cs: CustoEdit[] = (p?.repasse_procedimento_custos ?? []).map((c) => ({
+      tipo: c.tipo, descricao: c.descricao, valor: String(c.valor).replace(".", ","),
+      favorecido_profissional_id: c.favorecido_profissional_id ?? "", favorecido_nome: c.favorecido_nome ?? "",
+    }));
+    if (venda.tipo === "lente" && l) {
+      cs = [{ tipo: "insumo", descricao: `Lente ${l.codigo} (custo de compra)`, valor: String(l.custo_compra ?? 0).replace(".", ","), favorecido_profissional_id: "", favorecido_nome: "" }];
+    } else if (l) {
+      const i = cs.findIndex((c) => c.tipo === "insumo" && /lente/i.test(c.descricao));
+      if (i >= 0) {
+        const linha = cs[i];
+        const acrescimo = Math.round((Number(l.preco_venda ?? 0) - (numOuNulo(linha.valor) ?? 0)) * 100) / 100;
+        cs[i] = { ...linha, descricao: `Lente ${l.descricao} (${l.codigo})`, valor: String(l.custo_compra ?? 0).replace(".", ",") };
+        setPremium({ id: l.id, acrescimo, linha, indice: i });
+      }
+    }
+    setCustos(cs);
+    setF((x) => ({
+      ...x, regra: p?.regra ?? "geral", profissional_id: venda.profissional_id, procedimento_id: venda.procedimento_id ?? "",
+      procedimento: venda.procedimento, data_cirurgia: venda.data_cirurgia ?? x.data_cirurgia, data_pagamento: venda.data_pagamento,
+      valor: String(venda.valor_total).replace(".", ","), forma: venda.forma_pagamento, parcelas: String(venda.parcelas),
+      observacoes: venda.observacoes ?? "",
+    }));
+  }, [venda, base.procedimentos, base.lentes]);
 
   // Vindo de uma conta particular paga: preenche os dados
   useEffect(() => {
@@ -278,7 +319,7 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
     if (prev && prev.sobra < 0) return setErro("Imposto, taxa e custos passam do valor da cirurgia. Confira os valores.");
     setSalvando(true);
     const { data, error } = await supabase.rpc("repasse_lancar", { p: {
-      conta_id: conta, paciente_id: pac?.id ?? null, profissional_id: f.profissional_id, procedimento_id: f.procedimento_id || null,
+      venda_id: venda?.id ?? null, conta_id: conta, paciente_id: pac?.id ?? null, profissional_id: f.profissional_id, procedimento_id: f.procedimento_id || null,
       regra: f.regra, procedimento: f.procedimento.trim(), data_cirurgia: f.data_cirurgia, data_pagamento: f.data_pagamento, valor_total: valor,
       forma_pagamento: f.forma, parcelas: n, observacoes: f.observacoes.trim() || null,
       custos: custos.map((c, i) => ({ tipo: c.tipo, descricao: c.descricao.trim(), valor: custosNum[i],
@@ -295,6 +336,7 @@ function NovoRepasse({ base, contaId, aoFechar, aoCriar }: {
       rodape={<><button onClick={aoFechar}>Cancelar</button><button className="primario" disabled={salvando} onClick={salvar}>Lançar repasse</button></>}>
       <Aviso>{erro}</Aviso>
       {conta && <Aviso tipo="info">Dados puxados da conta particular. Confira antes de lançar.</Aviso>}
+      {venda && <Aviso tipo="info">Venda nº {venda.numero} registrada pela Orientação Cirúrgica{venda.criador ? ` (${venda.criador.nome})` : ""}. Confira valor, forma de pagamento e custos antes de lançar.</Aviso>}
       <Campo rotulo="Tipo de lançamento">
         <select value={f.regra} onChange={set("regra")}>{Object.entries(REGRAS).map(([k, v]) => <option key={k} value={k}>{v.rotulo}</option>)}</select>
       </Campo>
@@ -1026,6 +1068,62 @@ function LentesCatalogo() {
               {Object.entries(TIPO_OPTICO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Campo>
             <label className="linha pequeno"><input type="checkbox" checked={nova.torica} onChange={(e) => setNova({ ...nova, torica: e.target.checked })} /> Tórica</label>
           </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ vendas da Orientação Cirúrgica para conferir (migração 0097)
+export const SEL_VENDA = "*, pacientes(id, nome, nome_social, numero_prontuario), profissionais!orientacao_vendas_profissional_id_fkey(nome), criador:profissionais!orientacao_vendas_criado_por_fkey(nome)";
+function ParaConferir({ base, aoMudar }: { base: Awaited<ReturnType<typeof carregarBase>>; aoMudar: () => void }) {
+  const nav = useNavigate();
+  const [abrir, setAbrir] = useState<VendaOrientacao | null>(null);
+  const [devolver, setDevolver] = useState<VendaOrientacao | null>(null);
+  const [motivo, setMotivo] = useState("");
+  const [erro, setErro] = useState("");
+  const { dados, erro: e1, carregando, recarregar } = useCarregar(async () => ok(await supabase.from("orientacao_vendas").select(SEL_VENDA)
+    .in("status", ["aguardando", "devolvida"]).order("criado_em")) as VendaOrientacao[], []);
+  async function confirmarDevolucao() {
+    if (!devolver) return;
+    setErro("");
+    const { error } = await supabase.from("orientacao_vendas").update({ status: "devolvida", motivo: motivo.trim() }).eq("id", devolver.id);
+    if (error) return setErro(msgErro(error));
+    setDevolver(null); setMotivo(""); recarregar(); aoMudar();
+  }
+  const lista = dados ?? [];
+  return (
+    <div className="painel rolagem">
+      <h2>Vendas da Orientação Cirúrgica</h2>
+      <p className="muted pequeno">A Alessandra registra o que o paciente pagou. Confira e lance o repasse (a divisão aparece só aqui) ou devolva com o motivo.</p>
+      <Aviso>{erro || e1}</Aviso>
+      {carregando && !dados ? <Carregando /> : lista.length === 0 ? <div className="vazio">Nada para conferir.</div> : (
+        <table className="tabela">
+          <thead><tr><th>Nº</th><th>Registrada</th><th>Paciente</th><th>Médico / procedimento</th><th>Pagamento</th><th style={num}>Valor</th><th>Situação</th><th></th></tr></thead>
+          <tbody>
+            {lista.map((v) => (
+              <tr key={v.id}>
+                <td>{v.numero}</td>
+                <td>{fmtData(v.criado_em)}<div className="muted pequeno">{v.criador?.nome}</div></td>
+                <td>{v.pacientes ? nomeExibicao(v.pacientes) : "—"}<div className="muted pequeno">Pront. {v.pacientes?.numero_prontuario}</div></td>
+                <td><b>{v.profissionais?.nome}</b><div className="muted pequeno">{v.procedimento}{v.tipo === "lente" && " · só a lente (convênio)"}</div></td>
+                <td>{FORMAS_REPASSE[v.forma_pagamento]}{v.parcelas > 1 && ` ${v.parcelas}x`}<div className="muted pequeno">{fmtData(v.data_pagamento)}</div></td>
+                <td style={num}>{fmtMoeda(v.valor_total)}</td>
+                <td>{v.status === "devolvida" ? <><Etiqueta cor="vermelho">devolvida</Etiqueta><div className="muted pequeno">{v.motivo}</div></> : <Etiqueta cor="amarelo">aguardando</Etiqueta>}</td>
+                <td>{v.status === "aguardando" && <div className="linha" style={{ gap: 4 }}>
+                  <button className="primario pequeno" onClick={() => setAbrir(v)}>Conferir e lançar</button>
+                  <button className="pequeno" onClick={() => { setDevolver(v); setMotivo(""); }}>Devolver</button></div>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {abrir && <NovoRepasse base={base} contaId={null} venda={abrir} aoFechar={() => setAbrir(null)} aoCriar={(id) => { aoMudar(); nav(`/repasse/${id}`); }} />}
+      {devolver && (
+        <Modal titulo={`Devolver a venda nº ${devolver.numero}`} aoFechar={() => setDevolver(null)}
+          rodape={<><button onClick={() => setDevolver(null)}>Voltar</button><button className="perigo" disabled={!motivo.trim()} onClick={confirmarDevolucao}>Devolver</button></>}>
+          <p>A venda volta para a Alessandra corrigir. Diga o que precisa mudar.</p>
+          <Campo rotulo="Motivo"><input autoFocus value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="ex.: confirmar o número de parcelas" /></Campo>
         </Modal>
       )}
     </div>

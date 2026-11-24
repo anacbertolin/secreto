@@ -200,6 +200,11 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
             <span className="ct-icone">✏️</span>Nova conversa
           </button>
         )}
+        {setor === "orientacao" && (eu?.orientacao_cirurgica || eu?.funcao === "admin") && (
+          <Link className="botao" to="/orientacao-cirurgica/vendas" title="Registrar cirurgias e lentes pagas (vão para o Luciano conferir)">
+            <span className="ct-icone">💳</span>Vendas
+          </Link>
+        )}
         {veCanais && (
           <button className={visao === "ferramentas" ? "ativo" : ""} onClick={() => setVisao("ferramentas")}
             title={setor === "orientacao" ? "Pesquisar mensagens, modelos, fora do horário e importar conversas" : "Lembretes de consulta, modelos, fora do horário, pesquisar e importar conversas"}>
