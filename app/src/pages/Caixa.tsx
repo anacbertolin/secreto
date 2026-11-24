@@ -10,8 +10,10 @@ import { useCarregar, ok, Aviso, Carregando, Etiqueta, Modal, Campo } from "../c
 import { fmtData, fmtDataHora, fmtMoeda } from "../lib/util";
 
 // ------------------------------------------------------------------ tipos e utilidades
+type Setor = "recepcao" | "orientacao";
+export const SETORES: Record<Setor, string> = { recepcao: "Caixa da recepção", orientacao: "Caixa da Orientação Cirúrgica" };
 interface CaixaRow {
-  id: string; data: string; status: "aberto" | "fechado" | "conferido" | "aprovado"; fundo_troco: number;
+  id: string; data: string; setor: Setor; status: "aberto" | "fechado" | "conferido" | "aprovado"; fundo_troco: number;
   aberto_por: string | null; aberto_em: string; fechado_por: string | null; fechado_em: string | null;
   esperado_dinheiro: number | null; contado_dinheiro: number | null; diferenca_dinheiro: number | null; obs_fechamento: string | null;
   conferido_por: string | null; conferido_em: string | null; obs_conferencia: string | null;
@@ -27,6 +29,7 @@ interface Atendimento {
   id: string; caixa_id: string; paciente_nome: string; medico_id: string | null; descricao: string | null; valor: number;
   cortesia: boolean; motivo_cortesia: string | null; cortesia_autorizada_por: string | null; observacao: string | null;
   cancelado: boolean; motivo_cancelamento: string | null; criado_por: string | null; criado_em: string;
+  venda_id?: string | null;
   caixa_pagamentos: Pagamento[];
 }
 interface Saida {
@@ -94,8 +97,26 @@ export function lerValor(s: string): number | null {
 const pagoDe = (a: Atendimento) => n2(a.caixa_pagamentos.filter((p) => !p.cancelado).reduce((s, p) => s + Number(p.valor), 0));
 const saldoDe = (a: Atendimento) => (a.cancelado || a.cortesia ? 0 : n2(Number(a.valor) - pagoDe(a)));
 
-/** Quem pode o quê (o banco confere de novo — migração 0066) */
-export function papelCaixa(eu: Profissional | null) {
+/** Quem pode o quê (o banco confere de novo — migrações 0066 e 0098).
+ *  Sem setor: junta os dois (serve para o menu). Recepção e Orientação Cirúrgica são caixas separados. */
+export function papelCaixa(eu: Profissional | null, setor?: Setor) {
+  const f = eu?.funcao;
+  const rec = papelRecepcao(eu);
+  const ori = {
+    lancar: !!eu?.orientacao_cirurgica || f === "admin" || f === "faturamento",
+    conferir: rec.conferir,
+    aprovar: rec.aprovar,
+    ver: !!eu?.orientacao_cirurgica || f === "admin" || f === "faturamento" || rec.conferir || rec.aprovar,
+  };
+  if (setor === "recepcao") return rec;
+  if (setor === "orientacao") return ori;
+  return { lancar: rec.lancar || ori.lancar, conferir: rec.conferir, aprovar: rec.aprovar, ver: rec.ver || ori.ver };
+}
+/** setores que a pessoa enxerga */
+export function setoresCaixa(eu: Profissional | null): Setor[] {
+  return (["recepcao", "orientacao"] as Setor[]).filter((s) => papelCaixa(eu, s).ver);
+}
+function papelRecepcao(eu: Profissional | null) {
   const f = eu?.funcao;
   return {
     // abre, lança e fecha: recepção, administração e faturamento (migração 0083)
@@ -127,21 +148,35 @@ async function rpc(nome: string, args: Record<string, unknown>) {
 // ================================================================== Lista de caixas
 export default function Caixa() {
   const { eu } = useAuth();
-  const papel = papelCaixa(eu);
+  const setores = setoresCaixa(eu);
+  const [setor, setSetor] = useState<Setor>(() => {
+    const salvo = sessionStorage.getItem("caixa_setor") as Setor | null;
+    return salvo && setores.includes(salvo) ? salvo : setores[0] ?? "recepcao";
+  });
+  const papel = papelCaixa(eu, setor);
   const nav = useNavigate();
   const nomes = useNomes();
-  const { dados, erro, carregando } = useCarregar(
-    async () => ok(await supabase.from("caixas").select("*").order("aberto_em", { ascending: false }).limit(120)) as CaixaRow[], []);
+  const { dados: todos, erro, carregando } = useCarregar(
+    async () => ok(await supabase.from("caixas").select("*").order("aberto_em", { ascending: false }).limit(240)) as CaixaRow[], []);
   const [abrir, setAbrir] = useState(false);
-  const aberto = (dados ?? []).find((c) => c.status === "aberto");
-  const aguardando = (dados ?? []).filter((c) => (c.status === "fechado" && papel.conferir) || (c.status === "conferido" && papel.aprovar));
+  const dados = (todos ?? []).filter((c) => (c.setor ?? "recepcao") === setor);
+  const aberto = dados.find((c) => c.status === "aberto");
+  const aguardando = dados.filter((c) => (c.status === "fechado" && papel.conferir) || (c.status === "conferido" && papel.aprovar));
+  function trocar(s: Setor) { setSetor(s); try { sessionStorage.setItem("caixa_setor", s); } catch { /* sem armazenamento */ } }
 
   return (
     <div>
       <div className="cabecalho">
-        <div><h1>Caixa da recepção</h1><p className="sub" style={{ margin: 0 }}>Recebimentos do dia, saídas e fechamento (substitui a folha de papel)</p></div>
+        <div><h1>{SETORES[setor]}</h1><p className="sub" style={{ margin: 0 }}>{setor === "orientacao"
+          ? "Dinheiro recebido pela Orientação Cirúrgica (cirurgias e lentes). Separado do caixa da recepção."
+          : "Recebimentos do dia, saídas e fechamento (substitui a folha de papel)"}</p></div>
         {papel.lancar && !aberto && !carregando && <button className="primario" onClick={() => setAbrir(true)}>🔓 Abrir caixa</button>}
       </div>
+      {setores.length > 1 && (
+        <div className="linha" style={{ marginBottom: 14 }}>
+          {setores.map((s) => <button key={s} className={s === setor ? "primario" : ""} onClick={() => trocar(s)}>{s === "recepcao" ? "🏥 Recepção" : "🩺 Orientação Cirúrgica"}</button>)}
+        </div>
+      )}
       <Aviso>{erro}</Aviso>
       {carregando ? <Carregando /> : (
         <>
@@ -172,11 +207,11 @@ export default function Caixa() {
 
           <div className="painel rolagem">
             <h3 style={{ marginTop: 0 }}>Histórico</h3>
-            {(dados ?? []).length === 0 ? <div className="vazio">Nenhum caixa ainda.</div> : (
+            {dados.length === 0 ? <div className="vazio">Nenhum caixa ainda.</div> : (
               <table className="tabela">
                 <thead><tr><th>Data</th><th>Situação</th><th>Abriu</th><th>Fechou</th><th style={num}>Diferença na gaveta</th><th>Conferiu</th><th>Aprovou</th></tr></thead>
                 <tbody>
-                  {(dados ?? []).map((c) => (
+                  {dados.map((c) => (
                     <tr key={c.id} style={{ cursor: "pointer" }} onClick={() => nav(`/caixa/${c.id}`)}>
                       <td><Link to={`/caixa/${c.id}`}>{fmtData(c.data)}</Link></td>
                       <td><Etiqueta cor={STATUS_CAIXA[c.status].cor}>{STATUS_CAIXA[c.status].rotulo}</Etiqueta></td>
@@ -193,7 +228,7 @@ export default function Caixa() {
           </div>
         </>
       )}
-      {abrir && <AbrirCaixa aoFechar={() => setAbrir(false)} aoSalvar={(id) => nav(`/caixa/${id}`)} />}
+      {abrir && <AbrirCaixa setor={setor} aoFechar={() => setAbrir(false)} aoSalvar={(id) => nav(`/caixa/${id}`)} />}
     </div>
   );
 }
@@ -204,16 +239,16 @@ function Diferenca({ v }: { v: number }) {
   return <b style={{ color: x < 0 ? "#c62828" : "#b26a00" }}>{x < 0 ? "faltou " : "sobrou "}{fmtMoeda(Math.abs(x))}</b>;
 }
 
-function AbrirCaixa({ aoFechar, aoSalvar }: { aoFechar: () => void; aoSalvar: (id: string) => void }) {
-  const [fundo, setFundo] = useState("200,00");
+function AbrirCaixa({ setor, aoFechar, aoSalvar }: { setor: Setor; aoFechar: () => void; aoSalvar: (id: string) => void }) {
+  const [fundo, setFundo] = useState(setor === "orientacao" ? "0,00" : "200,00");
   const [erro, setErro] = useState("");
   async function salvar() {
     const v = lerValor(fundo);
     if (v === null || v < 0) return setErro("Informe o fundo de troco (pode ser 0).");
-    try { aoSalvar((await rpc("caixa_abrir", { p_fundo: v })) as string); } catch (e) { setErro(msgErro(e)); }
+    try { aoSalvar((await rpc("caixa_abrir", { p_fundo: v, p_setor: setor })) as string); } catch (e) { setErro(msgErro(e)); }
   }
   return (
-    <Modal titulo="Abrir caixa" aoFechar={aoFechar} rodape={<><button onClick={aoFechar}>Cancelar</button><button className="primario" onClick={salvar}>Abrir caixa</button></>}>
+    <Modal titulo={`Abrir ${SETORES[setor].toLowerCase()}`} aoFechar={aoFechar} rodape={<><button onClick={aoFechar}>Cancelar</button><button className="primario" onClick={salvar}>Abrir caixa</button></>}>
       <Aviso>{erro}</Aviso>
       <p>Quem abre o caixa fica registrada(o) como responsável do dia.</p>
       <Campo rotulo="Fundo de troco (dinheiro que já está na gaveta)"><input inputMode="decimal" value={fundo} onChange={(e) => setFundo(e.target.value)} autoFocus /></Campo>
@@ -225,7 +260,6 @@ function AbrirCaixa({ aoFechar, aoSalvar }: { aoFechar: () => void; aoSalvar: (i
 export function CaixaDetalhe() {
   const { id } = useParams();
   const { eu } = useAuth();
-  const papel = papelCaixa(eu);
   const nomes = useNomes();
   const { dados, erro, carregando, recarregar } = useCarregar(async () => {
     const [cx, ats, pags, sais] = await Promise.all([
@@ -237,8 +271,9 @@ export function CaixaDetalhe() {
     // saldos pendentes de outros dias (só interessa com o caixa aberto)
     let pendentes: Atendimento[] = [];
     if (cx.status === "aberto") {
-      const r = ok(await supabase.from("caixa_atendimentos").select("*, caixa_pagamentos(*)")
-        .neq("caixa_id", id!).eq("cancelado", false).eq("cortesia", false).gt("valor", 0)
+      // só do mesmo setor: recepção e orientação não se misturam (migração 0098)
+      const r = ok(await supabase.from("caixa_atendimentos").select("*, caixa_pagamentos(*), caixas!inner(setor)")
+        .eq("caixas.setor", cx.setor ?? "recepcao").neq("caixa_id", id!).eq("cancelado", false).eq("cortesia", false).gt("valor", 0)
         .order("criado_em", { ascending: false }).limit(500)) as Atendimento[];
       pendentes = r.filter((a) => saldoDe(a) > 0);
     }
@@ -251,6 +286,7 @@ export function CaixaDetalhe() {
   if (carregando && !dados) return <Carregando />;
   if (erro || !dados) return <Aviso>{erro || "Caixa não encontrado."}</Aviso>;
   const { cx, ats, pags, sais, pendentes } = dados;
+  const papel = papelCaixa(eu, cx.setor ?? "recepcao");
   const aberto = cx.status === "aberto";
   const podeLancar = aberto && papel.lancar;
 
@@ -278,7 +314,7 @@ export function CaixaDetalhe() {
     <div>
       <div className="cabecalho">
         <div>
-          <h1>Caixa de {fmtData(cx.data)} <Etiqueta cor={STATUS_CAIXA[cx.status].cor}>{STATUS_CAIXA[cx.status].rotulo}</Etiqueta></h1>
+          <h1>{cx.setor === "orientacao" ? "Caixa da Orientação Cirúrgica" : "Caixa"} de {fmtData(cx.data)} <Etiqueta cor={STATUS_CAIXA[cx.status].cor}>{STATUS_CAIXA[cx.status].rotulo}</Etiqueta></h1>
           <p className="sub" style={{ margin: 0 }}>
             Aberto por {nomes.nomeCompleto(cx.aberto_por)} em {fmtDataHora(cx.aberto_em)} · fundo de troco {fmtMoeda(cx.fundo_troco)}
           </p>
@@ -350,15 +386,16 @@ export function CaixaDetalhe() {
                           {FORMAS_CAIXA[p.forma]}{p.forma === "credito_parcelado" ? ` ${p.parcelas}x` : ""} {fmtMoeda(p.valor)}
                           {p.pagador ? <span className="muted"> · {p.pagador}</span> : null}
                           {p.caixa_id !== cx.id && <span className="muted"> · em outro dia</span>}
-                          {podeLancar && !p.cancelado && p.caixa_id === cx.id && <button className="mini nao-imprimir" style={{ marginLeft: 6 }} onClick={() => cancelar("caixa_pagamentos", p.id, "este pagamento")}>✕</button>}
+                          {podeLancar && !p.cancelado && p.caixa_id === cx.id && !a.venda_id && <button className="mini nao-imprimir" style={{ marginLeft: 6 }} onClick={() => cancelar("caixa_pagamentos", p.id, "este pagamento")}>✕</button>}
                         </div>
                       ))}
                     </td>
                     <td style={num}>{saldo > 0 ? <b style={{ color: "#c62828" }}>{fmtMoeda(saldo)}</b> : "—"}</td>
                     <td>{nomes.nome(a.criado_por)}</td>
                     <td className="nao-imprimir" style={{ whiteSpace: "nowrap" }}>
-                      {podeLancar && saldo > 0 && <button className="mini" onClick={() => setPagarAt(a)}>Receber</button>}
-                      {podeLancar && !a.cancelado && <button className="mini" onClick={() => cancelar("caixa_atendimentos", a.id, `o atendimento de ${a.paciente_nome}`)}>Cancelar</button>}
+                      {a.venda_id && <span className="pequeno muted">pela tela de vendas</span>}
+                      {podeLancar && saldo > 0 && !a.venda_id && <button className="mini" onClick={() => setPagarAt(a)}>Receber</button>}
+                      {podeLancar && !a.cancelado && !a.venda_id && <button className="mini" onClick={() => cancelar("caixa_atendimentos", a.id, `o atendimento de ${a.paciente_nome}`)}>Cancelar</button>}
                     </td>
                   </tr>
                 );

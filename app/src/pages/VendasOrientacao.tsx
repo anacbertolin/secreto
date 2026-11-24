@@ -36,6 +36,9 @@ export default function VendasOrientacao() {
     else if (filtro !== "todas") q = q.eq("status", filtro);
     return ok(await q) as VendaOrientacao[];
   }, [filtro]);
+  // caixa da Orientação (migração 0098): cada venda entra sozinha no caixa aberto; sem caixa aberto não registra
+  const caixa = useCarregar(async () =>
+    (ok(await supabase.from("caixas").select("id, data").eq("setor", "orientacao").eq("status", "aberto").limit(1)) as { id: string; data: string }[])[0] ?? null, [dados]);
   const lista = dados ?? [];
   const devolvidas = lista.filter((v) => v.status === "devolvida").length;
 
@@ -52,6 +55,9 @@ export default function VendasOrientacao() {
         </div>
       </div>
       <Aviso>{erro || base.erro}</Aviso>
+      {!caixa.carregando && (caixa.dados
+        ? <Aviso tipo="info">💵 Caixa da Orientação aberto ({fmtData(caixa.dados.data)}): cada venda registrada entra nele automaticamente. <Link to={`/caixa/${caixa.dados.id}`}>Ver o caixa →</Link></Aviso>
+        : <Aviso tipo="alerta">💵 O caixa da Orientação está fechado. Abra o caixa antes de registrar vendas: <Link to="/caixa">ir para o Caixa →</Link></Aviso>)}
       {devolvidas > 0 && <Aviso tipo="alerta">{devolvidas} venda(s) devolvida(s) pelo Luciano: abra, corrija e reenvie.</Aviso>}
       <div className="painel grade">
         <div className="linha">
