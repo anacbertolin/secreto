@@ -19,6 +19,7 @@ import Procedimentos from "./pages/Procedimentos";
 import RepasseMedico, { RepasseDetalhe } from "./pages/Repasse";
 import Caixa, { CaixaDetalhe, papelCaixa } from "./pages/Caixa";
 import Relatorios from "./pages/Relatorios";
+import Acessos from "./pages/Acessos";
 import WhatsApp from "./pages/WhatsApp";
 import ImportarWhatsApp from "./pages/ImportarWhatsApp";
 import AssistenteWhatsApp from "./pages/AssistenteWhatsApp";
@@ -72,6 +73,7 @@ const MENU: ItemMenu[] = [
   { para: "/repasse", rotulo: "Repasse médico", icone: "💰", funcoes: ["faturamento", "admin"] },
   { para: "/exames/importar", rotulo: "Arquivos dos aparelhos", icone: "📥", funcoes: ["medico", "enfermagem"] },
   { para: "/relatorios", rotulo: "Relatórios", icone: "📊" },
+  { para: "/acessos", rotulo: "Acessos ao prontuário", icone: "🔍", funcoes: ["admin"] },
   { grupo: "Cadastros", para: "/cadastros/equipe", rotulo: "Equipe", icone: "👥", funcoes: ["admin"] },
   { para: "/cadastros/horarios", rotulo: "Horários e bloqueios", icone: "🕒", funcoes: ["recepcao", "admin"] },
   { para: "/cadastros/convenios", rotulo: "Convênios", icone: "💳", funcoes: ["recepcao", "admin", "faturamento"] },
@@ -217,6 +219,7 @@ export default function App() {
           <Route path="/repasse" element={<Protegida funcoes={["faturamento", "admin"]}><RepasseMedico /></Protegida>} />
           <Route path="/repasse/:id" element={<Protegida funcoes={["faturamento", "admin"]}><RepasseDetalhe /></Protegida>} />
           <Route path="/relatorios" element={<Relatorios />} />
+          <Route path="/acessos" element={<Protegida funcoes={["admin"]}><Acessos /></Protegida>} />
           <Route path="/whatsapp" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><WhatsApp key="clinica" /></Protegida>} />
           {/* Orientação cirúrgica: mesma tela da Central, sempre no número da orientação (pedido da dona, 23/11) */}
           <Route path="/orientacao-cirurgica" element={
