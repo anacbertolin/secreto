@@ -1490,3 +1490,22 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
   ICP-Brasil (levantamento por médico; integração no sistema depende de escolher a certificadora e ver custo com a dona),
   fornecedores/DPAs e transferência para os EUA (Res. CD/ANPD 19/2024), plano de resposta a vazamento (3 dias úteis,
   Res. CD/ANPD 15/2024) e entrega de cópia do prontuário.
+
+### 23/11 — Confirmações (lentes)
+- Confirmado pela dona: R$ 15.000 para todas as Vivity e PanOptix (tóricas ou não); R$ 7.500 para todas as Clareon (inclusive AutonoMe).
+
+---
+
+## 24/11/2026 — Repasse: cirurgias de retina, facectomia e injeções (dados, sem mudança de estrutura)
+- **Lente simples agora é Rayner (custo R$ 190)**, no lugar da Hoya: catálogo ganhou `RAYNER-MONO` (venda 2.900); Hoya
+  inativada; os custos de lente dos procedimentos (Fascectomia, Fascectomia + TREC, Campo Grande) passaram a Rayner 190.
+- **Procedimentos novos** (médico em branco = qualquer médico, até a dona dizer de quem são; anestesista "Fábio (anestesista)"):
+  - Vitrectomia (sem faco) — 25.000; anestesista 2.000; sala 5.000 → médico 11.400,00 (PIX).
+  - Vitrectomia + faco — 25.000; anestesista 2.000; sala 5.000; lente Rayner 190 → médico 11.248,00.
+  - Facectomia (qualquer cirurgião) — 5.500; anestesista 350; sala 1.100; lente Rayner 190 → médico 2.428,00.
+    Com lente premium da Alcon "cobra-se a diferença do valor da lente" (regra a detalhar).
+  - Injeção antiangiogênica (Lucentis, Eylia ou Avastin; sem droga específica) — 2.200; anestesista 100; sala 600 → 936,00.
+  - Injeção de Ozurdex — 7.500 (a dona não lembrava; disse para usar); anestesista 350; sala com o medicamento 3.000
+    ("vai sair por 2.000, pode botar 3.000") → 2.420,00.
+- Em aberto: de qual médico são as de retina; "Fascectomia" do Dr. Pedro parece ser a mesma Facectomia (com instrumentação 100);
+  regra da diferença da lente premium; se o anestesista dos procedimentos do Dr. Pedro também é o Fábio.
