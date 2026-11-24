@@ -9,7 +9,8 @@
 //   texto      → { conversa_id, texto }  resposta livre (só até 24 h depois da última mensagem do paciente)
 //   retomar    → { conversa_id } ou { paciente_id, setor? }  envia o modelo "retomar_conversa"
 //                (ou "retomar_orientacao" no número da orientação) — fora das 24 h;
-//                { finalidade: "aviso_novo_numero_orientacao" } escolhe o aviso do número novo
+//                { finalidade: "aviso_novo_numero_orientacao" } escolhe o aviso do número novo;
+//                { telefone, nome?, paciente_id?, setor } começa conversa nova por um número de celular
 //   lembretes  → { data: "AAAA-MM-DD", simular?: true }  lembrete com botões para os agendamentos do dia
 //                ou { agendamento_id, simular?: true }  só para um paciente (botão da Agenda; pode repetir)
 //                A Orientação Cirúrgica (tipo 'orientacao', só registro) nunca recebe lembrete.
@@ -308,13 +309,20 @@ Deno.serve(async (req) => {
       return resposta({ erro: `O modelo “${finalidade.replaceAll("_", " ")}” ainda não foi aprovado/ligado (botão Modelos).` }, 409);
     }
 
-    if (!conversaId && pacienteId) {
-      const { data: p } = await db.from("pacientes").select("telefone, whatsapp_autorizado").eq("id", pacienteId).maybeSingle();
-      if (!p) return resposta({ erro: "Paciente não encontrado." }, 404);
-      if (respeitaRecusa && p.whatsapp_autorizado === false) return resposta({ erro: "Este paciente não autorizou mensagens pelo WhatsApp." }, 409);
-      const { data: numero } = await db.rpc("telefone_whatsapp", { p: p.telefone });
-      if (!numero) return resposta({ erro: "O telefone do cadastro não é um celular válido." }, 400);
-      const { data: id, error } = await db.rpc("whatsapp_conversa", { p_telefone: numero, p_paciente: pacienteId, p_setor: setor });
+    // Conversa nova: pelo paciente (telefone do cadastro ou outro informado) ou só por um número de celular
+    const telInformado = typeof corpo.telefone === "string" && corpo.telefone.trim() ? corpo.telefone.trim() : null;
+    if (!conversaId && (pacienteId || telInformado)) {
+      let tel = telInformado;
+      if (pacienteId) {
+        const { data: p } = await db.from("pacientes").select("telefone, whatsapp_autorizado").eq("id", pacienteId).maybeSingle();
+        if (!p) return resposta({ erro: "Paciente não encontrado." }, 404);
+        if (respeitaRecusa && p.whatsapp_autorizado === false) return resposta({ erro: "Este paciente não autorizou mensagens pelo WhatsApp." }, 409);
+        tel = tel ?? p.telefone;
+      }
+      const { data: numero } = await db.rpc("telefone_whatsapp", { p: tel });
+      if (!numero) return resposta({ erro: telInformado ? "Este número não é um celular válido (use DDD + número)." : "O telefone do cadastro não é um celular válido." }, 400);
+      const nomeContato = typeof corpo.nome === "string" && corpo.nome.trim() ? corpo.nome.trim().slice(0, 120) : null;
+      const { data: id, error } = await db.rpc("whatsapp_conversa", { p_telefone: numero, p_nome: nomeContato, p_paciente: pacienteId, p_setor: setor });
       if (error) return resposta({ erro: error.message }, 500);
       conversaId = id;
     }

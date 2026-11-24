@@ -1440,3 +1440,6 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
   consulta com resposta liberada.
 - `retomar` aceita `finalidade` (na orientação: `retomar_orientacao` ou `aviso_novo_numero_orientacao`); botões
   "📣 Avisar do número novo" na conversa (fora das 24 h) e ao começar conversa com paciente.
+- (24/11, mais tarde) **✏️ Nova conversa** na Central/Orientação (menu da esquerda, para quem pode responder): escolhe
+  paciente (ou só um celular + nome) e o modelo aprovado; a conversa abre já com quem começou como responsável.
+  `whatsapp-enviar` v15: `retomar` aceita `telefone` e `nome` para conversa nova sem cadastro.
