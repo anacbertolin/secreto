@@ -16,6 +16,16 @@ function resposta(corpo: unknown, status = 200) {
   });
 }
 
+/** Nível de verificação da sessão ("aal1" = só senha; "aal2" = senha + código). */
+function nivelDoToken(jwt: string): string | null {
+  try {
+    const parte = jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(parte + "=".repeat((4 - (parte.length % 4)) % 4))).aal ?? null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return resposta({ erro: "Método não permitido" }, 405);
@@ -40,6 +50,11 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!chamador || !chamador.ativo || chamador.funcao !== "admin") {
       return resposta({ erro: "Somente administradores podem criar acessos." }, 403);
+    }
+    // duas etapas (migração 0089): admin com código ativado precisa ter digitado o código nesta sessão
+    const temFator = (u.user.factors ?? []).some((f) => f.status === "verified");
+    if (temFator && nivelDoToken(jwt) !== "aal2") {
+      return resposta({ erro: "Entre de novo e digite o código do autenticador para criar acessos." }, 403);
     }
   }
 

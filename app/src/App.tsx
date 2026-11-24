@@ -20,6 +20,7 @@ import RepasseMedico, { RepasseDetalhe } from "./pages/Repasse";
 import Caixa, { CaixaDetalhe, papelCaixa } from "./pages/Caixa";
 import Relatorios from "./pages/Relatorios";
 import Acessos from "./pages/Acessos";
+import { VerificarCodigo, AtivarDuasEtapas } from "./pages/DuasEtapas";
 import WhatsApp from "./pages/WhatsApp";
 import ImportarWhatsApp from "./pages/ImportarWhatsApp";
 import AssistenteWhatsApp from "./pages/AssistenteWhatsApp";
@@ -99,7 +100,7 @@ function CaixaProtegido({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-  const { session, eu, carregando, sair, pode } = useAuth();
+  const { session, eu, carregando, sair, pode, precisaCodigo } = useAuth();
   const [menuAberto, setMenuAberto] = useState(false);
   const loc = useLocation();
   // Mensagens do WhatsApp não lidas: menu e título da aba, com som (só para quem responde: recepção e administração)
@@ -133,6 +134,7 @@ export default function App() {
 
   if (carregando) return <div className="vazio">Carregando…</div>;
   if (!session) return <Login />;
+  if (precisaCodigo) return <VerificarCodigo />;
   if (session.user.user_metadata?.trocar_senha) return <TrocarSenha obrigatoria />;
   if (!eu)
     return (
@@ -189,7 +191,7 @@ export default function App() {
         <div className="usuario">
           <div><b>{eu.nome}</b></div>
           <div style={{ opacity: 0.7 }}>{FUNCOES[eu.funcao]}</div>
-          <NavLink to="/minha-conta" style={{ color: "#9fd3f7", fontSize: "0.82rem" }}>Trocar minha senha</NavLink>
+          <NavLink to="/minha-conta" style={{ color: "#9fd3f7", fontSize: "0.82rem" }}>Minha conta e senha</NavLink>
           <button onClick={sair}>Sair</button>
         </div>
       </aside>
@@ -242,7 +244,7 @@ export default function App() {
           <Route path="/cadastros/memed" element={<Protegida funcoes={["admin"]}><ConfigMemed /></Protegida>} />
           <Route path="/cadastros/ia" element={<Protegida funcoes={["admin"]}><ConfigIA /></Protegida>} />
           <Route path="/cadastros/modelos" element={<Protegida funcoes={["medico", "enfermagem"]}><Modelos /></Protegida>} />
-          <Route path="/minha-conta" element={<TrocarSenha />} />
+          <Route path="/minha-conta" element={<div className="grade" style={{ gap: 20 }}><TrocarSenha />{eu?.funcao === "admin" && <AtivarDuasEtapas />}</div>} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
