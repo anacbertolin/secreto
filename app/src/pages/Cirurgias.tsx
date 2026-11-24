@@ -288,7 +288,8 @@ export function CirurgiaDetalhe() {
   if (c.carregando && !c.dados) return <Carregando />;
   if (!c.dados) return <Aviso>{c.erro || "Cirurgia não encontrada."}</Aviso>;
   const cir = c.dados;
-  const travada = !!cir.finalizada_em || cir.status === "cancelada";
+  // quem não é médico/enfermagem só consulta (migração 0088)
+  const travada = !!cir.finalizada_em || cir.status === "cancelada" || !pode("medico", "enfermagem");
   const set = (k: keyof Cirurgia) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
 
   async function salvar(extra: Partial<Cirurgia> = {}) {
@@ -501,7 +502,7 @@ export function CirurgiasPaciente({ pacienteId, paciente }: { pacienteId: string
       <div className="linha entre">
         <h2 style={{ margin: 0 }}>Cirurgias</h2>
         <div className="linha">
-          <button className="mini" onClick={() => setInj(true)}>💉 Registrar injeção</button>
+          {pode("medico", "enfermagem") && <button className="mini" onClick={() => setInj(true)}>💉 Registrar injeção</button>}
           {pode("medico") && <button className="mini primario" onClick={() => setNova(true)}>➕ Indicar cirurgia</button>}
         </div>
       </div>
