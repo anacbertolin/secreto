@@ -1477,3 +1477,11 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
 - Telas (`pages/DuasEtapas.tsx`): "Minha conta e senha" → "🔐 Verificação em duas etapas" (só admin) com QR code +
   chave manual + confirmação do código; depois do login, se tiver fator e sessão aal1, aparece a tela do código
   (`useAuth().precisaCodigo`). Celular perdido: remover o fator em `auth.mfa_factors` (suporte técnico) e reativar.
+
+## 24/11/2026 — LGPD: encarregada de dados e política de privacidade
+- A dona (advogada) é a **encarregada de dados**: "Ana Bertolin" na seção 9 da Política de Privacidade (`/privacidade`).
+- Política atualizada (24/11): fornecedores com país (OpenAI — transcrição nos EUA; Anthropic/Claude — assistente, texto
+  mascarado, EUA; Railway — só telas/site; Supabase — São Paulo; Meta; Memed; telefonia), transferência internacional
+  pelo art. 33, proteções (duas etapas na administração, registro de acessos, criptografia, termo de confidencialidade).
+- Proteção contra senhas vazadas (Supabase Auth → HaveIBeenPwned): não há ferramenta para ligar daqui; passo a passo
+  dado à dona (painel Supabase → Authentication → Sign In / Providers → Email → "Prevent use of leaked passwords").
