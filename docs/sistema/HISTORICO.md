@@ -1565,3 +1565,6 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
 - Vendas da orientação: a lista de procedimentos agora mostra TODOS, agrupados por médico (o escolhido primeiro); antes, ao
   escolher o médico, sumiam os dos outros (para Dr. Max/Dra. Luísa só apareciam Facectomia e Refrativa). Escolher o
   procedimento antes do médico já preenche o médico. Faltam cadastrar os procedimentos do Dr. Max e da Dra. Luísa.
+- Procedimentos novos (dados, 24/11, pedido do Dr. Gelson): "Facectomia (Dra. Luiza)" e "Facectomia (Dr. Max)" — regra geral,
+  R$ 5.500, anestesista 350, sala 1.100, lente Rayner 190; "Facectomia + TREC (Dr. Max)" — igual à do Dr. Pedro (R$ 10.500,
+  sala 1.800, lente 190, anestesista 800) SEM instrumentação de fora. PIX: catarata → médico 2.428; glaucoma Max → médico 4.908.
