@@ -118,12 +118,14 @@ export function setoresCaixa(eu: Profissional | null): Setor[] {
 }
 function papelRecepcao(eu: Profissional | null) {
   const f = eu?.funcao;
+  // recepção que atende a Orientação Cirúrgica fica só com o caixa da orientação (migração 0099)
+  const rec = f === "recepcao" && !eu?.orientacao_cirurgica;
   return {
     // abre, lança e fecha: recepção, administração e faturamento (migração 0083)
-    lancar: f === "recepcao" || f === "admin" || f === "faturamento",
+    lancar: rec || f === "admin" || f === "faturamento",
     conferir: !!eu?.caixa_conferir || f === "admin",
     aprovar: !!eu?.caixa_aprovar || f === "admin",
-    ver: f === "recepcao" || f === "admin" || f === "faturamento" || !!eu?.caixa_conferir || !!eu?.caixa_aprovar,
+    ver: rec || f === "admin" || f === "faturamento" || !!eu?.caixa_conferir || !!eu?.caixa_aprovar,
   };
 }
 
