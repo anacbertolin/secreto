@@ -579,3 +579,5 @@ textarea.resumo-notas { width: 100%; min-height: 44px; font-size: 0.85rem; paddi
 .agenda-lista tr.vago td { background: #fafbfc; }
 .agenda-lista tr.st-vermelho td { text-decoration: line-through; opacity: 0.7; }
 .agenda-lista .nota-lista { max-width: 340px; font-size: 0.82rem; color: #5c4a00; }
+/* Ferramentas dentro da Central (24/11) */
+.ct-ferramentas > button, .ct-ferramentas > a.botao { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; text-align: left; margin-bottom: 8px; padding: 10px 12px; }

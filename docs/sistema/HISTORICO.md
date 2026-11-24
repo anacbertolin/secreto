@@ -1443,3 +1443,6 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
 - (24/11, mais tarde) **✏️ Nova conversa** na Central/Orientação (menu da esquerda, para quem pode responder): escolhe
   paciente (ou só um celular + nome) e o modelo aprovado; a conversa abre já com quem começou como responsável.
   `whatsapp-enviar` v15: `retomar` aceita `telefone` e `nome` para conversa nova sem cadastro.
+- (24/11) **🧰 Ferramentas dentro da tela**: na Central/Orientação o botão não sai mais da tela; abre uma lista na coluna do
+  meio (Pesquisar mensagens, Modelos, Fora do horário, Lembretes na clínica) em janelas por cima. Importar e a tela antiga
+  continuam como links (abrem outra tela). Pesquisa abre a conversa achada com a mensagem destacada, mesmo arquivada.
