@@ -6,6 +6,7 @@ import { CLINICA } from "../lib/marca";
 import { TIPOS_DOC } from "../components/pep/SecoesConduta";
 import ImprimirFaturamento from "./ImprimirFaturamento";
 import ImprimirColirios from "./ImprimirColirios";
+import ImprimirProntuario from "./ImprimirProntuario";
 import { SeloAutenticidade, seloDoDocumento } from "../components/Autenticidade";
 import { fmtCPF, fmtData, fmtGrau, idade } from "../lib/util";
 
@@ -24,6 +25,7 @@ export default function Imprimir() {
   const { tipo } = useParams();
   if (tipo === "guia" || tipo === "recibo" || tipo === "lote") return <ImprimirFaturamento />;
   if (tipo === "colirios") return <ImprimirColirios />;
+  if (tipo === "prontuario") return <ImprimirProntuario />;
   return <ImprimirClinico />;
 }
 

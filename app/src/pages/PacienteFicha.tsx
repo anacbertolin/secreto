@@ -26,7 +26,9 @@ export default function PacienteFicha() {
   const { pode, eu } = useAuth();
   const nav = useNavigate();
   const clinico = pode("medico", "enfermagem");
-  const [aba, setAba] = useState(clinico ? "prontuario" : "dados");
+  // prontuário: toda a equipe VÊ (migração 0088); só médico/enfermagem alteram
+  const veProntuario = pode("medico", "enfermagem", "recepcao", "admin", "faturamento");
+  const [aba, setAba] = useState(veProntuario ? "prontuario" : "dados");
   const [agendar, setAgendar] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -43,8 +45,8 @@ export default function PacienteFicha() {
 
   // Registro de acesso ao prontuário (LGPD / auditoria)
   useEffect(() => {
-    if (clinico && id) supabase.rpc("registrar_leitura", { p_paciente_id: id, p_detalhes: "Abriu a ficha do paciente" }).then(() => {});
-  }, [clinico, id]);
+    if (veProntuario && id) supabase.rpc("registrar_leitura", { p_paciente_id: id, p_detalhes: "Abriu a ficha do paciente" }).then(() => {});
+  }, [veProntuario, id]);
 
   async function novoAtendimentoSemAgenda() {
     setErro("");
@@ -82,6 +84,7 @@ export default function PacienteFicha() {
           <BotaoLigar numero={p.telefone as string | null} pacienteId={id} className="" />
           {eu?.funcao === "medico" && <button onClick={novoAtendimentoSemAgenda}>🩺 Atender sem agendamento</button>}
           {clinico && <BotaoResumoIA pacienteId={id!} />}
+          {veProntuario && <Link className="botao" to={`/imprimir/prontuario/${id}`} target="_blank">🖨️ Imprimir prontuário</Link>}
           {pode("medico", "enfermagem", "recepcao", "admin") && <BotaoPortal pacienteId={id!} />}
         </div>
       </div>
@@ -93,26 +96,26 @@ export default function PacienteFicha() {
       )}
 
       <div className="abas">
-        {clinico && <button className={aba === "prontuario" ? "ativa" : ""} onClick={() => setAba("prontuario")}>Prontuário</button>}
-        {clinico && <button className={aba === "evolucao" ? "ativa" : ""} onClick={() => setAba("evolucao")}>📈 Evolução</button>}
-        {clinico && <button className={aba === "cirurgias" ? "ativa" : ""} onClick={() => setAba("cirurgias")}>Cirurgias e injeções</button>}
-        {clinico && <button className={aba === "exames" ? "ativa" : ""} onClick={() => setAba("exames")}>Exames</button>}
-        {clinico && <button className={aba === "documentos" ? "ativa" : ""} onClick={() => setAba("documentos")}>Documentos</button>}
+        {veProntuario && <button className={aba === "prontuario" ? "ativa" : ""} onClick={() => setAba("prontuario")}>Prontuário</button>}
+        {veProntuario && <button className={aba === "evolucao" ? "ativa" : ""} onClick={() => setAba("evolucao")}>📈 Evolução</button>}
+        {veProntuario && <button className={aba === "cirurgias" ? "ativa" : ""} onClick={() => setAba("cirurgias")}>Cirurgias e injeções</button>}
+        {veProntuario && <button className={aba === "exames" ? "ativa" : ""} onClick={() => setAba("exames")}>Exames</button>}
+        {veProntuario && <button className={aba === "documentos" ? "ativa" : ""} onClick={() => setAba("documentos")}>Documentos</button>}
         <button className={aba === "agenda" ? "ativa" : ""} onClick={() => setAba("agenda")}>Agendamentos</button>
         {pode("recepcao", "faturamento", "admin") && <button className={aba === "contas" ? "ativa" : ""} onClick={() => setAba("contas")}>Contas</button>}
         <button className={aba === "dados" ? "ativa" : ""} onClick={() => setAba("dados")}>Dados cadastrais</button>
       </div>
 
-      {aba === "prontuario" && clinico && (
+      {aba === "prontuario" && veProntuario && (
         <div className="pep">
-          <div className="painel"><h2>Saúde</h2><HistoricoSaude pacienteId={id!} /></div>
+          <div className="painel"><h2>Saúde</h2><HistoricoSaude pacienteId={id!} somenteLeitura={!clinico} /></div>
           <LinhaDoTempo pacienteId={id!} medicos={base.dados?.todos ?? []} />
         </div>
       )}
-      {aba === "evolucao" && clinico && <div className="painel"><EvolucaoPaciente pacienteId={id!} /></div>}
-      {aba === "cirurgias" && clinico && <CirurgiasPaciente pacienteId={id!} paciente={p as unknown as PacienteResumo} />}
-      {aba === "exames" && clinico && <ExamesPaciente pacienteId={id!} />}
-      {aba === "documentos" && clinico && <DocumentosPaciente pacienteId={id!} />}
+      {aba === "evolucao" && veProntuario && <div className="painel"><EvolucaoPaciente pacienteId={id!} /></div>}
+      {aba === "cirurgias" && veProntuario && <CirurgiasPaciente pacienteId={id!} paciente={p as unknown as PacienteResumo} />}
+      {aba === "exames" && veProntuario && <ExamesPaciente pacienteId={id!} />}
+      {aba === "documentos" && veProntuario && <DocumentosPaciente pacienteId={id!} podeAnexar={clinico} />}
       {aba === "agenda" && (
         <div className="painel rolagem">
           <table className="tabela">
@@ -222,6 +225,7 @@ function ExamesPaciente({ pacienteId }: { pacienteId: string }) {
     await supabase.from("exames_realizados").select("id, exame, olho, status, criado_em, laudado_em, conclusao").eq("paciente_id", pacienteId).order("criado_em", { ascending: false }),
   ) as { id: string; exame: string; olho: string | null; status: string; criado_em: string; laudado_em: string | null; conclusao: string | null }[], [pacienteId]);
   const nav = useNavigate();
+  const clinicoEx = useAuth().pode("medico", "enfermagem");
   const [marcados, setMarcados] = useState<string[]>([]);
   const [comparar, setComparar] = useState(false);
   const alternar = (id: string) => setMarcados((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m.slice(-1), id]));
@@ -236,7 +240,7 @@ function ExamesPaciente({ pacienteId }: { pacienteId: string }) {
         <thead><tr><th></th><th>Data</th><th>Exame</th><th>Olho</th><th>Situação</th><th>Conclusão</th></tr></thead>
         <tbody>
           {(dados ?? []).map((e) => (
-            <tr key={e.id} className="clicavel" onClick={() => nav(`/exames/${e.id}`)}>
+            <tr key={e.id} className="clicavel" onClick={() => clinicoEx && nav(`/exames/${e.id}`)}>
               <td onClick={(ev) => ev.stopPropagation()}><input type="checkbox" aria-label="Marcar para comparar" checked={marcados.includes(e.id)} onChange={() => alternar(e.id)} /></td>
               <td>{fmtData(e.criado_em)}</td><td>{e.exame}</td><td>{e.olho ?? "—"}</td>
               <td><Etiqueta cor={STATUS_EXAME[e.status].cor}>{STATUS_EXAME[e.status].rotulo}</Etiqueta></td>

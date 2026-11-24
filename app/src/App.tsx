@@ -201,9 +201,9 @@ export default function App() {
           <Route path="/pacientes/:id" element={<PacienteFicha />} />
           <Route path="/pacientes/:id/editar" element={<PacienteEditar />} />
           <Route path="/consultorio" element={<Protegida funcoes={["medico", "enfermagem"]}><FilaMedico /></Protegida>} />
-          <Route path="/atendimento/:id" element={<Protegida funcoes={["medico", "enfermagem"]}><Atendimento /></Protegida>} />
+          <Route path="/atendimento/:id" element={<Atendimento />} />
           <Route path="/cirurgias" element={<Protegida funcoes={["medico", "enfermagem"]}><Cirurgias /></Protegida>} />
-          <Route path="/cirurgias/:id" element={<Protegida funcoes={["medico", "enfermagem"]}><CirurgiaDetalhe /></Protegida>} />
+          <Route path="/cirurgias/:id" element={<CirurgiaDetalhe />} />
           <Route path="/estoque" element={<Protegida funcoes={["medico", "enfermagem", "admin", "faturamento"]}><Estoque /></Protegida>} />
           <Route path="/busca-ativa" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin"]}><BuscaAtiva /></Protegida>} />
           <Route path="/exames" element={<Protegida funcoes={["medico", "enfermagem"]}><Exames /></Protegida>} />

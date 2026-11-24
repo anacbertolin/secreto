@@ -11,7 +11,7 @@ const TIPOS_ANT: Record<string, string> = {
 };
 
 /** Alergias, medicamentos em uso e antecedentes — visível e editável por médico e enfermagem */
-export function HistoricoSaude({ pacienteId, compacto }: { pacienteId: string; compacto?: boolean }) {
+export function HistoricoSaude({ pacienteId, compacto, somenteLeitura }: { pacienteId: string; compacto?: boolean; somenteLeitura?: boolean }) {
   const { dados, erro, recarregar } = useCarregar(async () => {
     const [a, m, h] = await Promise.all([
       supabase.from("alergias").select("*").eq("paciente_id", pacienteId).eq("ativa", true).order("criado_em"),
@@ -66,7 +66,7 @@ export function HistoricoSaude({ pacienteId, compacto }: { pacienteId: string; c
           {dados!.alergias.map((a, i) => (
             <span key={a.id}>
               {i > 0 && "; "}{a.substancia}{a.reacao && ` (${a.reacao})`}
-              {!compacto && <button className="sutil mini" onClick={() => desativar("alergias", a.id)} title="Remover">✕</button>}
+              {!compacto && !somenteLeitura && <button className="sutil mini" onClick={() => desativar("alergias", a.id)} title="Remover">✕</button>}
             </span>
           ))}
         </div>
@@ -77,7 +77,7 @@ export function HistoricoSaude({ pacienteId, compacto }: { pacienteId: string; c
         {dados?.meds.map((m) => (
           <li key={m.id} className="linha entre">
             <span>{m.medicamento}{m.olho && ` · ${m.olho}`}{m.posologia && <span className="muted"> — {m.posologia}</span>}</span>
-            <button className="sutil mini" onClick={() => desativar("medicamentos_em_uso", m.id)} title="Parou de usar">✕</button>
+            {!somenteLeitura && <button className="sutil mini" onClick={() => desativar("medicamentos_em_uso", m.id)} title="Parou de usar">✕</button>}
           </li>
         ))}
         {dados?.meds.length === 0 && <li className="muted">Nenhum.</li>}
@@ -91,7 +91,7 @@ export function HistoricoSaude({ pacienteId, compacto }: { pacienteId: string; c
         {dados?.ants.length === 0 && <li className="muted">Nenhum.</li>}
       </ul>
 
-      {form === "" ? (
+      {somenteLeitura ? null : form === "" ? (
         <div className="linha" style={{ marginTop: 10 }}>
           <button className="mini" onClick={() => setForm("alergia")}>+ Alergia</button>
           <button className="mini" onClick={() => setForm("med")}>+ Medicamento</button>

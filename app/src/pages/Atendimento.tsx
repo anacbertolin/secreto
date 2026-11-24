@@ -88,7 +88,7 @@ export default function Atendimento() {
         </div>
         <div className="linha">
           <Link className="botao" to={`/pacientes/${pac.id}`}>📁 Histórico do paciente</Link>
-          <BotaoResumoIA pacienteId={pac.id} />
+          {(eu?.funcao === "medico" || eu?.funcao === "enfermagem") && <BotaoResumoIA pacienteId={pac.id} />}
           {ctx.editaMedico && <BotaoProtocolo atendId={atend.id} pacienteId={pac.id} aoAplicar={() => { protocoloAplicado.current = true; recarregar(); }} />}
           {ctx.editaMedico && <button className="primario" onClick={finalizar}>✅ Finalizar atendimento</button>}
           {aberto && !souResponsavel && eu?.funcao === "enfermagem" && <button onClick={() => nav("/consultorio")}>Concluir pré-consulta</button>}

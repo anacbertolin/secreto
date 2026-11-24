@@ -1446,3 +1446,19 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
 - (24/11) **🧰 Ferramentas dentro da tela**: na Central/Orientação o botão não sai mais da tela; abre uma lista na coluna do
   meio (Pesquisar mensagens, Modelos, Fora do horário, Lembretes na clínica) em janelas por cima. Importar e a tela antiga
   continuam como links (abrem outra tela). Pesquisa abre a conversa achada com a mensagem destacada, mesmo arquivada.
+
+## 24/11/2026 — Prontuário: toda a equipe vê, só o médico escreve + impressão do prontuário
+- Pedido da dona: recepção, telefone, administração e faturamento precisam CONSULTAR o prontuário (para marcar sabendo
+  se é retina, glaucoma, rotina…); só o médico altera, com o próprio login.
+- Migração `0088_prontuario_leitura_equipe`: política `equipe_ve_prontuario` (SELECT para recepcao/admin/faturamento) em
+  23 tabelas clínicas (atendimentos, triagens, exames oftalmológicos, refrações, diagnósticos, receitas, óculos, pedidos,
+  documentos, adendos, desenhos, exames realizados/arquivos, cirurgias, injeções, alergias, medicamentos, antecedentes,
+  seguimentos, Memed, documentos do paciente, prontuário legado) + leitura nos buckets `exames` e `documentos`.
+  Escrita NÃO mudou (médico; enfermagem só no que já fazia).
+- Telas: abas do prontuário na ficha para todos; botões de alterar escondidos para quem só consulta (HistoricoSaude
+  `somenteLeitura`, DocumentosPaciente `podeAnexar`, injeção/cirurgia); `/atendimento/:id` e `/cirurgias/:id` abertos
+  para consulta (a tela já é somente leitura para quem não é médico). Abrir ficha/atendimento continua indo para a auditoria.
+- Impressão do prontuário (`/imprimir/prontuario/:pacienteId`, botão "🖨️ Imprimir prontuário" na ficha): identificação,
+  alergias/medicamentos/antecedentes e linha do tempo (atendimentos completos, prontuário da Micrologos, laudos,
+  cirurgias, injeções), com período opcional, aviso LGPD e campo de recibo assinado pelo paciente. Cada impressão vai
+  para a auditoria ("Imprimiu o prontuário…").

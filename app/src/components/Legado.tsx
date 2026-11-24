@@ -61,7 +61,7 @@ async function sha256(file: File): Promise<string> {
 }
 
 /** Documentos do paciente (PDFs, fotos, termos) — os enviados aqui e os importados */
-export function DocumentosPaciente({ pacienteId }: { pacienteId: string }) {
+export function DocumentosPaciente({ pacienteId, podeAnexar = true }: { pacienteId: string; podeAnexar?: boolean }) {
   const { dados, erro, recarregar } = useCarregar(async () => ok(await supabase.from("paciente_documentos").select("*").eq("paciente_id", pacienteId).order("data_documento", { ascending: false, nullsFirst: false }).order("criado_em", { ascending: false })) as Doc[], [pacienteId]);
   const [f, setF] = useState({ tipo: "exame", titulo: "", data_documento: "" });
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -111,7 +111,7 @@ export function DocumentosPaciente({ pacienteId }: { pacienteId: string }) {
         </table>
         {dados?.length === 0 && <div className="vazio">Nenhum documento.</div>}
       </div>
-      <div className="secao grade">
+      {podeAnexar && <div className="secao grade">
         <h3>Anexar documento</h3>
         <div className="grade g4">
           <Campo rotulo="Tipo">
@@ -123,7 +123,7 @@ export function DocumentosPaciente({ pacienteId }: { pacienteId: string }) {
           <div style={{ alignSelf: "end" }}><button className="primario" disabled={enviando} onClick={enviar}>{enviando ? "Enviando…" : "Anexar"}</button></div>
         </div>
         <p className="muted pequeno" style={{ margin: 0 }}>Documentos anexados não podem ser apagados. O sistema guarda uma "impressão digital" (SHA-256) de cada arquivo para provar que ele não foi alterado.</p>
-      </div>
+      </div>}
     </div>
   );
 }
