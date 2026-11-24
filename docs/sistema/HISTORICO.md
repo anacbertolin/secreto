@@ -1485,3 +1485,8 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
   pelo art. 33, proteções (duas etapas na administração, registro de acessos, criptografia, termo de confidencialidade).
 - Proteção contra senhas vazadas (Supabase Auth → HaveIBeenPwned): não há ferramenta para ligar daqui; passo a passo
   dado à dona (painel Supabase → Authentication → Sign In / Providers → Email → "Prevent use of leaked passwords").
+- Kit LGPD (documento do Claude, para a dona revisar): https://claude.ai/artifact/1PXFD46B3bBo61eEfMQJyT — resumo do que
+  está feito, passo a passo das senhas vazadas, termos de confidencialidade (funcionários e médicos), assinatura digital
+  ICP-Brasil (levantamento por médico; integração no sistema depende de escolher a certificadora e ver custo com a dona),
+  fornecedores/DPAs e transferência para os EUA (Res. CD/ANPD 19/2024), plano de resposta a vazamento (3 dias úteis,
+  Res. CD/ANPD 15/2024) e entrega de cópia do prontuário.
