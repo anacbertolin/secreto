@@ -1562,3 +1562,6 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
 - Testado no banco local (abertura por setor, isolamento, venda → caixa, correção, cancelamento, caixa fechado, repasse).
 - (0099) Pedido do Dr. Gelson: a Alessandra fica SÓ com o caixa da orientação. Regra: quem tem função "recepção" E a marcação
   Orientação Cirúrgica não abre/lança/vê o caixa da recepção (`interno.caixa_papel`). Conferir/aprovar não mudaram.
+- Vendas da orientação: a lista de procedimentos agora mostra TODOS, agrupados por médico (o escolhido primeiro); antes, ao
+  escolher o médico, sumiam os dos outros (para Dr. Max/Dra. Luísa só apareciam Facectomia e Refrativa). Escolher o
+  procedimento antes do médico já preenche o médico. Faltam cadastrar os procedimentos do Dr. Max e da Dra. Luísa.
