@@ -1522,3 +1522,25 @@ cirurgia, trazer risco, se informar…), como na aba "Orientação Cirúrgica" d
   lente simples, 190); o custo da lente passa a ser o da premium. Ex.: Facectomia 5.500 + PanOptix → 20.310; custos 350 +
   1.100 + 4.198,95; médico 9.291,64 (PIX). Tela: no lançamento, "Trocar a lente por premium (Alcon)" (aparece quando o
   procedimento tem lente; desfaz ao voltar para "lente simples").
+
+### 24/11 (noite) — Vendas da Orientação Cirúrgica → Repasse médico (migração 0097)
+- **Pedido do Dr. Gelson:** a **Alessandra** (Orientação Cirúrgica) recebe o pagamento de toda cirurgia (maquininha/PIX) e
+  atende também os pacientes de convênio que pagam só a lente. Ela registra a venda no "cantinho" dela; o **Luciano**
+  confere e faz a divisão. A Alessandra vê **só o valor** (custos e divisão só o Luciano).
+- **Migração 0097 `orientacao_vendas`** (aplicada): tabela `orientacao_vendas` (tipo cirurgia | lente, paciente, médico,
+  procedimento, lente, valor, forma, parcelas, datas, status aguardando → devolvida/lançada/cancelada, repasse_id);
+  gatilho de regras (só faturamento devolve, com motivo; só o lançamento do repasse marca "lançada" — flag
+  `app.venda_lancando`; lançada/cancelada não muda; faturamento não altera os dados, devolve); RLS: quem atende a orientação
+  + faturamento + admin. Funções `orientacao_procedimentos()`, `orientacao_lentes()` e `orientacao_valor(proc, lente)`
+  (SECURITY DEFINER, conferem o papel; mostram só nome e valor de venda — avisos do Supabase esperados).
+  `repasse_lancar` aceita `venda_id` e marca a venda como lançada na mesma transação.
+- **Telas:** menu **💳 Vendas da orientação** (`/orientacao-cirurgica/vendas`, quem atende a orientação e admin) e botão
+  **💳 Vendas** na coluna da esquerda da tela da Orientação; formulário com valor sugerido (procedimento + diferença da lente
+  premium, ou preço da lente), devolvidas em destaque, corrigir e reenviar, cancelar com motivo. **Repasse médico → aba
+  "Para conferir"** (contador): "Conferir e lançar" abre o lançamento já preenchido (custos do procedimento + lente premium
+  trocada) e "Devolver" com motivo.
+- Testes: banco local (Alessandra não vê custos/repasses; recepção comum não vê; devolução/correção/lançamento; lançada não
+  muda; lançar duas vezes desfaz tudo) e banco real (transação desfeita: valor sugerido 20.310, médico 7.712,34 em 12x);
+  telas no navegador com dados simulados (Alessandra → Luciano).
+- Próximo: entrada do pagamento da Alessandra no Caixa? (perguntar); lentes no estoque + nota fiscal (substituir o Invistto;
+  ver com o Luciano como ele faz hoje).
