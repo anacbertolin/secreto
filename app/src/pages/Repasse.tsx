@@ -460,6 +460,9 @@ export function RepasseDetalhe() {
     r.repasse_parcelas = (r.repasse_parcelas ?? []).sort((a, b) => a.numero - b.numero);
     return r;
   }, [id]);
+  // veio de uma venda da Orientação Cirúrgica? (migração 0101: o cancelamento leva a venda junto)
+  const vendaLigada = useCarregar(async () =>
+    (ok(await supabase.from("orientacao_vendas").select("id, numero").eq("repasse_id", id!).limit(1)) as { id: string; numero: number }[])[0] ?? null, [id]);
 
   if (carregando && !dados) return <Carregando />;
   if (!dados) return <Aviso>{e1}</Aviso>;
@@ -482,12 +485,15 @@ export function RepasseDetalhe() {
     if (error) return setErro(msgErro(error));
     setOkMsg(msg); recarregar();
   }
-  async function cancelarRepasse(motivo: string) {
+  async function cancelarRepasse(motivo: string, cancelarVenda: boolean) {
     setErro(""); setOkMsg("");
-    const { error } = await supabase.from("repasses").update({ status: "cancelado", motivo_cancelamento: motivo }).eq("id", r.id);
+    const { error } = await supabase.rpc("repasse_cancelar", { p_repasse: r.id, p_motivo: motivo, p_cancelar_venda: cancelarVenda });
     setCancelar(false);
     if (error) return setErro(msgErro(error));
-    recarregar();
+    if (vendaLigada.dados) setOkMsg(cancelarVenda
+      ? `Repasse cancelado. A venda nº ${vendaLigada.dados.numero} foi cancelada e o valor saiu do caixa da Orientação.`
+      : `Repasse cancelado. A venda nº ${vendaLigada.dados.numero} voltou para "Para conferir": lance de novo com os dados certos.`);
+    recarregar(); vendaLigada.recarregar();
   }
 
   return (
@@ -612,17 +618,31 @@ export function RepasseDetalhe() {
           </table>
         </div>
       </div>}
-      {cancelar && <CancelarRepasse aoFechar={() => setCancelar(false)} aoConfirmar={cancelarRepasse} />}
+      {cancelar && <CancelarRepasse venda={vendaLigada.dados ?? null} aoFechar={() => setCancelar(false)} aoConfirmar={cancelarRepasse} />}
     </div>
   );
 }
 
-function CancelarRepasse({ aoFechar, aoConfirmar }: { aoFechar: () => void; aoConfirmar: (m: string) => void }) {
+function CancelarRepasse({ venda, aoFechar, aoConfirmar }: {
+  venda: { id: string; numero: number } | null; aoFechar: () => void; aoConfirmar: (m: string, cancelarVenda: boolean) => void;
+}) {
   const [m, setM] = useState("");
+  const [desistiu, setDesistiu] = useState<boolean | null>(venda ? null : false);
   return (
     <Modal titulo="Cancelar repasse" aoFechar={aoFechar}
-      rodape={<><button onClick={aoFechar}>Voltar</button><button className="perigo" disabled={!m.trim()} onClick={() => aoConfirmar(m.trim())}>Cancelar repasse</button></>}>
+      rodape={<><button onClick={aoFechar}>Voltar</button><button className="perigo" disabled={!m.trim() || desistiu === null} onClick={() => aoConfirmar(m.trim(), !!desistiu)}>
+        {desistiu ? "Cancelar venda e repasse" : "Cancelar repasse"}</button></>}>
       <p>O repasse fica guardado como cancelado (não é apagado). Para corrigir valor, forma de pagamento ou médico, cancele e lance de novo.</p>
+      {venda && (
+        <div className="campo">
+          Este repasse veio da venda nº {venda.numero} da Orientação Cirúrgica. O que aconteceu?
+          <label className="linha"><input type="radio" checked={desistiu === false} onChange={() => setDesistiu(false)} />
+            <span><b>Só corrigir o repasse</b> — a venda volta para “Para conferir” e o dinheiro continua no caixa.</span></label>
+          <label className="linha"><input type="radio" checked={desistiu === true} onChange={() => setDesistiu(true)} />
+            <span><b>O paciente desistiu / foi devolvido</b> — cancela a venda e tira o valor do caixa da Orientação
+              (se o caixa daquele dia já foi fechado, é preciso devolver o caixa antes).</span></label>
+        </div>
+      )}
       <Campo rotulo="Motivo"><input autoFocus value={m} onChange={(e) => setM(e.target.value)} placeholder="ex.: lançado com valor errado" /></Campo>
     </Modal>
   );
