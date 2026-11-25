@@ -20,6 +20,8 @@ export interface Profissional {
   /** Caixa da recepção (migração 0066): confere / dá a aprovação final */
   caixa_conferir?: boolean;
   caixa_aprovar?: boolean;
+  /** Pode cancelar caixa aberto por engano e reabrir caixa para correção (migração 0110 — só a dona) */
+  caixa_corrigir?: boolean;
 }
 
 interface Ctx {
