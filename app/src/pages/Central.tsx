@@ -99,6 +99,10 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pacienteParam, setor]);
+  // O vigia do número da clínica só aparece quando ele estiver ligado à API oficial
+  const estadoWA = useCarregar(async () => setor === "clinica"
+    ? await whatsapp<{ configurado: boolean }>("estado").catch(() => ({ configurado: false }))
+    : { configurado: false }, [setor]);
   const base = useCarregar(async () => {
     const [medicos, convenios, locais] = await Promise.all([listaProfissionais(["medico"]), listaConvenios(), listaLocais()]);
     return { medicos, convenios, locais };
@@ -222,7 +226,7 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
         </div>
 
         {/* Vigia: só no número da orientação, o único ligado à API por enquanto */}
-        {veCanais && setor === "orientacao" && <VigiaWhatsApp setor={setor} />}
+        {veCanais && (setor === "orientacao" || estadoWA.dados?.configurado) && <VigiaWhatsApp setor={setor} />}
         {visao === "conversas" ? (
           <>
             {veCanais && <Equipe pessoas={equipe.dados ?? []} euId={eu?.id} livres={livres.length} />}

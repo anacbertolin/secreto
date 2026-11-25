@@ -1652,3 +1652,7 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
   - "✏️ Corrigir" nas mensagens de texto enviadas (dentro das 24 h): a API da Meta NÃO permite editar nem apagar
     mensagem enviada; o sistema manda "✏️ *Correção:*" + texto certo como resposta citando a mensagem errada
     (`whatsapp-enviar` v17, parâmetro `corrige`; grava `em_resposta_a`). A mensagem errada fica marcada "corrigida abaixo".
+- (25/11) Na Central (telefonia): corretor em português também na conversa interna (aba Interno) e na anotação depois
+  da ligação; botão 😊 de emojis na conversa interna. O WhatsApp da Central usa o mesmo `Chat` da Orientação (já tem
+  respostas rápidas por número, emojis, corretor e Corrigir). Vigia do recebimento passa a aparecer também no número da
+  clínica assim que ele estiver ligado à API (`estado.configurado`).

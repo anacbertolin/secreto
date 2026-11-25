@@ -1362,7 +1362,7 @@ export function RespostasRapidas(props: { setor: SetorWA; aoFechar: () => void }
 }
 
 /** Emojis mais usados no atendimento (a lista completa do Windows abre com a tecla Windows + ponto) */
-const EMOJIS = [
+export const EMOJIS = [
   "😊", "🙂", "😀", "😁", "😉", "🥰", "😍", "🤗", "🙏", "👍", "👏", "👋", "🤝", "💪", "✌️", "👌",
   "❤️", "💙", "💚", "💛", "🌹", "🌷", "🌻", "✨", "⭐", "🎉", "😅", "😂", "🤔", "😔", "😢", "😷",
   "👁️", "👀", "🕶️", "👓", "💉", "💊", "🩺", "🏥", "🩹", "🧾", "📄", "📋", "📎", "📷",
