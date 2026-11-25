@@ -11,6 +11,7 @@ import {
   FORMAS_REPASSE, REGRAS, TIPOS_CUSTO, calcularRepasse, custoDaClinica, partesPorParcela, taxaInternaPct, type RegrasRepasse, type TaxaCartao,
   varianteProcedimento, nomesProcedimentos,
 } from "../lib/repasse";
+import { GuiaVendas } from "../components/GuiaVendas";
 
 // ------------------------------------------------------------------ tipos
 interface Parcela {
@@ -96,6 +97,7 @@ export default function RepasseMedico() {
           <h1>Repasse médico</h1>
           <p className="sub" style={{ margin: 0 }}>Cirurgia particular: valor − imposto − taxa do cartão − custos (sala, instrumentação, auxiliar) = honorários → 20% clínica, 80% médico</p>
         </div>
+        <div className="linha"><GuiaVendas /></div>
       </div>
       <Aviso>{base.erro}</Aviso>
       {aba !== "conferir" && (pend.dados ?? 0) > 0 && (

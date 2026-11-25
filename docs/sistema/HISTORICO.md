@@ -1717,3 +1717,8 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   crédito → dia 25), WhatsApp/Copiar/Imprimir, e "Faltam data ou check" (`cirurgias_lista(p_pendentes)`).
 - SEM check ninguém recebe: relatório e custos a pagar só contam realizadas; o repasse mostra "aguarda realização";
   cancelamento só é barrado se já realizada e com data de pagamento passada. Previsão inclui as futuras.
+- (0160) Guia "❓ Como funciona" (fluxo venda → conferência → data → cirurgia → check → pagamentos, + "E se…?") nas telas
+  Vendas da orientação, Cirurgias do dia e Repasse médico (`app/src/components/GuiaVendas.tsx`). LEITURA OBRIGATÓRIA nas 5
+  primeiras vezes de cada pessoa (tela cheia, faixa vermelha, "Li e entendi" só depois de rolar até o fim + 8 s; no máximo
+  1 vez por abertura do sistema). Contagem em `guia_leituras` (funções `guia_vezes`/`guia_li`); admin vê quem leu em
+  Cirurgias do dia. Mudou o fluxo? Atualize o texto e suba `GUIA_VERSAO` — a contagem recomeça.

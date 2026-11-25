@@ -9,6 +9,7 @@ import { useCarregar, ok, Aviso, Carregando, Etiqueta } from "../components/ui";
 import { fmtData, fmtDataHora, fmtMoeda, isoDia, somaDias } from "../lib/util";
 import { FORMAS_REPASSE } from "../lib/repasse";
 import { MarcarDataCirurgia } from "./VendasOrientacao";
+import { GuiaVendas, LeiturasGuia } from "../components/GuiaVendas";
 
 interface Linha {
   venda_id: string | null; repasse_id: string | null; venda_numero: number | null; repasse_numero: number | null;
@@ -75,6 +76,7 @@ export default function CirurgiasDia() {
           <p className="sub" style={{ margin: 0 }}>Todas as cirurgias vendidas (na clínica e fora). Dê o ✔ quando forem realizadas: só depois disso os médicos recebem e a nota pode ser emitida.</p>
         </div>
         <div className="linha nao-imprimir">
+          <GuiaVendas />
           <button onClick={() => irPara(isoDia(somaDias(deData(dia), -1)))}>←</button>
           <input type="date" value={dia} onChange={(e) => e.target.value && irPara(e.target.value)} style={{ width: 160 }} />
           <button onClick={() => irPara(isoDia(somaDias(deData(dia), 1)))}>→</button>
@@ -161,6 +163,7 @@ export default function CirurgiasDia() {
           </table>
         )}
       </div>
+      <LeiturasGuia />
     </div>
   );
 }
