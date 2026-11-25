@@ -7,10 +7,12 @@
 --    (sem acento, primeiro e último nome). Ex.: Pedro Boni tem 2 cadastros no Micrologos (19 e 21) -> o mesmo profissional.
 -- 2) Médicos antigos que não estão no sistema novo entram como profissionais INATIVOS, sem login
 --    (e-mail vazio é permitido para inativo, migração 0008), só para o histórico de agenda e prontuário.
--- 3) "Agendas" do Micrologos que não são pessoas (0 Sem Médico, 12 Centro Cirúrgico, 20 Ortóptica,
---    23 Consumed Olhos, 28 Orientação Cirúrgica, 31 Contatólogo, 6 Eveline/Campo Visual, 9 Fernanda,
---    25 Médico Transcrição, 26 Prestador Não Identificado) NÃO entram aqui: ❓ aguardam decisão da dona
---    sobre como ficam as agendas de recurso no sistema novo (ver migracao/PROXIMOS-PASSOS.md).
+-- 3) Colunas de setor (decisão da dona, 25/11/2026; migração 0152): 12 Centro Cirúrgico, 20 Ortóptica,
+--    31 Contatólogo e 6 Eveline (Campo Visual) -> as colunas de setor criadas na 0152; 28 Orientação Cirúrgica
+--    -> a coluna da Orientação (Alessandra, profissionais.orientacao_cirurgica). Sem agenda e sem uso:
+--    0 Sem Médico, 9 Fernanda, 23 Consumed Olhos, 25 Médico Transcrição, 26 Prestador Não Identificado (não entram).
+-- 5) Antonio Carlos de Souza Ferreira (24, cirurgião de fora) fica ATIVO sem login (0152). Marcos Arnaut e
+--    Annamaria não trabalham mais na clínica -> inativos.
 -- 4) Luciano Campino Pinto (8, instrumentador, COREN) já existe no sistema novo (faturamento) -> ligado pelo nome.
 -- =====================================================================
 
@@ -22,6 +24,17 @@ create or replace function pg_temp.nome_chave(p text) returns text language sql 
   from (select upper(regexp_replace(translate(legacy_micrologos.txt(p),
           'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ', 'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC'), '\s+', ' ', 'g')) n) x
 $$;
+
+insert into legacy_micrologos.mapa_ids (entidade, legacy_id, novo_id, tabela_nova)
+select 'medico', v.cod, p.id, 'public.profissionais'
+from (values ('12', 'Centro Cirúrgico'), ('20', 'Ortóptica'), ('31', 'Contatólogo'), ('6', 'Eveline (Campo Visual)')) v(cod, nome)
+join public.profissionais p on p.nome = v.nome and p.agenda_recurso
+on conflict (entidade, legacy_id) do nothing;
+insert into legacy_micrologos.mapa_ids (entidade, legacy_id, novo_id, tabela_nova)
+select 'medico', '28', p.id, 'public.profissionais'
+from public.profissionais p where p.orientacao_cirurgica and p.funcao <> 'medico' and p.ativo
+order by p.nome limit 1
+on conflict (entidade, legacy_id) do nothing;
 
 create temp table _med as
 select m.*, btrim(m.id_medico)::int as cod, pg_temp.crm_chave(m.crm) as crm_k, pg_temp.nome_chave(m.nome) as nome_k

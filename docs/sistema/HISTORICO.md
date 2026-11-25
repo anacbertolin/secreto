@@ -1722,3 +1722,18 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   primeiras vezes de cada pessoa (tela cheia, faixa vermelha, "Li e entendi" só depois de rolar até o fim + 8 s; no máximo
   1 vez por abertura do sistema). Contagem em `guia_leituras` (funções `guia_vezes`/`guia_li`); admin vê quem leu em
   Cirurgias do dia. Mudou o fluxo? Atualize o texto e suba `GUIA_VERSAO` — a contagem recomeça.
+
+## 25/11/2026: Colunas de setor na agenda, como no Micrologos (sessão "Dados para migração")
+- Pedido da dona: a agenda fica com as mesmas colunas e a mesma ordem do Micrologos, **em ordem alfabética**, misturando
+  médicos e setores (Antonio, Centro Cirúrgico, Contatólogo, Eveline (Campo Visual), Gelson, Gisele, Luiza, Matheus, Max,
+  Orientação Cirúrgica, Ortóptica, Pedro, Renato).
+- **Migração 0152 `agenda_colunas_setor`:**
+  - `profissionais.agenda_recurso` (coluna de setor, não é pessoa) e `profissionais.sem_acesso` (ativo sem login);
+  - o check `profissionais_email_se_ativo` passou a aceitar ativo sem e-mail quando `sem_acesso`;
+  - criadas as colunas Centro Cirúrgico, Contatólogo, Eveline (Campo Visual) e Ortóptica (`funcao` enfermagem, sem login);
+  - criado o cirurgião de fora **Antonio Carlos de Souza Ferreira** (CRM 52788066-RJ), ativo, sem login. Ele fatura pela
+    Unimed como prestador PF.
+- `app/src/lib/dados.ts` (`listaAgendas`): inclui `agenda_recurso` e ordena todas as colunas pelo nome. Horários e
+  bloqueios dessas colunas são cadastrados na mesma tela dos médicos.
+- Pendente (tarefa sugerida à dona): esconder as colunas de setor das listas de PESSOAS (chat interno, ramais, WhatsApp, Equipe).
+- Médicos que saíram: Marcos Arnaut e Annamaria Ciminelli (inativos na migração).
