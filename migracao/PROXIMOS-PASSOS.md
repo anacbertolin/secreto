@@ -25,6 +25,11 @@
   - telefones sem DDD recebem o DDD 21;
   - o nº do prontuário usado no dia a dia é o "código" (ID) do Micrologos;
   - o que fazer com os 153 CPFs repetidos.
+- **Convênios** (`migracao/transformacoes/02_convenios.sql`), testado no ensaio:
+  - 31 convênios (22 ativos), 384 planos, 223 procedimentos, 13.905 preços, 47 códigos de hospital;
+  - os particulares ficam de fora (particular = sem convênio);
+  - **conferência com a tela do Bradesco: 113 de 113 iguais**, só a Epilação no plano Empresa diverge (pergunta à dona em aberto);
+  - a cópia do Firebird nunca leva senhas, tokens nem dados bancários (lista no script).
 - **Próximos:** convênios e planos direto do banco (CONVENIOS_MESTRE/CONVENIOS/PRECOS_PRODUTOS…), profissionais, agenda,
   atendimentos (PEP) e contas.
 - **Canal para a carga no Supabase:** ainda falta. A dona não conseguiu criar a chave secreta; os links assinados servem

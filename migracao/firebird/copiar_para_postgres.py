@@ -32,6 +32,15 @@ _cp1252.decoding_table = "".join(chr(i) if c == "\ufffe" else c for i, c in enum
 
 LOTE = 5000
 
+# Colunas que NUNCA são copiadas (senhas, tokens, dados bancários). Ficam como NULL na tabela bruta.
+COLUNAS_SECRETAS = {
+    ("CONVENIOS_INFO", "LOGIN"), ("CONVENIOS_INFO", "SENHA"), ("CONVENIOS_MESTRE", "AUTORIZADOR_SENHA"),
+    ("CONVENIOS_MESTRE", "AUTORIZADOR_HTML"), ("UNIDADES", "TES_LOGIN"), ("UNIDADES", "TES_SENHA"),
+    ("MEDICOS", "ZOOP_TOKEN_ID"), ("MEDICOS", "ZOOP_MED_BANK_ACCOUNT_NUMBER"), ("MEDICOS", "ZOOP_MED_ROUTING_NUMBER"),
+    ("MEDICOS", "ZOOP_MED_BANK_CODE"), ("MEDICOS", "ZOOP_MED_TAXPAYER_ID"), ("MEDICOS", "ZOOP_SELLER_ID"),
+}
+PADROES_SECRETOS = ("SENHA", "PASSWORD", "TOKEN", "SECRET")
+
 
 def texto(v):
     if v is None:
@@ -97,7 +106,8 @@ def main():
                           (f"{a.arquivo}:{t}", nome, cols, total))
                 carga = p.fetchone()[0]
                 p.execute(f'delete from legacy_micrologos."bruto_{nome}" where _carga_id <> %s', (carga,))
-                sel = ", ".join(f'"{c}"' for c in cols_fb)
+                sel = ", ".join("null" if ((t, c) in COLUNAS_SECRETAS or any(x in c for x in PADROES_SECRETOS)) else f'"{c}"'
+                                for c in cols_fb)
                 cur.execute(f'select {sel} from "{t}"')
                 n = 0
                 colunas_pg = ", ".join(["_carga_id", "_linha"] + [f'"{c}"' for c in cols])
