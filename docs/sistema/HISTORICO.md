@@ -1698,3 +1698,9 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   Vitrectomia (repasse 29): parcela 1 cai 25/12 → médico recebe 25/01.
 - Repasse: nova aba "Previsão de pagamentos" — tabela médico × mês (3/6/12/24 meses) com quanto cada médico recebe, pelas
   datas automáticas da 0156; clicar no valor mostra de quais repasses/parcelas vem.
+- (0157, decisão do Dr. Gelson) Sociedade Dr. Gelson + Dr. Max: em todo repasse de um dos dois (qualquer procedimento,
+  qualquer forma de pagamento, venda de lente, Clínica Vital) a parte do médico é dividida 50/50; o centavo que sobra fica com
+  o Dr. Gelson. Tabela `repasse_sociedade` (fica_centavo) + visão `repasse_parcelas_medicos` (security_invoker; uma linha por
+  parcela e por médico que recebe; demais partes divididas na mesma proporção). Relatório por médico e Previsão usam a visão;
+  o repasse mostra a metade de cada um por parcela. Vale para os já lançados (vitrectomia nº 29: R$ 410,48 + R$ 410,48 por
+  parcela). Clínica Vital: continua sem imposto e sem os 20%; cirurgião padrão = Dr. Max (R$ 250 para cada).

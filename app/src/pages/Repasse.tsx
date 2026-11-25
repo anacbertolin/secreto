@@ -488,6 +488,10 @@ export function RepasseDetalhe() {
     return r;
   }, [id]);
   // veio de uma venda da Orientação Cirúrgica? (migração 0101: o cancelamento leva a venda junto)
+  // sócios (0157): divisão da parte do médico por parcela
+  const divisao = useCarregar(async () => ok(await supabase.from("repasse_parcelas_medicos")
+    .select("parcela_id, profissional_id, medico_nome, medico, dividido").eq("repasse_id", id!).eq("dividido", true)) as
+    { parcela_id: string; profissional_id: string; medico_nome: string; medico: number; dividido: boolean }[], [id]);
   const vendaLigada = useCarregar(async () =>
     (ok(await supabase.from("orientacao_vendas").select("id, numero").eq("repasse_id", id!).limit(1)) as { id: string; numero: number }[])[0] ?? null, [id]);
 
@@ -593,6 +597,11 @@ export function RepasseDetalhe() {
 
       {!cob && <div className="painel">
         <h2>Parcelas</h2>
+        {(divisao.dados ?? []).length > 0 && (
+          <Aviso tipo="info">Sociedade: a parte do médico é dividida <b>50% para cada</b> — {[...new Set((divisao.dados ?? []).map((d) => d.medico_nome))].join(" e ")} (o centavo que sobra fica com o Dr. Gelson).
+            Total para cada: {[...new Set((divisao.dados ?? []).map((d) => d.medico_nome))].map((nome) =>
+              `${nome.split(" ")[0]} ${fmtMoeda((divisao.dados ?? []).filter((d) => d.medico_nome === nome).reduce((x, d) => x + Number(d.medico), 0))}`).join(" · ")}</Aviso>
+        )}
         {ativo && r.parcelas > 1 && (
           <p className="muted pequeno">Tudo automático: a parcela conta como recebida na data prevista (o cartão paga). Fechamento no dia 20: o que cai até o dia 20 é pago ao médico no dia 25 do mesmo mês; depois do dia 20, no dia 25 do mês seguinte.</p>
         )}
@@ -610,7 +619,9 @@ export function RepasseDetalhe() {
                   <td style={num}>{fmtMoeda(p.taxa_interna)}</td>
                   <td style={num}>{fmtMoeda(p.custos)}</td>
                   <td style={num}>{fmtMoeda(p.centro_cirurgico)}</td>
-                  <td style={num}><b>{fmtMoeda(p.medico)}</b></td>
+                  <td style={num}><b>{fmtMoeda(p.medico)}</b>
+                    {(divisao.dados ?? []).filter((d) => d.parcela_id === p.id).map((d) => (
+                      <div key={d.profissional_id} className="muted pequeno">{d.medico_nome.split(" ")[0]} {fmtMoeda(d.medico)}</div>))}</td>
                   <td>
                     {p.recebido_em ? (p.recebido_em <= isoDia(new Date())
                       ? <span>✅ {fmtData(p.recebido_em)}</span>
@@ -663,14 +674,34 @@ function CancelarRepasse({ venda, aoFechar, aoConfirmar }: {
 // ------------------------------------------------------------------ relatório por médico
 interface LinhaRel extends Parcela { repasses: Pick<Repasse, "numero" | "procedimento" | "data_cirurgia" | "profissional_id" | "forma_pagamento" | "parcelas" | "status"> & { profissionais: { nome: string } | null; pacientes: { nome: string; nome_social: string | null } | null } }
 
+/** linha da visão repasse_parcelas_medicos (0157): uma por parcela e por médico que recebe (sócios Gelson + Max: 50/50) */
+interface ParcelaMedico {
+  parcela_id: string; repasse_id: string; numero: number; data_prevista: string; recebido_em: string | null; pago_medico_em: string | null;
+  profissional_id: string; medico_nome: string; dividido: boolean; cirurgiao_id: string; cirurgiao_nome: string;
+  repasse_numero: number; procedimento: string; data_cirurgia: string; forma_pagamento: string; parcelas: number; status: string; regra: string;
+  paciente_nome: string | null; paciente_nome_social: string | null;
+  valor: number; imposto: number; taxa_interna: number; custos: number; centro_cirurgico: number; medico: number;
+}
+function paraLinhaRel(v: ParcelaMedico): LinhaRel {
+  return {
+    id: `${v.parcela_id}-${v.profissional_id}`, repasse_id: v.repasse_id, numero: v.numero, data_prevista: v.data_prevista, valor: v.valor, valor_recebido: null,
+    recebido_em: v.recebido_em, imposto: v.imposto, custos: v.custos, centro_cirurgico: v.centro_cirurgico, taxa_interna: v.taxa_interna, medico: v.medico,
+    pago_medico_em: v.pago_medico_em,
+    repasses: {
+      numero: v.repasse_numero, procedimento: v.dividido ? `${v.procedimento} (cirurgião: ${v.cirurgiao_nome.split(" ")[0]} · 50%)` : v.procedimento,
+      data_cirurgia: v.data_cirurgia, profissional_id: v.profissional_id, forma_pagamento: v.forma_pagamento, parcelas: v.parcelas, status: v.status,
+      profissionais: { nome: v.medico_nome }, pacientes: v.paciente_nome ? { nome: v.paciente_nome, nome_social: v.paciente_nome_social } : null,
+    },
+  };
+}
+
 function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
   const [f, setF] = useState({ de: primeiroDiaMes(), ate: isoDia(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)), medico: "todos", situacao: "todas" });
   const { dados, erro, carregando } = useCarregar(async () => {
-    const q = supabase.from("repasse_parcelas")
-      .select("*, repasses!inner(numero, procedimento, data_cirurgia, profissional_id, forma_pagamento, parcelas, status, profissionais!repasses_profissional_id_fkey(nome), pacientes(nome, nome_social))")
-      .not("pago_medico_em", "is", null).gte("pago_medico_em", f.de).lte("pago_medico_em", f.ate).neq("repasses.status", "cancelado").neq("repasses.regra", "cobranca")
+    const q = supabase.from("repasse_parcelas_medicos").select("*")
+      .not("pago_medico_em", "is", null).gte("pago_medico_em", f.de).lte("pago_medico_em", f.ate).neq("status", "cancelado").neq("regra", "cobranca")
       .order("pago_medico_em").limit(5000);
-    return ok(await (f.medico === "todos" ? q : q.eq("repasses.profissional_id", f.medico))) as LinhaRel[];
+    return (ok(await (f.medico === "todos" ? q : q.eq("profissional_id", f.medico))) as ParcelaMedico[]).map(paraLinhaRel);
   }, [f.de, f.ate, f.medico]);
 
   const linhas = (dados ?? []).filter((l) => f.situacao === "todas" || (f.situacao === "pagar" ? !jaPago(l.pago_medico_em) : jaPago(l.pago_medico_em)));
@@ -1023,13 +1054,9 @@ function CustosAPagar({ de, ate, situacao }: { de: string; ate: string; situacao
 function Previsao() {
   const [meses, setMeses] = useState(12);
   const hoje = isoDia(new Date());
-  const { dados, erro, carregando } = useCarregar(async () => ok(await supabase.from("repasse_parcelas")
-    .select("medico, pago_medico_em, repasse_id, numero, repasses!inner(numero, procedimento, parcelas, status, regra, profissional_id, profissionais!repasses_profissional_id_fkey(nome))")
-    .gte("pago_medico_em", hoje).neq("repasses.status", "cancelado").neq("repasses.regra", "cobranca")
-    .order("pago_medico_em").limit(5000)) as unknown as {
-      medico: number; pago_medico_em: string; repasse_id: string; numero: number;
-      repasses: { numero: number; procedimento: string; parcelas: number; profissional_id: string; profissionais: { nome: string } | null };
-    }[], []);
+  const { dados, erro, carregando } = useCarregar(async () => (ok(await supabase.from("repasse_parcelas_medicos").select("*")
+    .gte("pago_medico_em", hoje).neq("status", "cancelado").neq("regra", "cobranca")
+    .order("pago_medico_em").limit(5000)) as ParcelaMedico[]).map(paraLinhaRel) as (LinhaRel & { pago_medico_em: string })[], []);
   const [aberto, setAberto] = useState<string | null>(null);
   const colunas = Array.from({ length: meses }, (_, i) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + i); return isoDia(d).slice(0, 7); });
   const linhas = (dados ?? []).filter((l) => colunas.includes(l.pago_medico_em.slice(0, 7)));
@@ -1065,7 +1092,7 @@ function Previsao() {
           <table className="tabela">
             <thead><tr><th>Recebe em</th><th>Repasse</th><th>Procedimento</th><th>Parcela</th><th style={num}>Valor</th></tr></thead>
             <tbody>{detalhe.map((l) => (
-              <tr key={`${l.repasse_id}-${l.numero}`}><td>{fmtData(l.pago_medico_em)}</td><td><Link to={`/repasse/${l.repasse_id}`}>nº {l.repasses.numero}</Link></td>
+              <tr key={l.id}><td>{fmtData(l.pago_medico_em)}</td><td><Link to={`/repasse/${l.repasse_id}`}>nº {l.repasses.numero}</Link></td>
                 <td>{l.repasses.procedimento}</td><td>{l.numero}/{l.repasses.parcelas}</td><td style={num}>{fmtMoeda(l.medico)}</td></tr>
             ))}</tbody>
           </table>
