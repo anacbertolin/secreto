@@ -321,6 +321,26 @@ export function Chat(props: {
   const [opcoes, setOpcoes] = useState(false);
   const [transferir, setTransferir] = useState(false);
   const fim = useRef<HTMLDivElement>(null);
+  // Respostas rápidas: digitar "/" mostra as mensagens prontas do número (migração 0102)
+  const respostas = useCarregar(async () => podeResponder
+    ? ok(await supabase.from("whatsapp_respostas_rapidas").select("*").eq("setor", c.setor ?? "clinica").order("atalho")) as RespostaRapida[]
+    : [], [c.setor, podeResponder]);
+  const [rapIdx, setRapIdx] = useState(0);
+  const [rapFechado, setRapFechado] = useState(false);
+  const [gerenciarRap, setGerenciarRap] = useState(false);
+  const caixa = useRef<HTMLTextAreaElement>(null);
+  const termoRap = texto.startsWith("/") && !texto.includes("\n") && !rapFechado ? texto.slice(1).trim().toLowerCase() : null;
+  const achadasRap = termoRap === null ? [] : (respostas.dados ?? []).filter((r) =>
+    !termoRap || r.atalho.includes(termoRap) || r.texto.toLowerCase().includes(termoRap)).slice(0, 8);
+  const nomePaciente = (() => {
+    const n = (c.pacientes ? (c.pacientes.nome_social || c.pacientes.nome) : c.nome_contato ?? "").trim().split(/\s+/)[0] ?? "";
+    return n ? n.charAt(0).toUpperCase() + n.slice(1).toLowerCase() : "";
+  })();
+  function usarRapida(r: RespostaRapida) {
+    setTexto(r.texto.replace(/\{nome\}/gi, nomePaciente).replace(/ ,/g, ","));
+    setRapIdx(0);
+    window.setTimeout(() => caixa.current?.focus(), 0);
+  }
 
   // As 500 mais recentes (com histórico importado do celular a conversa pode ter milhares)
   const msgs = useCarregar(async () =>
@@ -597,16 +617,45 @@ export function Chat(props: {
               <div className="wa-botoes-anexo">
                 <button className="mini" title="Anexar foto ou documento" disabled={enviando || preparando} onClick={() => seletor.current?.click()}>📎</button>
                 <button className="mini" title="Gravar áudio" disabled={enviando || preparando} onClick={comecarGravacao}>🎤</button>
+                <button className="mini" title="Respostas rápidas (ou digite / na caixa de texto)" disabled={enviando || preparando}
+                  onClick={() => { setRapFechado(false); setTexto("/"); caixa.current?.focus(); }}>⚡</button>
               </div>
+              {termoRap !== null && (
+                <div className="wa-rapidas">
+                  {achadasRap.length === 0 ? (
+                    <div className="pequeno muted" style={{ padding: "6px 10px" }}>
+                      {(respostas.dados ?? []).length === 0 ? "Nenhuma resposta rápida cadastrada ainda." : "Nenhuma resposta com esse atalho."}
+                    </div>
+                  ) : achadasRap.map((r, i) => (
+                    <button key={r.id} className={i === Math.min(rapIdx, achadasRap.length - 1) ? "ativa" : ""}
+                      onMouseDown={(e) => { e.preventDefault(); usarRapida(r); }}>
+                      <b>/{r.atalho}</b> <span>{r.texto.length > 110 ? r.texto.slice(0, 110) + "…" : r.texto}</span>
+                    </button>
+                  ))}
+                  <div className="wa-rapidas-rodape">
+                    <span className="pequeno muted">↑ ↓ para escolher · Enter para usar · Esc fecha</span>
+                    <button className="mini" onMouseDown={(e) => { e.preventDefault(); setGerenciarRap(true); }}>⚙ Cadastrar / editar</button>
+                  </div>
+                </div>
+              )}
               <textarea
+                ref={caixa}
                 value={texto}
                 placeholder={preparando ? "Preparando o áudio…" : anexo && !anexoAudio ? "Legenda (opcional)…" : "Escreva a resposta… (Enter envia, Shift+Enter pula linha)"}
-                onChange={(e) => setTexto(e.target.value)}
+                onChange={(e) => { setTexto(e.target.value); setRapIdx(0); if (!e.target.value.startsWith("/")) setRapFechado(false); }}
                 onPaste={(e) => {
                   const f = Array.from(e.clipboardData.files)[0];
                   if (f) { e.preventDefault(); escolherArquivo(f); }
                 }}
                 onKeyDown={(e) => {
+                  if (termoRap !== null) {
+                    if (e.key === "ArrowDown" && achadasRap.length) { e.preventDefault(); setRapIdx((i) => Math.min(i + 1, achadasRap.length - 1)); return; }
+                    if (e.key === "ArrowUp" && achadasRap.length) { e.preventDefault(); setRapIdx((i) => Math.max(i - 1, 0)); return; }
+                    if (e.key === "Escape") { e.preventDefault(); setRapFechado(true); return; }
+                    if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey && achadasRap.length) {
+                      e.preventDefault(); usarRapida(achadasRap[Math.min(rapIdx, achadasRap.length - 1)]); return;
+                    }
+                  }
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
                     enviar();
@@ -631,6 +680,8 @@ export function Chat(props: {
           )}
         </div>
       )}
+
+      {gerenciarRap && <RespostasRapidas setor={c.setor ?? "clinica"} aoFechar={() => { setGerenciarRap(false); respostas.recarregar(); }} />}
 
       {transferir && (
         <Transferir setor={c.setor ?? "clinica"} atual={c.responsavel_id} aoFechar={() => setTransferir(false)}
@@ -1147,6 +1198,90 @@ export function ForaDoHorario(props: { setor: SetorWA; aoFechar: () => void }) {
             );
           })}
         </>
+      )}
+    </Modal>
+  );
+}
+
+// ---------- Respostas rápidas (migração 0102, pedido da dona em 25/11/2026) ----------
+export interface RespostaRapida { id: string; setor: SetorWA; atalho: string; texto: string }
+
+/** Cadastro das respostas rápidas do número: atalho (o que vem depois da barra) e o texto. {nome} = primeiro nome. */
+export function RespostasRapidas(props: { setor: SetorWA; aoFechar: () => void }) {
+  const { eu } = useAuth();
+  const pode = podeResponderSetor(eu, props.setor);
+  const lista = useCarregar(async () => ok(await supabase.from("whatsapp_respostas_rapidas").select("*")
+    .eq("setor", props.setor).order("atalho")) as RespostaRapida[], [props.setor]);
+  const vazio = { id: "", atalho: "", texto: "" };
+  const [f, setF] = useState(vazio);
+  const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const limparAtalho = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/^\//, "")
+    .replace(/\s+/g, "-").replace(/[^a-z0-9_-]/g, "").slice(0, 30);
+
+  async function salvar() {
+    setErro("");
+    if (!f.atalho || !f.texto.trim()) { setErro("Preencha o atalho e o texto."); return; }
+    setSalvando(true);
+    const dados = { setor: props.setor, atalho: f.atalho, texto: f.texto.trim() };
+    const { error } = f.id
+      ? await supabase.from("whatsapp_respostas_rapidas").update(dados).eq("id", f.id)
+      : await supabase.from("whatsapp_respostas_rapidas").insert(dados);
+    setSalvando(false);
+    if (error) { setErro(error.code === "23505" ? `Já existe uma resposta com o atalho /${f.atalho}.` : msgErro(error)); return; }
+    setF(vazio);
+    lista.recarregar();
+  }
+  async function apagar(r: RespostaRapida) {
+    if (!confirm(`Apagar a resposta rápida /${r.atalho}?`)) return;
+    const { error } = await supabase.from("whatsapp_respostas_rapidas").delete().eq("id", r.id);
+    if (error) setErro(msgErro(error));
+    if (f.id === r.id) setF(vazio);
+    lista.recarregar();
+  }
+
+  return (
+    <Modal titulo="⚡ Respostas rápidas" largo aoFechar={props.aoFechar} rodape={<button onClick={props.aoFechar}>Fechar</button>}>
+      <p className="pequeno muted" style={{ marginTop: 0 }}>
+        Mensagens prontas do dia a dia. Na conversa, digite <b>/</b> (barra) e escolha — ou clique no <b>⚡</b>. O texto entra
+        na caixa e você pode mexer antes de enviar. Escreva <b>{"{nome}"}</b> onde quiser o primeiro nome do paciente.
+        A lista é a mesma para todos que atendem {props.setor === "orientacao" ? "a Orientação Cirúrgica" : "o número da clínica"}.
+      </p>
+      {pode && (
+        <div className="painel" style={{ padding: 12, marginBottom: 12 }}>
+          <div className="linha" style={{ alignItems: "flex-end" }}>
+            <label style={{ width: 200 }}>Atalho
+              <input value={f.atalho ? "/" + f.atalho : ""} placeholder="/risco" onChange={(e) => setF({ ...f, atalho: limparAtalho(e.target.value) })} />
+            </label>
+            <span className="pequeno muted">Palavra curta, sem espaço (ex.: /risco, /jejum, /documentos)</span>
+          </div>
+          <label>Texto
+            <textarea rows={4} value={f.texto} placeholder="Olá, {nome}! Para a sua cirurgia, traga…" onChange={(e) => setF({ ...f, texto: e.target.value })} />
+          </label>
+          <div className="linha">
+            <button className="primario" disabled={salvando} onClick={() => void salvar()}>{salvando ? "Salvando…" : f.id ? "Salvar alteração" : "+ Adicionar"}</button>
+            {f.id && <button onClick={() => setF(vazio)}>Cancelar edição</button>}
+          </div>
+          {erro && <Aviso>{erro}</Aviso>}
+        </div>
+      )}
+      {lista.carregando && !lista.dados ? <Carregando /> : (lista.dados ?? []).length === 0 ? (
+        <div className="vazio pequeno">Nenhuma resposta rápida ainda.</div>
+      ) : (
+        <div className="wa-rapidas-lista">
+          {(lista.dados ?? []).map((r) => (
+            <div key={r.id} className="wa-rapidas-item">
+              <b>/{r.atalho}</b>
+              <span style={{ whiteSpace: "pre-wrap" }}>{r.texto}</span>
+              {pode && (
+                <span className="linha" style={{ flexWrap: "nowrap" }}>
+                  <button className="mini" onClick={() => setF({ id: r.id, atalho: r.atalho, texto: r.texto })}>Editar</button>
+                  <button className="mini" onClick={() => void apagar(r)}>Apagar</button>
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
       )}
     </Modal>
   );
