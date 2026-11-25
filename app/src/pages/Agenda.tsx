@@ -5,6 +5,7 @@ import { useCarregar, ok, Aviso, Carregando } from "../components/ui";
 import { NovoAgendamento, DetalheAgendamento, type ModoAgendamento } from "../components/AgendamentoModais";
 import { BuscaPaciente, type PacienteResumo } from "../components/ui";
 import { Lembretes } from "./WhatsApp";
+import { CirurgiaVendidaAgenda } from "./VendasOrientacao";
 import { whatsapp } from "../lib/whatsapp";
 import { MiniCalendario, ResumoAgendamento } from "../components/AgendaTopo";
 import { Modal } from "../components/ui";
@@ -336,6 +337,7 @@ export default function Agenda() {
           <button disabled={!sel} onClick={() => sel && abrir(sel)}>Abrir…</button>
         </div>
       )}
+      {sel?.tipo === "orientacao" && sel.paciente_id && <CirurgiaVendidaAgenda pacienteId={sel.paciente_id} />}
       {aviso && <Aviso tipo={aviso.tipo === "ok" ? "ok" : undefined}>{aviso.texto}</Aviso>}
       {base.carregando || (doDia.carregando && !doDia.dados) ? <Carregando /> : medicos.length === 0 ? (
         <div className="painel vazio">

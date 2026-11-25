@@ -18,6 +18,7 @@ import Faturamento, { ContaDetalhe, LoteDetalhe } from "./pages/Faturamento";
 import Procedimentos from "./pages/Procedimentos";
 import RepasseMedico, { RepasseDetalhe } from "./pages/Repasse";
 import VendasOrientacao from "./pages/VendasOrientacao";
+import CirurgiasDia from "./pages/CirurgiasDia";
 import Caixa, { CaixaDetalhe, papelCaixa } from "./pages/Caixa";
 import Relatorios from "./pages/Relatorios";
 import Acessos from "./pages/Acessos";
@@ -74,6 +75,8 @@ const MENU: ItemMenu[] = [
   { para: "/caixa", rotulo: "Caixa", icone: "💵", ve: (eu) => papelCaixa(eu).ver },
   { para: "/repasse", rotulo: "Repasse médico", icone: "💰", funcoes: ["faturamento", "admin"] },
   { para: "/orientacao-cirurgica/vendas", rotulo: "Vendas da orientação", icone: "💳", ve: (eu) => eu?.orientacao_cirurgica === true || eu?.funcao === "admin" },
+  // mapa com check de realizada (0158): orientação, faturamento, administração e os sócios (a tela confere o acesso)
+  { para: "/cirurgias-do-dia", rotulo: "Cirurgias do dia", icone: "🗓️", ve: (eu) => eu?.orientacao_cirurgica === true || eu?.funcao === "admin" || eu?.funcao === "faturamento" || /^(max|gelson)\b/i.test(eu?.nome ?? "") },
   { para: "/exames/importar", rotulo: "Arquivos dos aparelhos", icone: "📥", funcoes: ["medico", "enfermagem"] },
   { para: "/relatorios", rotulo: "Relatórios", icone: "📊" },
   { para: "/acessos", rotulo: "Acessos ao prontuário", icone: "🔍", funcoes: ["admin"] },
@@ -232,6 +235,7 @@ export default function App() {
           <Route path="/orientacao-cirurgica/vendas" element={
             eu?.orientacao_cirurgica === true || eu?.funcao === "admin" ? <VendasOrientacao /> : <div className="painel vazio">Você não tem acesso a esta área.</div>
           } />
+          <Route path="/cirurgias-do-dia" element={<CirurgiasDia />} />
           <Route path="/orientacao-cirurgica/ferramentas" element={
             podeVerSetor(eu, "orientacao") ? <WhatsApp key="orientacao" setor="orientacao" /> : <div className="painel vazio">Você não tem acesso a esta área.</div>
           } />

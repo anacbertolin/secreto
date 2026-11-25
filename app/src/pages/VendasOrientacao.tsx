@@ -69,7 +69,7 @@ export default function VendasOrientacao() {
         {carregando && !dados ? <Carregando /> : (
           <div className="rolagem">
             <table className="tabela">
-              <thead><tr><th>Nº</th><th>Pagamento</th><th>Paciente</th><th>Médico / procedimento</th><th>Forma</th><th style={{ textAlign: "right" }}>Valor</th><th>Situação</th></tr></thead>
+              <thead><tr><th>Nº</th><th>Pagamento</th><th>Paciente</th><th>Médico / procedimento</th><th>Forma</th><th style={{ textAlign: "right" }}>Valor</th><th>Cirurgia</th><th>Situação</th></tr></thead>
               <tbody>
                 {lista.map((v) => (
                   <tr key={v.id} className="clicavel" onClick={() => setEdit(v)}>
@@ -79,6 +79,11 @@ export default function VendasOrientacao() {
                     <td><b>{v.profissionais?.nome}</b><div className="muted pequeno">{v.procedimento}</div></td>
                     <td>{FORMAS_REPASSE[v.forma_pagamento]}{v.parcelas > 1 && ` ${v.parcelas}x`}</td>
                     <td style={{ textAlign: "right" }}>{fmtMoeda(v.valor_total)}</td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      {v.realizada_em ? <Etiqueta cor="verde">✔ {fmtData(v.data_cirurgia)}</Etiqueta>
+                        : v.status !== "cancelada" ? <MarcarDataCirurgia vendaId={v.id} repasseId={null} data={v.data_cirurgia} fora={!!v.fora_clinica} aoSalvar={recarregar} compacto /> : "—"}
+                      {v.fora_clinica && !v.realizada_em && <div className="muted pequeno">fora da clínica</div>}
+                    </td>
                     <td><Etiqueta cor={SITUACAO[v.status].cor}>{SITUACAO[v.status].rotulo}</Etiqueta>{v.status === "devolvida" && <div className="muted pequeno">{v.motivo}</div>}</td>
                   </tr>
                 ))}
@@ -104,7 +109,7 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
     proc_nome: base.procs.find((p) => p.id === venda?.procedimento_id)?.nome ?? "",
     procedimento: venda?.procedimento ?? "", lente_id: venda?.lente_id ?? "", valor: venda ? String(venda.valor_total).replace(".", ",") : "",
     forma: venda?.forma_pagamento ?? "pix", parcelas: String(venda?.parcelas ?? 1), data_pagamento: venda?.data_pagamento ?? isoDia(new Date()),
-    data_cirurgia: venda?.data_cirurgia ?? "", observacoes: venda?.observacoes ?? "",
+    data_cirurgia: venda?.data_cirurgia ?? "", observacoes: venda?.observacoes ?? "", fora: !!venda?.fora_clinica,
     anest: venda?.anestesista_direto ? String(venda.anestesista_direto).replace(".", ",") : "",
   });
   const [erro, setErro] = useState("");
@@ -145,7 +150,7 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
     const dados = {
       tipo: f.tipo, paciente_id: pac.id, profissional_id: f.profissional_id, procedimento_id: f.tipo === "lente" ? null : procId || null,
       procedimento: descricao() || f.procedimento.trim(), lente_id: f.lente_id || null, valor_total: valor, forma_pagamento: f.forma,
-      parcelas: f.forma === "credito" ? Number(f.parcelas) : 1, data_pagamento: f.data_pagamento, data_cirurgia: f.data_cirurgia || null,
+      parcelas: f.forma === "credito" ? Number(f.parcelas) : 1, data_pagamento: f.data_pagamento, data_cirurgia: f.data_cirurgia || null, fora_clinica: f.fora,
       observacoes: f.observacoes.trim() || null,
       anestesista_direto: f.tipo === "cirurgia" && (numOuNulo(f.anest) ?? 0) > 0 ? numOuNulo(f.anest) : null,
     };
@@ -224,7 +229,8 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
         </div>
         <div className="grade g3">
           <Campo rotulo="Data do pagamento"><input type="date" value={f.data_pagamento} onChange={set("data_pagamento")} /></Campo>
-          <Campo rotulo="Data prevista da cirurgia"><input type="date" value={f.data_cirurgia} onChange={set("data_cirurgia")} /></Campo>
+          <Campo rotulo="Data da cirurgia (se já souber)"><input type="date" value={f.data_cirurgia} onChange={set("data_cirurgia")} />
+            <label className="pequeno"><input type="checkbox" checked={f.fora} onChange={(e) => setF({ ...f, fora: e.target.checked })} /> Fora da clínica</label></Campo>
         </div>
         {f.tipo === "cirurgia" && (
           <Campo rotulo="Anestesista pago DIRETO pelo paciente (R$) — só se combinado">
@@ -242,5 +248,56 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
         </Modal>
       )}
     </Modal>
+  );
+}
+
+// ------------------------------------------------------------------ data da cirurgia (0158): marcada depois, pela agenda ou aqui
+export function MarcarDataCirurgia({ vendaId, repasseId, data, fora, aoSalvar, compacto }: {
+  vendaId: string | null; repasseId: string | null; data: string | null; fora: boolean; aoSalvar: () => void; compacto?: boolean;
+}) {
+  const [editando, setEditando] = useState(!data && !compacto);
+  const [d, setD] = useState(data ?? "");
+  const [fo, setFo] = useState(fora);
+  const [erro, setErro] = useState("");
+  async function salvar() {
+    setErro("");
+    const campos = { data_cirurgia: d || null, fora_clinica: fo };
+    const r = vendaId ? await supabase.from("orientacao_vendas").update(campos).eq("id", vendaId)
+      : await supabase.from("repasses").update(campos).eq("id", repasseId!);
+    if (r.error) return setErro(msgErro(r.error));
+    setEditando(false); aoSalvar();
+  }
+  if (!editando) return (
+    <span className="linha" style={{ gap: 4 }}>{data ? fmtData(data) : <Etiqueta cor="vermelho">sem data</Etiqueta>}
+      <button className="sutil pequeno" onClick={() => setEditando(true)}>{data ? "remarcar" : "marcar data"}</button></span>
+  );
+  return (
+    <span className="linha" style={{ gap: 4, flexWrap: "wrap" }}>
+      <input type="date" value={d} onChange={(e) => setD(e.target.value)} style={{ width: 150 }} />
+      <label className="pequeno"><input type="checkbox" checked={fo} onChange={(e) => setFo(e.target.checked)} /> fora da clínica</label>
+      <button className="primario pequeno" onClick={salvar}>Salvar</button>
+      {compacto && <button className="sutil pequeno" onClick={() => setEditando(false)}>✕</button>}
+      {erro && <span className="pequeno" style={{ color: "#c62828" }}>{erro}</span>}
+    </span>
+  );
+}
+
+/** Na agenda da Orientação: cirurgias vendidas deste paciente ainda não realizadas — marcar/remarcar a data ali mesmo. */
+export function CirurgiaVendidaAgenda({ pacienteId }: { pacienteId: string }) {
+  const { dados, recarregar } = useCarregar(async () => ok(await supabase.from("orientacao_vendas")
+    .select("id, numero, procedimento, data_cirurgia, fora_clinica").eq("paciente_id", pacienteId)
+    .in("status", ["aguardando", "devolvida", "lancada"]).is("realizada_em", null).order("criado_em")) as
+    { id: string; numero: number; procedimento: string; data_cirurgia: string | null; fora_clinica: boolean }[], [pacienteId]);
+  if (!dados?.length) return null;
+  return (
+    <div className="painel" style={{ borderLeft: "4px solid var(--primaria, #1565c0)" }}>
+      {dados.map((v) => (
+        <div key={v.id} className="linha" style={{ flexWrap: "wrap", gap: 8, marginBottom: 4 }}>
+          <span>💳 Cirurgia vendida: <b>{v.procedimento}</b> <span className="muted pequeno">(venda nº {v.numero})</span>{v.fora_clinica && <> <Etiqueta cor="roxo">fora da clínica</Etiqueta></>}</span>
+          <span className="pequeno muted">Cirurgia marcada para:</span>
+          <MarcarDataCirurgia vendaId={v.id} repasseId={null} data={v.data_cirurgia} fora={v.fora_clinica} aoSalvar={recarregar} />
+        </div>
+      ))}
+    </div>
   );
 }
