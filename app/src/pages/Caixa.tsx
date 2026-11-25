@@ -13,12 +13,14 @@ import { fmtData, fmtDataHora, fmtMoeda } from "../lib/util";
 type Setor = "recepcao" | "orientacao";
 export const SETORES: Record<Setor, string> = { recepcao: "Caixa da recepção", orientacao: "Caixa da Orientação Cirúrgica" };
 interface CaixaRow {
-  id: string; data: string; setor: Setor; status: "aberto" | "fechado" | "conferido" | "aprovado"; fundo_troco: number;
+  id: string; data: string; setor: Setor; status: "aberto" | "fechado" | "conferido" | "aprovado" | "cancelado"; fundo_troco: number;
   aberto_por: string | null; aberto_em: string; fechado_por: string | null; fechado_em: string | null;
   esperado_dinheiro: number | null; contado_dinheiro: number | null; diferenca_dinheiro: number | null; obs_fechamento: string | null;
   conferido_por: string | null; conferido_em: string | null; obs_conferencia: string | null;
   aprovado_por: string | null; aprovado_em: string | null; obs_aprovacao: string | null;
   devolvido_por: string | null; devolvido_em: string | null; motivo_devolucao: string | null;
+  cancelado_por?: string | null; cancelado_em?: string | null; motivo_cancelamento?: string | null;
+  reaberto_por?: string | null; reaberto_em?: string | null; motivo_reabertura?: string | null;
 }
 interface Pagamento {
   id: string; caixa_id: string; atendimento_id: string; forma: Forma; parcelas: number; valor: number; pagador: string | null;
@@ -47,6 +49,7 @@ export const STATUS_CAIXA: Record<CaixaRow["status"], { rotulo: string; cor: str
   fechado: { rotulo: "Fechado · aguardando conferência", cor: "amarelo" },
   conferido: { rotulo: "Conferido · aguardando aprovação", cor: "roxo" },
   aprovado: { rotulo: "Aprovado", cor: "verde" },
+  cancelado: { rotulo: "Cancelado (aberto por engano)", cor: "cinza" },
 };
 /** O que foi recebido: um ou mais tipos + itens marcados, gravados juntos em `descricao`
  *  (ex.: "Consulta (Retorno) + Exame (Tonometria, Mapeamento de retina)"). */
@@ -188,6 +191,7 @@ export default function Caixa() {
                 <div>
                   <b>Caixa aberto</b> desde {fmtDataHora(aberto.aberto_em)} por {nomes.nomeCompleto(aberto.aberto_por)} · fundo de troco {fmtMoeda(aberto.fundo_troco)}
                   {aberto.motivo_devolucao && <div><Etiqueta cor="vermelho">Devolvido para correção</Etiqueta> <span className="pequeno">{aberto.motivo_devolucao}</span></div>}
+                  {aberto.motivo_reabertura && <div><Etiqueta cor="vermelho">Reaberto para correção</Etiqueta> <span className="pequeno">{aberto.motivo_reabertura}</span></div>}
                 </div>
                 <button className="primario" onClick={() => nav(`/caixa/${aberto.id}`)}>Ir para o caixa →</button>
               </div>
@@ -283,6 +287,7 @@ export function CaixaDetalhe() {
   }, [id]);
   const [modal, setModal] = useState<"" | "receber" | "cortesia" | "saida" | "fechar" | "conferir" | "aprovar" | "devolver">("");
   const [pagarAt, setPagarAt] = useState<Atendimento | null>(null);
+  const [incluirAt, setIncluirAt] = useState<Atendimento | null>(null);
   const [erroAcao, setErroAcao] = useState("");
 
   if (carregando && !dados) return <Carregando />;
@@ -312,6 +317,17 @@ export function CaixaDetalhe() {
     if (error) setErroAcao(msgErro(error)); else recarregar();
   }
 
+  async function corrigir(acao: "caixa_cancelar" | "caixa_reabrir") {
+    setErroAcao("");
+    const texto = acao === "caixa_cancelar"
+      ? "Cancelar este caixa (aberto por engano)? Ele não é apagado: fica no histórico como cancelado. Escreva o motivo:"
+      : "Reabrir este caixa para correção? Ele volta a ficar aberto e precisa ser fechado, conferido e aprovado de novo. Escreva o motivo:";
+    const motivo = window.prompt(texto);
+    if (motivo === null) return;
+    if (!motivo.trim()) return setErroAcao("É preciso escrever o motivo.");
+    try { await rpc(acao, { p_caixa: cx.id, p_motivo: motivo.trim() }); recarregar(); } catch (e) { setErroAcao(msgErro(e)); }
+  }
+
   return (
     <div>
       <div className="cabecalho">
@@ -327,6 +343,12 @@ export function CaixaDetalhe() {
         </div>
       </div>
       <Aviso>{erroAcao}</Aviso>
+      {cx.status === "cancelado" && (
+        <Aviso tipo="info">Caixa cancelado por {nomes.nomeCompleto(cx.cancelado_por)} em {fmtDataHora(cx.cancelado_em)}: <b>{cx.motivo_cancelamento}</b>.</Aviso>
+      )}
+      {cx.motivo_reabertura && aberto && (
+        <Aviso tipo="alerta">Reaberto para correção por {nomes.nomeCompleto(cx.reaberto_por)} em {fmtDataHora(cx.reaberto_em)}: <b>{cx.motivo_reabertura}</b>. Corrija e feche de novo.</Aviso>
+      )}
       {cx.motivo_devolucao && aberto && (
         <Aviso tipo="alerta">Devolvido para correção por {nomes.nomeCompleto(cx.devolvido_por)} em {fmtDataHora(cx.devolvido_em)}: <b>{cx.motivo_devolucao}</b>. Corrija e feche de novo.</Aviso>
       )}
@@ -347,6 +369,8 @@ export function CaixaDetalhe() {
           <button className="primario" onClick={() => setModal("aprovar")}>✅ Aprovar</button>
           <button onClick={() => setModal("devolver")}>↩️ Devolver para correção</button>
         </>}
+        {eu?.caixa_corrigir && aberto && <button onClick={() => corrigir("caixa_cancelar")} title="Só para caixa aberto por engano">🚫 Cancelar caixa</button>}
+        {eu?.caixa_corrigir && ["fechado", "conferido", "aprovado"].includes(cx.status) && <button onClick={() => corrigir("caixa_reabrir")}>🔁 Reabrir para correção</button>}
       </div>
 
       {/* ---------- Totais ---------- */}
@@ -396,6 +420,7 @@ export function CaixaDetalhe() {
                     <td>{nomes.nome(a.criado_por)}</td>
                     <td className="nao-imprimir" style={{ whiteSpace: "nowrap" }}>
                       {a.venda_id && <span className="pequeno muted">pela tela de vendas</span>}
+                      {podeLancar && !a.cancelado && !a.cortesia && !a.venda_id && <button className="mini" onClick={() => setIncluirAt(a)} title="Incluir exames ou procedimentos neste mesmo paciente">➕ Incluir</button>}
                       {podeLancar && saldo > 0 && !a.venda_id && <button className="mini" onClick={() => setPagarAt(a)}>Receber</button>}
                       {podeLancar && !a.cancelado && !a.venda_id && <button className="mini" onClick={() => cancelar("caixa_atendimentos", a.id, `o atendimento de ${a.paciente_nome}`)}>Cancelar</button>}
                     </td>
@@ -472,6 +497,8 @@ export function CaixaDetalhe() {
           {cx.fechado_em && <li>🔒 Fechado por <b>{nomes.nomeCompleto(cx.fechado_por)}</b> em {fmtDataHora(cx.fechado_em)}{cx.obs_fechamento ? ` — ${cx.obs_fechamento}` : ""}</li>}
           {cx.conferido_em && <li>✔️ Conferido por <b>{nomes.nomeCompleto(cx.conferido_por)}</b> em {fmtDataHora(cx.conferido_em)}{cx.obs_conferencia ? ` — ${cx.obs_conferencia}` : ""}</li>}
           {cx.aprovado_em && <li>✅ Aprovado por <b>{nomes.nomeCompleto(cx.aprovado_por)}</b> em {fmtDataHora(cx.aprovado_em)}{cx.obs_aprovacao ? ` — ${cx.obs_aprovacao}` : ""}</li>}
+          {cx.reaberto_em && <li>🔁 Reaberto para correção por <b>{nomes.nomeCompleto(cx.reaberto_por)}</b> em {fmtDataHora(cx.reaberto_em)} — {cx.motivo_reabertura}</li>}
+          {cx.cancelado_em && <li>🚫 Cancelado por <b>{nomes.nomeCompleto(cx.cancelado_por)}</b> em {fmtDataHora(cx.cancelado_em)} — {cx.motivo_cancelamento}</li>}
           {cx.devolvido_em && <li>↩️ Última devolução: {nomes.nomeCompleto(cx.devolvido_por)} em {fmtDataHora(cx.devolvido_em)} — {cx.motivo_devolucao}</li>}
         </ul>
       </div>
@@ -483,6 +510,7 @@ export function CaixaDetalhe() {
       {(modal === "conferir" || modal === "aprovar" || modal === "devolver") && (
         <Decisao tipo={modal} cx={cx} souQuemFechou={!!eu && cx.fechado_por === eu.id} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />
       )}
+      {incluirAt && <IncluirNoAtendimento caixaId={cx.id} at={incluirAt} aoFechar={() => setIncluirAt(null)} aoSalvar={() => { setIncluirAt(null); recarregar(); }} />}
       {pagarAt && <ReceberSaldo caixaId={cx.id} at={pagarAt} aoFechar={() => setPagarAt(null)} aoSalvar={() => { setPagarAt(null); recarregar(); }} />}
     </div>
   );
@@ -708,6 +736,97 @@ function ReceberSaldo({ caixaId, at, aoFechar, aoSalvar }: { caixaId: string; at
       <Aviso>{erro}</Aviso>
       <p>{at.descricao ?? "Atendimento"} de {fmtData(at.criado_em)} · valor {fmtMoeda(at.valor)} · já pago {fmtMoeda(pagoDe(at))} · <b>falta {fmtMoeda(saldo)}</b></p>
       <div className="grade g2"><LinhasPagamento linhas={linhas} setLinhas={setLinhas} /></div>
+    </Modal>
+  );
+}
+
+/** Paciente já lançado volta do médico e vai fazer exames: inclui no MESMO atendimento (soma no valor e na descrição). */
+function IncluirNoAtendimento({ caixaId, at, aoFechar, aoSalvar }: { caixaId: string; at: Atendimento; aoFechar: () => void; aoSalvar: () => void }) {
+  const tabela = useTabelaParticular();
+  const lista = tabela.length ? tabela : TIPOS_RECEBIMENTO.flatMap((g) => DETALHES[g].map((nome) => ({ nome, grupo: g, valor: 0 })));
+  const [itens, setItens] = useState<string[]>([]);
+  const [outros, setOutros] = useState("");
+  const [filtro, setFiltro] = useState("");
+  const [valor, setValor] = useState("");
+  const [valorManual, setValorManual] = useState(false);
+  const [linhas, setLinhas] = useState<LinhaPag[]>([linhaVazia()]);
+  const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const precoDe = new Map(lista.map((i) => [i.nome, i.valor]));
+  const novaDescricao = [
+    ...TIPOS_RECEBIMENTO.map((g) => {
+      const m = lista.filter((i) => i.grupo === g && itens.includes(i.nome)).map((i) => i.nome);
+      return m.length ? `${g} (${m.join(", ")})` : "";
+    }).filter(Boolean),
+    ...(outros.trim() ? [outros.trim()] : []),
+  ].join(" + ");
+  function mudaValor(v: string) {
+    const antigo = valor;
+    setValor(v);
+    if (linhas.length === 1 && (!linhas[0].valor || linhas[0].valor === antigo)) setLinhas([{ ...linhas[0], valor: v }]);
+  }
+  function alterna(nome: string) {
+    const novos = itens.includes(nome) ? itens.filter((x) => x !== nome) : [...itens, nome];
+    setItens(novos);
+    if (!valorManual) {
+      const soma = n2(novos.reduce((s, i) => s + (precoDe.get(i) ?? 0), 0));
+      mudaValor(soma ? soma.toFixed(2).replace(".", ",") : "");
+    }
+  }
+  const adicional = lerValor(valor) ?? 0;
+  const saldoAntes = saldoDe(at);
+  const { pags } = validarLinhas(linhas);
+  const pago = n2(pags.reduce((s, p) => s + p.valor, 0));
+
+  async function salvar() {
+    setErro("");
+    if (!novaDescricao) return setErro("Marque o que foi incluído (ou escreva em “Outro”).");
+    if (lerValor(valor) === null || adicional <= 0) return setErro("Informe o valor do que foi incluído.");
+    const v = validarLinhas(linhas);
+    if (v.erro) return setErro(v.erro);
+    if (pago > n2(saldoAntes + adicional)) return setErro("O valor pago está maior do que falta receber.");
+    setSalvando(true);
+    const { error } = await supabase.from("caixa_atendimentos")
+      .update({ valor: n2(Number(at.valor) + adicional), descricao: [at.descricao, novaDescricao].filter(Boolean).join(" + ") })
+      .eq("id", at.id);
+    if (error) { setSalvando(false); return setErro(msgErro(error)); }
+    try { await gravarPagamentos(caixaId, at.id, v.pags); aoSalvar(); }
+    catch (e) { setSalvando(false); setErro("Incluído, mas o pagamento não foi gravado: " + msgErro(e) + " — use o botão “Receber” na lista."); }
+  }
+
+  const visiveis = lista.filter((i) => itens.includes(i.nome) || !filtro.trim() || semAcento(i.nome).includes(semAcento(filtro.trim())));
+  return (
+    <Modal largo titulo={`Incluir no atendimento de ${at.paciente_nome}`} aoFechar={aoFechar}
+      rodape={<><button onClick={aoFechar}>Cancelar</button><button className="primario" disabled={salvando} onClick={salvar}>{salvando ? "Salvando…" : "Incluir"}</button></>}>
+      <Aviso>{erro}</Aviso>
+      <p className="pequeno">Já lançado: <b>{at.descricao ?? "Atendimento"}</b> · {fmtMoeda(at.valor)} · já pago {fmtMoeda(pagoDe(at))}</p>
+      <div className="grade g2">
+        <input className="inteiro" placeholder="🔎 Procurar (ex.: oct, mapeamento, tonometria)" value={filtro} onChange={(e) => setFiltro(e.target.value)} autoFocus />
+        {(["Exame", "Procedimento", "Consulta"] as TipoRecebimento[]).map((g) => {
+          const doGrupo = visiveis.filter((i) => i.grupo === g);
+          if (!doGrupo.length) return null;
+          return (
+            <div key={g} className="inteiro">
+              <div className="muted pequeno" style={{ marginBottom: 4 }}>{g === "Exame" ? "Exames" : g === "Procedimento" ? "Procedimentos" : "Consultas"}</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {doGrupo.map((i) => (
+                  <button key={i.nome} type="button" className={"mini-l" + (itens.includes(i.nome) ? " primario" : "")} onClick={() => alterna(i.nome)}>
+                    {itens.includes(i.nome) ? "✓ " : ""}{i.nome}{i.valor > 0 && <span style={{ opacity: 0.75 }}> · {fmtMoeda(i.valor)}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        <Campo rotulo="Outro (se não estiver na lista — opcional)" className="inteiro"><input value={outros} onChange={(e) => setOutros(e.target.value)} /></Campo>
+        <Campo rotulo="Valor do que está sendo incluído (R$)"><input inputMode="decimal" value={valor} onChange={(e) => { setValorManual(true); mudaValor(e.target.value); }} /></Campo>
+        <div className="pequeno" style={{ alignSelf: "end" }}>Novo total do paciente: <b>{fmtMoeda(n2(Number(at.valor) + adicional))}</b></div>
+        <LinhasPagamento linhas={linhas} setLinhas={setLinhas} />
+        <div className="inteiro">
+          Pago agora: <b>{fmtMoeda(pago)}</b>
+          {n2(saldoAntes + adicional - pago) > 0 && <> · <b style={{ color: "#c62828" }}>falta receber {fmtMoeda(n2(saldoAntes + adicional - pago))}</b> (fica pendente)</>}
+        </div>
+      </div>
     </Modal>
   );
 }

@@ -1624,3 +1624,14 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
   Alessandra revisados (português, negrito, {nome}, campos ___ para completar, sem dados de paciente). Atalhos sem acento
   (endereco, marcacao, saudacao, revisaodeinjecao); a busca na conversa ignora acentos e mostra até 40, começando pelos
   atalhos que começam com o que foi digitado.
+
+### 25/11 — Caixa: incluir exames no mesmo paciente, cancelar e reabrir caixa (migração 0110, pedido da dona)
+- Caixa de teste da recepção aberto pela Soraline em 23/11 (vazio) **apagado direto no banco** a pedido da dona.
+- **➕ Incluir** (linha do paciente, caixa aberto): o paciente que volta do médico e vai fazer exames fica no MESMO atendimento —
+  soma o valor, completa a descrição ("Consulta + Exame (OCT)") e já recebe o pagamento. Não vale para cortesia nem venda da orientação.
+  Se o caixa do dia já fechou, lança como novo recebimento.
+- **🚫 Cancelar caixa** (só caixa aberto e sem lançamento válido — cancele as linhas antes): fica no histórico como "cancelado".
+- **🔁 Reabrir para correção** (fechado, conferido ou aprovado): volta a aberto e passa de novo por fechar/conferir/aprovar.
+- Os dois só para quem tem `profissionais.caixa_corrigir` (decisão da dona: **só ela**; não aparece na tela Equipe) + duas etapas da administração.
+- Teste no banco (transação desfeita): incluir 100→250 com novo pagamento; Soraline não cancela; caixa com lançamento não cancela;
+  fechar → reabrir; cancelar linhas → cancelar caixa → abrir outro. Build OK.
