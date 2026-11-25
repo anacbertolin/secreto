@@ -22,6 +22,7 @@ FONTES = [
 
 def limpar(t: str) -> str:
     t = t.replace("\r\n", "\n").replace("\r", "\n").replace("\x00", "")
+    t = re.sub("[\ud800-\udfff]", "", t)  # pedaços de caractere inválidos vindos do RTF
     t = re.sub(r"[ \t]+\n", "\n", t)
     t = re.sub(r"\n{3,}", "\n\n", t)
     return t.strip()
@@ -46,14 +47,15 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pg", required=True)
     a = ap.parse_args()
-    with psycopg.connect(a.pg) as pg:
+    with psycopg.connect(a.pg) as pg, psycopg.connect(a.pg) as leitura:
         pg.execute("""create table if not exists legacy_micrologos.textos_convertidos (
                         origem text not null, legacy_id text not null, texto text, primary key (origem, legacy_id))""")
         pg.execute("alter table legacy_micrologos.textos_convertidos enable row level security")
         for origem, sql in FONTES:
             pg.execute("delete from legacy_micrologos.textos_convertidos where origem = %s", (origem,))
             n = vazios = 0
-            with pg.cursor(name=f"ler_{origem}") as cur, pg.cursor() as w:
+            # leitura e gravação em conexões separadas (o COPY ocupa a conexão de gravação)
+            with leitura.cursor(name=f"ler_{origem}") as cur, pg.cursor() as w:
                 cur.itersize = 5000
                 cur.execute(sql)
                 with w.copy("copy legacy_micrologos.textos_convertidos (origem, legacy_id, texto) from stdin") as cp:
