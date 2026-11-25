@@ -328,6 +328,16 @@ export function Chat(props: {
   const [rapIdx, setRapIdx] = useState(0);
   const [rapFechado, setRapFechado] = useState(false);
   const [gerenciarRap, setGerenciarRap] = useState(false);
+  // Corrigir mensagem enviada: a API da Meta não deixa editar; vai uma correção citando a mensagem errada
+  const [corrigindo, setCorrigindo] = useState<Mensagem | null>(null);
+  const [emojis, setEmojis] = useState(false);
+  function inserirNoCursor(trecho: string) {
+    const el = caixa.current;
+    const ini = el?.selectionStart ?? texto.length, fim = el?.selectionEnd ?? texto.length;
+    const novo = texto.slice(0, ini) + trecho + texto.slice(fim);
+    setTexto(novo);
+    window.setTimeout(() => { el?.focus(); el?.setSelectionRange(ini + trecho.length, ini + trecho.length); }, 0);
+  }
   const caixa = useRef<HTMLTextAreaElement>(null);
   // Sem diferenciar acentos: "/endereço" acha o atalho "endereco"
   const semAcento = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -376,6 +386,7 @@ export function Chat(props: {
   }, [c.id, c.nao_lidas]);
 
   const qtd = msgs.dados?.length ?? 0;
+  const corrigidas = new Set((msgs.dados ?? []).filter((m) => m.direcao === "enviada" && m.em_resposta_a).map((m) => m.em_resposta_a as string));
   useEffect(() => {
     // Vindo da pesquisa: rola até a mensagem encontrada; senão, até o fim
     const alvo = props.destaque ? document.getElementById("msg-" + props.destaque) : null;
@@ -394,7 +405,10 @@ export function Chat(props: {
     setPendentes((ps) => ps.filter((p) => !reais.some((m) => m.texto === p.texto && m.quando >= new Date(new Date(p.quando).getTime() - 60000).toISOString())));
   }, [msgs.dados]);
   useEffect(() => { if (pendentes.length) fim.current?.scrollIntoView({ block: "end" }); }, [pendentes.length]);
-  async function enviarTexto(t: string) {
+  async function enviarTexto(t0: string) {
+    const corr = corrigindo;
+    const t = corr && !/^\*?corre[cç][aã]o/i.test(t0) ? `✏️ *Correção:*\n${t0}` : t0;
+    setCorrigindo(null);
     const temp: Mensagem = {
       id: "tmp-" + Date.now() + Math.random().toString(36).slice(2, 6), conversa_id: c.id, direcao: "enviada", tipo: "texto",
       texto: t, modelo: null, midia_id: null, midia_tipo: null, midia_nome: null, situacao: "enviando", erro: null,
@@ -405,7 +419,7 @@ export function Chat(props: {
     setErro("");
     if (!c.responsavel_id && eu) mudar({ responsavel_id: eu.id }); // quem responde assume a conversa
     try {
-      await whatsapp("texto", { conversa_id: c.id, texto: t });
+      await whatsapp("texto", { conversa_id: c.id, texto: t, corrige: corr?.id ?? null });
     } catch (e) {
       const msg = msgErro(e);
       setPendentes((ps) => ps.map((p) => (p.id === temp.id ? { ...p, situacao: "falhou", erro: msg } : p)));
@@ -607,7 +621,10 @@ export function Chat(props: {
         {(msgs.dados ?? []).map((m) => {
           const dia = fmtData(m.quando);
           const sep = dia !== diaAnterior ? ((diaAnterior = dia), <div key={"d" + m.id} className="wa-dia">{dia}</div>) : null;
-          return [sep, <Balao key={m.id} m={m} quem={nomeEquipe(m.enviado_por)} podeTranscrever={podeResponder} destacada={m.id === props.destaque} />];
+          const podeCorrigir = podeResponder && aberta && m.direcao === "enviada" && m.tipo === "texto" && !!m.wa_id && m.situacao !== "falhou";
+          return [sep, <Balao key={m.id} m={m} quem={nomeEquipe(m.enviado_por)} podeTranscrever={podeResponder} destacada={m.id === props.destaque}
+            corrigida={!!m.wa_id && corrigidas.has(m.wa_id)}
+            aoCorrigir={podeCorrigir ? () => { setCorrigindo(m); setTexto(m.texto ?? ""); window.setTimeout(() => caixa.current?.focus(), 0); } : undefined} />];
         })}
         {pendentes.map((m) => <Balao key={m.id} m={m} quem={nomeEquipe(m.enviado_por)} podeTranscrever={false} />)}
         <div ref={fim} />
@@ -655,7 +672,20 @@ export function Chat(props: {
                 <button className="mini" title="Gravar áudio" disabled={enviando || preparando} onClick={comecarGravacao}>🎤</button>
                 <button className="mini" title="Respostas rápidas (ou digite / na caixa de texto)" disabled={enviando || preparando}
                   onClick={() => { setRapFechado(false); setTexto("/"); caixa.current?.focus(); }}>⚡</button>
+                <button className="mini" title="Emojis" disabled={enviando || preparando} onClick={() => setEmojis(!emojis)}>😊</button>
               </div>
+              {emojis && (
+                <div className="wa-emojis" onMouseLeave={() => setEmojis(false)}>
+                  {EMOJIS.map((e) => <button key={e} onMouseDown={(ev) => { ev.preventDefault(); inserirNoCursor(e); }}>{e}</button>)}
+                </div>
+              )}
+              {corrigindo && (
+                <div className="wa-corrigindo">
+                  <span>✏️ <b>Corrigindo:</b> “{(corrigindo.texto ?? "").slice(0, 90)}{(corrigindo.texto ?? "").length > 90 ? "…" : ""}”
+                    <span className="pequeno muted"> — o paciente recebe o texto certo como resposta à mensagem errada.</span></span>
+                  <button className="mini" onClick={() => { setCorrigindo(null); setTexto(""); }}>Cancelar</button>
+                </div>
+              )}
               {termoRap !== null && (
                 <div className="wa-rapidas">
                   {achadasRap.length === 0 ? (
@@ -676,6 +706,10 @@ export function Chat(props: {
               )}
               <textarea
                 ref={caixa}
+                spellCheck
+                lang="pt-BR"
+                autoCorrect="on"
+                autoCapitalize="sentences"
                 value={texto}
                 placeholder={preparando ? "Preparando o áudio…" : anexo && !anexoAudio ? "Legenda (opcional)…" : "Escreva a resposta… (Enter envia, Shift+Enter pula linha)"}
                 onChange={(e) => { setTexto(e.target.value); setRapIdx(0); if (!e.target.value.startsWith("/")) setRapFechado(false); }}
@@ -872,7 +906,9 @@ function Transcricao({ m, podePedir }: { m: Mensagem; podePedir: boolean }) {
   );
 }
 
-function Balao({ m, quem, podeTranscrever, destacada }: { m: Mensagem; quem?: string; podeTranscrever: boolean; destacada?: boolean }) {
+function Balao({ m, quem, podeTranscrever, destacada, aoCorrigir, corrigida }: {
+  m: Mensagem; quem?: string; podeTranscrever: boolean; destacada?: boolean; aoCorrigir?: () => void; corrigida?: boolean;
+}) {
   const [url, setUrl] = useState<string | null>(null);
   const [erro, setErro] = useState("");
   const [abrindo, setAbrindo] = useState(false);
@@ -926,6 +962,8 @@ function Balao({ m, quem, podeTranscrever, destacada }: { m: Mensagem; quem?: st
         {enviada && !m.enviado_por && m.tipo === "texto" && !m.importada && <span>Resposta automática · </span>}
         {m.importada ? fmtDataHora(m.quando) : fmtHora(m.quando)}
         {enviada && <span className={"wa-sit " + m.situacao} title={m.situacao}> {ICONE_SITUACAO[m.situacao] ?? ""}</span>}
+        {corrigida && <span className="wa-corrigida"> · ✏️ corrigida abaixo</span>}
+        {aoCorrigir && <button className="wa-corrigir" title="Mandar a versão certa desta mensagem" onClick={aoCorrigir}>✏️ Corrigir</button>}
       </div>
       {m.situacao === "falhou" && m.erro && <div className="pequeno" style={{ color: "var(--perigo)" }}>Não enviada: {m.erro}</div>}
     </div>
@@ -1322,3 +1360,12 @@ export function RespostasRapidas(props: { setor: SetorWA; aoFechar: () => void }
     </Modal>
   );
 }
+
+/** Emojis mais usados no atendimento (a lista completa do Windows abre com a tecla Windows + ponto) */
+const EMOJIS = [
+  "😊", "🙂", "😀", "😁", "😉", "🥰", "😍", "🤗", "🙏", "👍", "👏", "👋", "🤝", "💪", "✌️", "👌",
+  "❤️", "💙", "💚", "💛", "🌹", "🌷", "🌻", "✨", "⭐", "🎉", "😅", "😂", "🤔", "😔", "😢", "😷",
+  "👁️", "👀", "🕶️", "👓", "💉", "💊", "🩺", "🏥", "🩹", "🧾", "📄", "📋", "📎", "📷",
+  "📅", "🗓️", "🕐", "⏰", "⏱️", "📍", "🚗", "🚕", "🚌", "🏠", "📞", "📱", "💬", "✉️",
+  "✅", "☑️", "✔️", "❌", "⚠️", "❗", "❓", "ℹ️", "➡️", "⬇️", "👉", "💳", "💵", "💰", "🔒", "☀️",
+];

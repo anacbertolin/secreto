@@ -604,3 +604,10 @@ textarea.resumo-notas { width: 100%; min-height: 44px; font-size: 0.85rem; paddi
 @keyframes vigia-pisca { 50% { box-shadow: 0 0 0 3px rgba(240, 68, 56, 0.25); } }
 .modal .vigia { max-width: none; margin: 0; }
 .modal .vigia .vigia-texto, .vigia.no-modal { white-space: normal; }
+/* Emojis e correção de mensagem (25/11) */
+.wa-emojis { position: absolute; left: 0; bottom: calc(100% + 6px); width: min(360px, 100%); display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; padding: 8px; background: var(--fundo-painel, #fff); border: 1px solid var(--borda); border-radius: 10px; box-shadow: 0 8px 24px rgba(16,24,40,.15); z-index: 21; }
+.wa-emojis button { border: none; background: transparent; font-size: 1.35rem; padding: 4px; border-radius: 6px; cursor: pointer; }
+.wa-emojis button:hover { background: #eef4ff; }
+.wa-corrigindo { position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; background: #fffaeb; border: 1px solid #fedf89; border-radius: 8px; font-size: 0.85rem; z-index: 19; }
+.wa-corrigir { border: none; background: transparent; color: var(--primaria); font-size: 0.72rem; padding: 0 0 0 6px; cursor: pointer; text-decoration: underline; }
+.wa-corrigida { font-size: 0.72rem; color: #b54708; }
