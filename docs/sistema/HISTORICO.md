@@ -1689,3 +1689,10 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   repasse nº 29, vitrectomia de 26/11, "sumiu"). Agora o padrão vai até daqui a 1 ano.
 - (25/11) Menu "📋 Atendimentos" da Central/Orientação virou **"📋 Encerradas"**; cartões com "✅ Encerrada · quem
   atendeu"; cabeçalho da conversa encerrada diz quem encerrou e que ela fica guardada em "Encerradas".
+- (0156, decisões do Dr. Gelson) Pagamentos AUTOMÁTICOS, sem botão: médico no CRÉDITO → fechamento no dia 20 (parcela que cai
+  até o dia 20 é paga no dia 25 do mês; depois, no dia 25 do mês seguinte); PIX/dinheiro/débito → no dia da cirurgia;
+  terceiros (auxiliar/instrumentação/anestesista) → à vista no dia da cirurgia. Fim de semana/feriado não importa.
+  `interno.repasse_dia_pagamento`, gatilhos `pagar_medico` (parcelas) e `pagar_terceiro` (custos); mudar a data da cirurgia
+  recalcula. "Pago" = data de hoje ou passada (a tela calcula "Médico pago"; status no banco fica "aberto", só cobrança fecha).
+  Cancelar só é bloqueado se já houver pagamento com data passada. Relatório por médico filtra pela data em que o médico recebe.
+  Vitrectomia (repasse 29): parcela 1 cai 25/12 → médico recebe 25/01.
