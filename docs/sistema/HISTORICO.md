@@ -1600,3 +1600,11 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
 - Pendências do Bradesco: no `LEIAME.md` da pasta de convênios (Epilação em duas tabelas, colírios como tabela 20…).
 - Encarregada de dados: nome completo **Ana Carolina Bertolin Moura Brasil** (25/11) — Política de Privacidade e documentos
   do kit LGPD (termos, plano de vazamento). OAB não é exigida para encarregado; e-mail próprio ainda a definir.
+
+### 25/11/2026 — Respostas rápidas do WhatsApp (migração 0102)
+- Pedido da dona: a Alessandra usa no WhatsApp Business mensagens prontas com "/" — agora também no sistema.
+- Tabela `whatsapp_respostas_rapidas` (setor, atalho, texto; única por setor+atalho; RLS: vê quem vê o número;
+  inclui/altera/apaga quem responde o número e a admin; auditoria). Não é modelo da Meta: vai como texto comum (24 h).
+- Na conversa: digitar "/" (ou botão ⚡) abre a lista; ↑↓ escolhe, Enter/Tab usa, Esc fecha. `{nome}` vira o primeiro
+  nome do paciente. O texto entra na caixa para ajustar antes de enviar.
+- Cadastro: 🧰 Ferramentas → ⚡ Respostas rápidas, ou "⚙ Cadastrar / editar" dentro da lista.

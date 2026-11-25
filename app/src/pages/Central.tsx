@@ -14,7 +14,7 @@ import { SELECT_CONVERSA, whatsapp, fmtNumeroWA, podeResponderSetor, podeVerSeto
 import { STATUS_CENTRAL, fmtEsperando, useCentral, type StatusCentral } from "../lib/central";
 import { fmtNumeroTel, useTelefone } from "../lib/telefone";
 import { BotaoLigar } from "../components/Telefone";
-import { Chat, FichaPaciente, ForaDoHorario, Lembretes, Modelos, Pesquisa, iniciais, nomeConversa } from "./WhatsApp";
+import { Chat, FichaPaciente, ForaDoHorario, Lembretes, Modelos, Pesquisa, RespostasRapidas, iniciais, nomeConversa } from "./WhatsApp";
 import { InternoChat, InternoLista } from "../components/Interno";
 import { useInternoNaoLidas } from "../lib/interno";
 
@@ -59,7 +59,7 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
   const [agendar, setAgendar] = useState<Conversa | null>(null);
   const [nova, setNova] = useState(false);
   // Ferramentas abertas dentro da própria tela (pedido da dona, 24/11: antes o botão saía da tela)
-  const [ferr, setFerr] = useState<"" | "pesquisa" | "modelos" | "ausencia" | "lembretes">("");
+  const [ferr, setFerr] = useState<"" | "pesquisa" | "modelos" | "ausencia" | "lembretes" | "rapidas">("");
   const [destaque, setDestaque] = useState<string | null>(null);
   const [avulsa, setAvulsa] = useState<Conversa | null>(null);
   const [, setTique] = useState(0);
@@ -280,6 +280,7 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
           <div className="ct-rolagem ct-ferramentas">
             <h3 className="ct-secao">Ferramentas</h3>
             <button onClick={() => setFerr("pesquisa")}>🔎 Pesquisar mensagens<span className="pequeno muted">O que foi dito, inclusive nos áudios</span></button>
+            <button onClick={() => setFerr("rapidas")}>⚡ Respostas rápidas<span className="pequeno muted">Mensagens prontas do dia a dia (digite / na conversa)</span></button>
             <button onClick={() => setFerr("modelos")}>📝 Modelos de mensagem<span className="pequeno muted">Mensagens aprovadas pela Meta</span></button>
             {(podeResponder || eu?.funcao === "admin") && (
               <button onClick={() => setFerr("ausencia")}>🌙 Fora do horário<span className="pequeno muted">Resposta automática fora do expediente</span></button>
@@ -341,6 +342,7 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
             setInternaId(null); setDestaque(mensagemId); setAbertaId(conversaId);
           }} />
       )}
+      {ferr === "rapidas" && <RespostasRapidas setor={setor} aoFechar={() => setFerr("")} />}
       {ferr === "modelos" && <Modelos setor={setor} aoFechar={() => setFerr("")} />}
       {ferr === "ausencia" && <ForaDoHorario setor={setor} aoFechar={() => setFerr("")} />}
       {ferr === "lembretes" && <Lembretes aoFechar={() => setFerr("")} aoEnviar={() => lista.recarregar()} />}
