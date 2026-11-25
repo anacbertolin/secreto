@@ -7,6 +7,7 @@ import { useCarregar, ok, Aviso, Carregando, Etiqueta, Modal, Campo, BuscaPacien
 import { fmtData, fmtMoeda, isoDia, nomeExibicao, numOuNulo } from "../lib/util";
 import { FORMAS_REPASSE, varianteProcedimento, nomesProcedimentos } from "../lib/repasse";
 import { SEL_VENDA, type VendaOrientacao } from "./Repasse";
+import { GuiaVendas } from "../components/GuiaVendas";
 
 interface ProcOrientacao { id: string; nome: string; profissional_id: string | null; valor_sugerido: number | null; tem_lente: boolean }
 interface LenteOrientacao { id: string; descricao: string; fabricante: string; premium: boolean; preco_venda: number }
@@ -50,6 +51,7 @@ export default function VendasOrientacao() {
           <p className="sub" style={{ margin: 0 }}>Registre aqui cada cirurgia ou lente que o paciente pagar. O Luciano confere e faz a divisão no Repasse.</p>
         </div>
         <div className="linha">
+          <GuiaVendas />
           <Link className="botao" to="/orientacao-cirurgica">← Orientação cirúrgica</Link>
           <button className="primario" onClick={() => setEdit("nova")}>➕ Registrar venda</button>
         </div>
