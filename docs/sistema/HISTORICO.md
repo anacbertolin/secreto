@@ -1682,3 +1682,6 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   recebido_em = data_prevista (gatilho `entra_sozinha`); repasses abertos foram preenchidos. Saiu o botão "Entrou hoje";
   a tela mostra "Cai na conta" (✅ já caiu / ⏳ futura). O relatório por médico filtra pelo mês em que a parcela cai
   (serve também de previsão). "Marcar pago hoje" (pagamento ao médico) continua manual.
+- (25/11) **Atendimentos encerrados: busca em todos os dias.** Encerrar só arquiva (`arquivada = true`); nada é apagado.
+  Na visão 📋 Atendimentos, escrevendo nome ou telefone na busca, a lista procura em todos os encerrados (não só no dia).
+  Para o conteúdo, continua 🧰 Ferramentas → 🔎 Pesquisar mensagens (texto e transcrição dos áudios).
