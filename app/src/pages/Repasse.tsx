@@ -107,12 +107,14 @@ export default function RepasseMedico() {
         <button className={aba === "conferir" ? "ativa" : ""} onClick={() => setParams({ aba: "conferir" })}>Para conferir{(pend.dados ?? 0) > 0 && <span className="etiqueta amarelo" style={{ marginLeft: 6 }}>{pend.dados}</span>}</button>
         <button className={aba === "lancamentos" ? "ativa" : ""} onClick={() => setParams({ aba: "lancamentos" })}>Lançamentos</button>
         <button className={aba === "medicos" ? "ativa" : ""} onClick={() => setParams({ aba: "medicos" })}>Relatório por médico</button>
+        <button className={aba === "previsao" ? "ativa" : ""} onClick={() => setParams({ aba: "previsao" })}>Previsão de pagamentos</button>
         <button className={aba === "regras" ? "ativa" : ""} onClick={() => setParams({ aba: "regras" })}>Regras e taxas</button>
         <button className={aba === "lentes" ? "ativa" : ""} onClick={() => setParams({ aba: "lentes" })}>Lentes</button>
       </div>
       {base.dados && aba === "lancamentos" && <Lancamentos base={base.dados} />}
       {base.dados && aba === "conferir" && <ParaConferir base={base.dados} aoMudar={pend.recarregar} />}
       {base.dados && aba === "medicos" && <RelatorioMedicos medicos={base.dados.medicos} />}
+      {aba === "previsao" && <Previsao />}
       {base.dados && aba === "regras" && <Regras cfg={base.dados.cfg} taxas={base.dados.taxas} aoMudar={base.recarregar} />}
       {aba === "lentes" && <LentesCatalogo />}
       {base.dados && aba === "regras" && <Procedimentos procs={base.dados.procedimentos} medicos={base.dados.medicos} aoMudar={base.recarregar} />}
@@ -1013,6 +1015,62 @@ function CustosAPagar({ de, ate, situacao }: { de: string; ate: string; situacao
         <tfoot><tr><th colSpan={4}>Total · já pago {fmtMoeda(total(linhas.filter((c) => jaPago(c.pago_em))))} · a pagar {fmtMoeda(total(linhas.filter((c) => !jaPago(c.pago_em))))}</th>
           <th style={num}>{fmtMoeda(total(linhas))}</th><th></th></tr></tfoot>
       </table>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ previsão: quanto cada médico recebe em cada mês (0156)
+function Previsao() {
+  const [meses, setMeses] = useState(12);
+  const hoje = isoDia(new Date());
+  const { dados, erro, carregando } = useCarregar(async () => ok(await supabase.from("repasse_parcelas")
+    .select("medico, pago_medico_em, repasse_id, numero, repasses!inner(numero, procedimento, parcelas, status, regra, profissional_id, profissionais!repasses_profissional_id_fkey(nome))")
+    .gte("pago_medico_em", hoje).neq("repasses.status", "cancelado").neq("repasses.regra", "cobranca")
+    .order("pago_medico_em").limit(5000)) as unknown as {
+      medico: number; pago_medico_em: string; repasse_id: string; numero: number;
+      repasses: { numero: number; procedimento: string; parcelas: number; profissional_id: string; profissionais: { nome: string } | null };
+    }[], []);
+  const [aberto, setAberto] = useState<string | null>(null);
+  const colunas = Array.from({ length: meses }, (_, i) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + i); return isoDia(d).slice(0, 7); });
+  const linhas = (dados ?? []).filter((l) => colunas.includes(l.pago_medico_em.slice(0, 7)));
+  const medicos = [...new Map(linhas.map((l) => [l.repasses.profissional_id, l.repasses.profissionais?.nome ?? "—"])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  const valor = (med: string | null, mes: string) => linhas.filter((l) => (!med || l.repasses.profissional_id === med) && l.pago_medico_em.startsWith(mes)).reduce((s, l) => s + Number(l.medico), 0);
+  const nomeMes = (m: string) => new Date(Number(m.slice(0, 4)), Number(m.slice(5)) - 1, 1).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+  const detalhe = aberto ? linhas.filter((l) => `${l.repasses.profissional_id}|${l.pago_medico_em.slice(0, 7)}` === aberto) : [];
+  return (
+    <div className="painel rolagem">
+      <div className="linha"><h2 style={{ margin: 0 }}>Previsão de pagamentos aos médicos</h2><span style={{ marginLeft: "auto" }} />
+        <select style={{ width: 150 }} value={meses} onChange={(e) => setMeses(Number(e.target.value))}>
+          <option value={3}>Próximos 3 meses</option><option value={6}>Próximos 6 meses</option><option value={12}>Próximos 12 meses</option><option value={24}>Próximos 24 meses</option>
+        </select>
+        <button onClick={() => window.print()}>🖨️ Imprimir</button></div>
+      <p className="muted pequeno">Quanto cada médico vai receber em cada mês, pelas regras automáticas: crédito com fechamento no dia 20 e pagamento no dia 25; PIX, dinheiro e débito no dia da cirurgia. Clique num valor para ver de onde vem.</p>
+      <Aviso>{erro}</Aviso>
+      {carregando && !dados ? <Carregando /> : medicos.length === 0 ? <div className="vazio">Nenhum pagamento previsto.</div> : (
+        <table className="tabela">
+          <thead><tr><th>Médico</th>{colunas.map((m) => <th key={m} style={num}>{nomeMes(m)}</th>)}<th style={num}>Total</th></tr></thead>
+          <tbody>
+            {medicos.map(([id, nome]) => (
+              <tr key={id}><td><b>{nome}</b></td>
+                {colunas.map((m) => { const v = valor(id, m); return (
+                  <td key={m} style={{ ...num, cursor: v ? "pointer" : undefined }} onClick={() => v && setAberto(`${id}|${m}`)}>{v ? <span style={{ textDecoration: "underline dotted" }}>{fmtMoeda(v)}</span> : <span className="muted">—</span>}</td>); })}
+                <td style={num}><b>{fmtMoeda(colunas.reduce((s, m) => s + valor(id, m), 0))}</b></td></tr>
+            ))}
+          </tbody>
+          <tfoot><tr><th>Total</th>{colunas.map((m) => <th key={m} style={num}>{fmtMoeda(valor(null, m))}</th>)}<th style={num}>{fmtMoeda(colunas.reduce((s, m) => s + valor(null, m), 0))}</th></tr></tfoot>
+        </table>
+      )}
+      {aberto && (
+        <Modal titulo={`${detalhe[0]?.repasses.profissionais?.nome ?? ""} · ${nomeMes(aberto.split("|")[1])}`} aoFechar={() => setAberto(null)}>
+          <table className="tabela">
+            <thead><tr><th>Recebe em</th><th>Repasse</th><th>Procedimento</th><th>Parcela</th><th style={num}>Valor</th></tr></thead>
+            <tbody>{detalhe.map((l) => (
+              <tr key={`${l.repasse_id}-${l.numero}`}><td>{fmtData(l.pago_medico_em)}</td><td><Link to={`/repasse/${l.repasse_id}`}>nº {l.repasses.numero}</Link></td>
+                <td>{l.repasses.procedimento}</td><td>{l.numero}/{l.repasses.parcelas}</td><td style={num}>{fmtMoeda(l.medico)}</td></tr>
+            ))}</tbody>
+          </table>
+        </Modal>
+      )}
     </div>
   );
 }

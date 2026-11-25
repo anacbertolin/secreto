@@ -1696,3 +1696,5 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   recalcula. "Pago" = data de hoje ou passada (a tela calcula "Médico pago"; status no banco fica "aberto", só cobrança fecha).
   Cancelar só é bloqueado se já houver pagamento com data passada. Relatório por médico filtra pela data em que o médico recebe.
   Vitrectomia (repasse 29): parcela 1 cai 25/12 → médico recebe 25/01.
+- Repasse: nova aba "Previsão de pagamentos" — tabela médico × mês (3/6/12/24 meses) com quanto cada médico recebe, pelas
+  datas automáticas da 0156; clicar no valor mostra de quais repasses/parcelas vem.
