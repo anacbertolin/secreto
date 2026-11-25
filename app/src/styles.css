@@ -609,5 +609,6 @@ textarea.resumo-notas { width: 100%; min-height: 44px; font-size: 0.85rem; paddi
 .wa-emojis button { border: none; background: transparent; font-size: 1.35rem; padding: 4px; border-radius: 6px; cursor: pointer; }
 .wa-emojis button:hover { background: #eef4ff; }
 .wa-corrigindo { position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; background: #fffaeb; border: 1px solid #fedf89; border-radius: 8px; font-size: 0.85rem; z-index: 19; }
-.wa-corrigir { border: none; background: transparent; color: var(--primaria); font-size: 0.72rem; padding: 0 0 0 6px; cursor: pointer; text-decoration: underline; }
+.wa-corrigir { border: 1px solid #b2ccff; background: #eef4ff; color: #175cd3; font-size: 0.72rem; font-weight: 600; padding: 1px 8px; margin-left: 8px; border-radius: 99px; cursor: pointer; }
+.wa-corrigir:hover { background: #d1e0ff; }
 .wa-corrigida { font-size: 0.72rem; color: #b54708; }

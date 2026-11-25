@@ -1661,3 +1661,7 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
 Primeira venda real (vitrectomia, venda nº 3): entrou certo no caixa da Orientação e ficou "aguardando", mas o Luciano
 abriu o Repasse na aba "Lançamentos" e não achou. Agora, sem aba escolhida, a tela abre direto em "Para conferir" se houver
 venda aguardando, e as outras abas mostram um aviso com botão para ir até elas.
+- (25/11) **Editar mensagem na conversa interna** (migração 0104): o autor edita a própria mensagem por até 24 h
+  ("✏️ Editar" no rodapé); fica marcada "editada" e o texto original é guardado em `texto_original` (gatilho
+  `editada`; só o texto pode mudar). No WhatsApp, o "✏️ Corrigir" virou um botão azul mais visível (aparece só nas
+  mensagens de texto que nós enviamos, enquanto a janela de 24 h estiver aberta).

@@ -125,6 +125,8 @@ export function InternoChat(props: { conversaId: string; aoVoltar: () => void })
   const [texto, setTexto] = useState("");
   const [emojis, setEmojis] = useState(false);
   const caixaInt = useRef<HTMLTextAreaElement>(null);
+  // Editar a própria mensagem (até 24 h; migração 0104)
+  const [editando, setEditando] = useState<MensagemInterna | null>(null);
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [acrescentar, setAcrescentar] = useState(false);
@@ -140,6 +142,8 @@ export function InternoChat(props: { conversaId: string; aoVoltar: () => void })
     const canal = supabase.channel("interno-conversa-" + props.conversaId)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "interno_mensagens", filter: `conversa_id=eq.${props.conversaId}` },
         () => { msgs.recarregar(); marcar(); })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "interno_mensagens", filter: `conversa_id=eq.${props.conversaId}` },
+        () => msgs.recarregar())
       .subscribe();
     const t = window.setInterval(() => msgs.recarregar(), 15000);
     return () => { window.clearInterval(t); supabase.removeChannel(canal); };
@@ -153,7 +157,10 @@ export function InternoChat(props: { conversaId: string; aoVoltar: () => void })
     if (!t) return;
     setEnviando(true);
     setErro("");
-    const { error } = await supabase.from("interno_mensagens").insert({ conversa_id: props.conversaId, texto: t });
+    const { error } = editando
+      ? await supabase.from("interno_mensagens").update({ texto: t }).eq("id", editando.id)
+      : await supabase.from("interno_mensagens").insert({ conversa_id: props.conversaId, texto: t });
+    setEditando(null);
     setEnviando(false);
     if (error) return setErro(msgErro(error));
     setTexto("");
@@ -187,7 +194,14 @@ export function InternoChat(props: { conversaId: string; aoVoltar: () => void })
             <div key={m.id} className={"wa-balao " + (minha ? "enviada" : "recebida")}>
               {!minha && <div className="ct-autor">{nomeDe(m.autor_id)}</div>}
               <div className="wa-texto">{m.texto}</div>
-              <div className="wa-rodape">{new Date(m.criado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</div>
+              <div className="wa-rodape">
+                {new Date(m.criado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                {m.editado_em && <span title={`Editada às ${new Date(m.editado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`}> · editada</span>}
+                {minha && Date.now() - new Date(m.criado_em).getTime() < 86400000 && (
+                  <button className="wa-corrigir" title="Corrigir esta mensagem"
+                    onClick={() => { setEditando(m); setTexto(m.texto); window.setTimeout(() => caixaInt.current?.focus(), 0); }}>✏️ Editar</button>
+                )}
+              </div>
             </div>
           )];
         })}
@@ -197,6 +211,12 @@ export function InternoChat(props: { conversaId: string; aoVoltar: () => void })
       <div className="wa-escrever">
         {/* Emojis e corretor em português, como no WhatsApp (pedido da dona, 25/11) */}
         <button className="mini" title="Emojis" onClick={() => setEmojis(!emojis)}>😊</button>
+        {editando && (
+          <div className="wa-corrigindo">
+            <span>✏️ <b>Editando:</b> “{editando.texto.slice(0, 90)}{editando.texto.length > 90 ? "…" : ""}”</span>
+            <button className="mini" onClick={() => { setEditando(null); setTexto(""); }}>Cancelar</button>
+          </div>
+        )}
         {emojis && (
           <div className="wa-emojis" onMouseLeave={() => setEmojis(false)}>
             {EMOJIS.map((e) => <button key={e} onMouseDown={(ev) => {
@@ -212,7 +232,7 @@ export function InternoChat(props: { conversaId: string; aoVoltar: () => void })
           value={texto} placeholder="Mensagem para a equipe… (Enter envia, Shift+Enter pula linha)"
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void enviar(); } }} />
-        <button className="primario" disabled={enviando || !texto.trim()} onClick={() => void enviar()}>Enviar</button>
+        <button className="primario" disabled={enviando || !texto.trim()} onClick={() => void enviar()}>{editando ? "Salvar" : "Enviar"}</button>
       </div>
       {acrescentar && c && (
         <EscolherPessoas titulo="Acrescentar pessoas ao grupo" jaEstao={c.participantes.map((p) => p.profissional_id)} aoFechar={() => setAcrescentar(false)}

@@ -17,6 +17,7 @@ export interface MensagemInterna {
   autor_id: string;
   texto: string;
   criado_em: string;
+  editado_em?: string | null;
 }
 
 export const SELECT_INTERNA = "id, tipo, nome, ultima_mensagem_em, participantes:interno_participantes(profissional_id, lida_em, profissionais(nome, funcao))";
