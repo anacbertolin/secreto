@@ -17,6 +17,7 @@ import { BotaoLigar } from "../components/Telefone";
 import { Chat, FichaPaciente, ForaDoHorario, Lembretes, Modelos, Pesquisa, RespostasRapidas, iniciais, nomeConversa } from "./WhatsApp";
 import { InternoChat, InternoLista } from "../components/Interno";
 import { useInternoNaoLidas } from "../lib/interno";
+import { VigiaWhatsApp } from "../components/VigiaWhatsApp";
 
 type Visao = "conversas" | "atendimentos" | "ferramentas";
 type Aba = "canais" | "interno" | "telefone";
@@ -220,6 +221,8 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
           <input className="ct-busca" placeholder="🔍 Buscar" value={busca} onChange={(e) => setBusca(e.target.value)} />
         </div>
 
+        {/* Vigia: só no número da orientação, o único ligado à API por enquanto */}
+        {veCanais && setor === "orientacao" && <VigiaWhatsApp setor={setor} />}
         {visao === "conversas" ? (
           <>
             {veCanais && <Equipe pessoas={equipe.dados ?? []} euId={eu?.id} livres={livres.length} />}

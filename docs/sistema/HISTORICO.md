@@ -1611,3 +1611,12 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
 - (25/11) **Envio mais rápido na tela**: a mensagem de texto aparece na hora na conversa (🕓) e a caixa limpa; a ida à
   Meta (1–3 s, medido nos logs da função) acontece em segundo plano. Quando confirma vira ✓; se falhar, a bolha fica
   "Não enviada" com o motivo (o texto não se perde). Anexos e áudios continuam esperando o envio.
+
+### 25/11/2026 — Vigia do recebimento do WhatsApp (migração 0103)
+- Pedido da dona: o número da orientação está só na API (sem celular para conferir); se o webhook parar, ninguém veria.
+- `whatsapp_vigia(setor)` (security invoker): última mensagem recebida, última confirmação ✓✓ da Meta, enviadas sem ✓✓.
+- Faixa no alto da coluna do meio da Orientação (`components/VigiaWhatsApp.tsx`): 🟢 recebendo; 🟡 1 h sem sinal; 🔴 2 h
+  sem sinal — contando só minutos DENTRO do horário de atendimento (tabela `whatsapp_ausencia`), ou 3+ enviadas sem ✓✓
+  sem nenhuma confirmada em 3 h. Atualiza a cada minuto e ao chegar mensagem.
+- Clicar abre detalhes e "Testar recebimento": espera até 3 min uma mensagem mandada de qualquer celular e diz se chegou.
+- Só aparece no número da orientação (o da clínica ainda não está ligado à API).

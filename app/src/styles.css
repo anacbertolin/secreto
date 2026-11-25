@@ -591,3 +591,16 @@ textarea.resumo-notas { width: 100%; min-height: 44px; font-size: 0.85rem; paddi
 .wa-rapidas-lista { display: flex; flex-direction: column; gap: 6px; }
 .wa-rapidas-item { display: grid; grid-template-columns: 140px 1fr auto; gap: 10px; align-items: start; padding: 8px 10px; border: 1px solid var(--borda); border-radius: 8px; }
 @media (max-width: 700px) { .wa-rapidas-item { grid-template-columns: 1fr; } }
+/* Vigia do recebimento do WhatsApp (0103) */
+.vigia { box-sizing: border-box; display: flex; align-items: center; gap: 8px; width: auto; max-width: calc(100% - 24px); margin: 8px 12px 0; padding: 6px 10px; border-radius: 8px; border: 1px solid; font-size: 0.8rem; text-align: left; cursor: pointer; }
+.vigia-texto { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vigia-dados { display: grid; grid-template-columns: 190px 1fr; gap: 4px 10px; margin: 12px 0; }
+.vigia-dados dt { color: var(--suave); }
+.vigia-dados dd { margin: 0; }
+.vigia-ok { background: #ecfdf3; border-color: #abefc6; color: #067647; }
+.vigia-atencao { background: #fffaeb; border-color: #fedf89; color: #b54708; }
+.vigia-alerta { background: #fef3f2; border-color: #fda29b; color: #b42318; font-weight: 600; animation: vigia-pisca 2s ease-in-out infinite; }
+.vigia-acao { text-decoration: underline; }
+@keyframes vigia-pisca { 50% { box-shadow: 0 0 0 3px rgba(240, 68, 56, 0.25); } }
+.modal .vigia { max-width: none; margin: 0; }
+.modal .vigia .vigia-texto, .vigia.no-modal { white-space: normal; }
