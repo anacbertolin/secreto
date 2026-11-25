@@ -1635,6 +1635,16 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
 - Os dois só para quem tem `profissionais.caixa_corrigir` (decisão da dona: **só ela**; não aparece na tela Equipe) + duas etapas da administração.
 - Teste no banco (transação desfeita): incluir 100→250 com novo pagamento; Soraline não cancela; caixa com lançamento não cancela;
   fechar → reabrir; cancelar linhas → cancelar caixa → abrir outro. Build OK.
+
+### 25/11 — Caixa: conferência em duas etapas (migração 0111, pedido da dona)
+- Caminho novo: aberto → fechado → **dinheiro conferido** (1º check) → **conferido** (conferência completa, 2º check) → aprovado (Luciano).
+- 1º check (recepção do 4º andar, no dia): digita o dinheiro que recebeu; a tela compara com o esperado e com o que o térreo contou.
+- 2º check (durante a semana): lista com 💳 cartões, 📲 PIX e 🧾 notas fiscais (check geral, com observação), marcada aos poucos;
+  com os três marcados, "Conferência completa: entregar ao Luciano".
+- Decisão da dona: **a mesma pessoa** do 1º check termina a conferência (a administração com `caixa_corrigir` também pode, para não travar).
+  Notas fiscais: check geral por enquanto (sugestão aceita; dá para virar paciente a paciente depois).
+- Quem está conferindo pode devolver para correção; reabrir (só a dona) vale também para caixa em conferência.
+- Teste no banco (desfeito): pular o 1º check bloqueado; concluir sem notas bloqueado; outra conferente bloqueada; fluxo completo OK. Build OK.
 - (25/11) **Corretor, emojis e corrigir mensagem** na conversa do WhatsApp:
   - Caixa de texto com corretor do navegador em português (`spellCheck`, `lang="pt-BR"`): sublinha em vermelho; botão
     direito mostra as sugestões.
