@@ -147,11 +147,21 @@
 - Confirmar no ensaio se o status "Esp. Pend." do Micrologos significa mesmo "agendado".
 
 ## Logins da equipe vinda do Micrologos (25/11/2026)
-- Migração 0161: 17 pessoas ativas no Micrologos (acesso nos últimos 6 meses) criadas na tela Equipe com usuário
+- Migração 0161 criou as pessoas ativas no Micrologos (acesso nos últimos 6 meses) na tela Equipe, com usuário
   nome.sobrenome e função inicial **recepção** (a dona confere a função e gera as senhas).
-- Não criados (já existiam na tela Equipe): Ana Bertolin, Andrea, Gelson, Gisele, Ingrid, Isabelle, Luana, Luciano,
-  Luiza, Matheus, Max, Pedro, Renato, Soraline. Dr. Marcos (saiu). Contas genéricas (Mlmaster, Mlsuporte, Sam Call Center).
-- ❓ Perguntar à dona: Alessandra Moura de Oliveira (é a Alessandra Galter já cadastrada?); Marcio (TI) precisa de login?;
-  ativos no Micrologos mas sem acesso há mais de 6 meses: Nicole Coutinho Couto, Marise Barreto Ramos,
-  Juliana do Valle Quintilhano, Kalini Lourenço dos Santos, Emilly Caroline Aguiar da Silva, Darlene Cardoso Marreiro,
-  Rafael Ramos da Costa.
+- Migração 0162 (resposta da dona): saíram Ana Beatriz Carrilho, Beatriz Tomaz e Caroline Aparecida (não trabalham mais);
+  entraram Marcio (TI), Darlene e Rafael (senha só se precisar). Alessandra Moura de Oliveira = Alessandra Galter (já existia).
+  Nicole, Marise, Juliana do Valle, Kalini e Emilly não trabalham mais: nada criado.
+- Não criados (já existiam): Ana Bertolin, Andrea, Gelson, Gisele, Ingrid, Isabelle, Luana, Luciano, Luiza, Matheus, Max,
+  Pedro, Renato, Soraline. Dr. Marcos (saiu). Contas genéricas (Mlmaster, Mlsuporte, Sam Call Center).
+
+## Contas de faturamento — ⛔ NÃO transformar sem a dona autorizar (pedido dela, 25/11/2026)
+- A dona precisa mexer em contas já fechadas (convênio paga 3–5 meses depois: abrir a cobrança, tirar/recolocar paciente
+  para recurso, gerar XML de novo) e o Dr. Gelson compara faturamento com anos anteriores (relatórios por convênio/médico).
+- Volume no Micrologos (desde 2016): 333 mil contas, 411 mil itens, 321 mil pagamentos, 10,9 mil cobranças (lotes).
+  Por ano: 2016 10 mil · 2017 20 mil · 2018 28 mil · 2019 30 mil · 2020 29 mil · 2021 34 mil · 2022 40 mil ·
+  2023 35 mil · 2024 36 mil · 2025 36 mil · 2026 34 mil.
+- Tamanho bruto ≈ 460 MB; no sistema novo estimado 0,3–0,6 GB. Ensaio completo (pacientes+agenda+prontuário) ≈ 0,7 GB.
+  Plano Pro inclui 8 GB de banco: cabe o histórico inteiro sem custo extra.
+- Opções para a dona decidir: tudo desde 2016; últimos 5 anos (2021+, ~215 mil contas) com o resto só guardado no banco
+  (schema legacy_micrologos, consultável para relatórios); ou só abertas.
