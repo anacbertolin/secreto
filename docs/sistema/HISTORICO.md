@@ -1685,3 +1685,5 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
 - (25/11) **Atendimentos encerrados: busca em todos os dias.** Encerrar só arquiva (`arquivada = true`); nada é apagado.
   Na visão 📋 Atendimentos, escrevendo nome ou telefone na busca, a lista procura em todos os encerrados (não só no dia).
   Para o conteúdo, continua 🧰 Ferramentas → 🔎 Pesquisar mensagens (texto e transcrição dos áudios).
+- Lançamentos do repasse: o filtro "até" era HOJE e escondia repasses de cirurgia futura (venda paga antes da cirurgia —
+  repasse nº 29, vitrectomia de 26/11, "sumiu"). Agora o padrão vai até daqui a 1 ano.
