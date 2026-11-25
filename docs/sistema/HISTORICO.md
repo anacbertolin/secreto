@@ -1665,3 +1665,7 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   ("✏️ Editar" no rodapé); fica marcada "editada" e o texto original é guardado em `texto_original` (gatilho
   `editada`; só o texto pode mudar). No WhatsApp, o "✏️ Corrigir" virou um botão azul mais visível (aparece só nas
   mensagens de texto que nós enviamos, enquanto a janela de 24 h estiver aberta).
+- (0152) Anestesista pago DIRETO pelo paciente: `orientacao_vendas.anestesista_direto`. A Alessandra informa o valor (o que
+  foi pago à clínica vai em "valor"); no repasse a linha do anestesista entra com valor 0 e a anotação "pago direto pelo
+  paciente (R$ X)" — não é descontado de novo. No Novo repasse manual há a marcação "pago direto pelo paciente" na linha do
+  anestesista. Custos de valor 0 não aparecem em "a pagar". Venda nº 3 (vitrectomia, R$ 23.000 + R$ 2.000 ao Fábio) ajustada.
