@@ -1598,3 +1598,5 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
   - os 14 hospitais (Unidades) e os 6 códigos de hospital no Bradesco.
   - Teste (desfeito): conta Bradesco Individual com OCT, Corpo estranho e Fluoresceína → 22/41501144 = 77,84; 22/30304032 = 64,04; 20/90548906 = 6,46.
 - Pendências do Bradesco: no `LEIAME.md` da pasta de convênios (Epilação em duas tabelas, colírios como tabela 20…).
+- Encarregada de dados: nome completo **Ana Carolina Bertolin Moura Brasil** (25/11) — Política de Privacidade e documentos
+  do kit LGPD (termos, plano de vazamento). OAB não é exigida para encarregado; e-mail próprio ainda a definir.
