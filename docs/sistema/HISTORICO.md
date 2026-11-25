@@ -1620,3 +1620,7 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
   sem nenhuma confirmada em 3 h. Atualiza a cada minuto e ao chegar mensagem.
 - Clicar abre detalhes e "Testar recebimento": espera até 3 min uma mensagem mandada de qualquer celular e diz se chegou.
 - Só aparece no número da orientação (o da clínica ainda não está ligado à API).
+- (25/11) **18 respostas rápidas da Orientação cadastradas** (aprovadas pela dona): textos do WhatsApp Business da
+  Alessandra revisados (português, negrito, {nome}, campos ___ para completar, sem dados de paciente). Atalhos sem acento
+  (endereco, marcacao, saudacao, revisaodeinjecao); a busca na conversa ignora acentos e mostra até 40, começando pelos
+  atalhos que começam com o que foi digitado.

@@ -329,9 +329,14 @@ export function Chat(props: {
   const [rapFechado, setRapFechado] = useState(false);
   const [gerenciarRap, setGerenciarRap] = useState(false);
   const caixa = useRef<HTMLTextAreaElement>(null);
-  const termoRap = texto.startsWith("/") && !texto.includes("\n") && !rapFechado ? texto.slice(1).trim().toLowerCase() : null;
-  const achadasRap = termoRap === null ? [] : (respostas.dados ?? []).filter((r) =>
-    !termoRap || r.atalho.includes(termoRap) || r.texto.toLowerCase().includes(termoRap)).slice(0, 8);
+  // Sem diferenciar acentos: "/endereço" acha o atalho "endereco"
+  const semAcento = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const termoRap = texto.startsWith("/") && !texto.includes("\n") && !rapFechado ? semAcento(texto.slice(1).trim()) : null;
+  const achadasRap = termoRap === null ? [] : (respostas.dados ?? [])
+    .filter((r) => !termoRap || r.atalho.includes(termoRap) || semAcento(r.texto).includes(termoRap))
+    // primeiro os atalhos que começam com o que foi digitado
+    .sort((x, y) => Number(!x.atalho.startsWith(termoRap)) - Number(!y.atalho.startsWith(termoRap)))
+    .slice(0, 40);
   const nomePaciente = (() => {
     const n = (c.pacientes ? (c.pacientes.nome_social || c.pacientes.nome) : c.nome_contato ?? "").trim().split(/\s+/)[0] ?? "";
     return n ? n.charAt(0).toUpperCase() + n.slice(1).toLowerCase() : "";
