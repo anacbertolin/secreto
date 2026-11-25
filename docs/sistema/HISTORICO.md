@@ -1608,3 +1608,6 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
 - Na conversa: digitar "/" (ou botão ⚡) abre a lista; ↑↓ escolhe, Enter/Tab usa, Esc fecha. `{nome}` vira o primeiro
   nome do paciente. O texto entra na caixa para ajustar antes de enviar.
 - Cadastro: 🧰 Ferramentas → ⚡ Respostas rápidas, ou "⚙ Cadastrar / editar" dentro da lista.
+- (25/11) **Envio mais rápido na tela**: a mensagem de texto aparece na hora na conversa (🕓) e a caixa limpa; a ida à
+  Meta (1–3 s, medido nos logs da função) acontece em segundo plano. Quando confirma vira ✓; se falhar, a bolha fica
+  "Não enviada" com o motivo (o texto não se perde). Anexos e áudios continuam esperando o envio.

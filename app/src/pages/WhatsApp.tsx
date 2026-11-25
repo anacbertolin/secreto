@@ -12,7 +12,7 @@ import { BotaoLigar } from "../components/Telefone";
 import { BotoesStatus, STATUS_CENTRAL, fmtEsperando, useCentral, type StatusCentral } from "../lib/central";
 import { gravarAudio, type Gravacao } from "../lib/gravador";
 
-const ICONE_SITUACAO: Record<string, string> = { enviada: "✓", entregue: "✓✓", lida: "✓✓", falhou: "⚠️" };
+const ICONE_SITUACAO: Record<string, string> = { enviando: "🕓", enviada: "✓", entregue: "✓✓", lida: "✓✓", falhou: "⚠️" };
 const ICONE_TIPO: Record<string, string> = {
   imagem: "📷 Foto", audio: "🎤 Áudio", video: "🎬 Vídeo", documento: "📄 Documento", figurinha: "🙂 Figurinha",
   localizacao: "📍 Localização", contato: "👤 Contato",
@@ -381,9 +381,39 @@ export function Chat(props: {
 
   const aberta = janelaAberta(c);
 
+  // Texto: aparece na hora na conversa (🕓) e vai para a Meta em segundo plano — a pessoa já pode escrever a próxima
+  // (pedido da dona, 25/11: o envio parecia lento; a ida até a Meta leva de 1 a 3 segundos)
+  const [pendentes, setPendentes] = useState<Mensagem[]>([]);
+  useEffect(() => {
+    const reais = (msgs.dados ?? []).filter((m) => m.direcao === "enviada");
+    setPendentes((ps) => ps.filter((p) => !reais.some((m) => m.texto === p.texto && m.quando >= new Date(new Date(p.quando).getTime() - 60000).toISOString())));
+  }, [msgs.dados]);
+  useEffect(() => { if (pendentes.length) fim.current?.scrollIntoView({ block: "end" }); }, [pendentes.length]);
+  async function enviarTexto(t: string) {
+    const temp: Mensagem = {
+      id: "tmp-" + Date.now() + Math.random().toString(36).slice(2, 6), conversa_id: c.id, direcao: "enviada", tipo: "texto",
+      texto: t, modelo: null, midia_id: null, midia_tipo: null, midia_nome: null, situacao: "enviando", erro: null,
+      agendamento_id: null, enviado_por: eu?.id ?? null, quando: new Date().toISOString(),
+    };
+    setPendentes((ps) => [...ps, temp]);
+    setTexto("");
+    setErro("");
+    if (!c.responsavel_id && eu) mudar({ responsavel_id: eu.id }); // quem responde assume a conversa
+    try {
+      await whatsapp("texto", { conversa_id: c.id, texto: t });
+    } catch (e) {
+      const msg = msgErro(e);
+      setPendentes((ps) => ps.map((p) => (p.id === temp.id ? { ...p, situacao: "falhou", erro: msg } : p)));
+      setErro(msg);
+    }
+    msgs.recarregar();
+    props.aoMudar();
+  }
+
   async function enviar() {
     const t = texto.trim();
     if (!t && !anexo) return;
+    if (!anexo) { void enviarTexto(t); return; }
     setEnviando(true);
     setErro("");
     try {
@@ -574,6 +604,7 @@ export function Chat(props: {
           const sep = dia !== diaAnterior ? ((diaAnterior = dia), <div key={"d" + m.id} className="wa-dia">{dia}</div>) : null;
           return [sep, <Balao key={m.id} m={m} quem={nomeEquipe(m.enviado_por)} podeTranscrever={podeResponder} destacada={m.id === props.destaque} />];
         })}
+        {pendentes.map((m) => <Balao key={m.id} m={m} quem={nomeEquipe(m.enviado_por)} podeTranscrever={false} />)}
         <div ref={fim} />
       </div>
 
