@@ -5,7 +5,7 @@ import { useAuth } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Modal } from "./ui";
 import { FUNCOES, fmtData, isoDia, type Funcao } from "../lib/util";
 import { SELECT_INTERNA, tituloInterna, type ConversaInterna, type MensagemInterna } from "../lib/interno";
-import { iniciais } from "../pages/WhatsApp";
+import { EMOJIS, iniciais } from "../pages/WhatsApp";
 
 interface Pessoa { id: string; nome: string; funcao: Funcao }
 
@@ -123,6 +123,8 @@ function EscolherPessoas(props: { titulo: string; unica?: boolean; comNome?: boo
 export function InternoChat(props: { conversaId: string; aoVoltar: () => void }) {
   const { eu } = useAuth();
   const [texto, setTexto] = useState("");
+  const [emojis, setEmojis] = useState(false);
+  const caixaInt = useRef<HTMLTextAreaElement>(null);
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [acrescentar, setAcrescentar] = useState(false);
@@ -193,7 +195,21 @@ export function InternoChat(props: { conversaId: string; aoVoltar: () => void })
       </div>
       <Aviso>{erro}</Aviso>
       <div className="wa-escrever">
-        <textarea value={texto} placeholder="Mensagem para a equipe… (Enter envia, Shift+Enter pula linha)"
+        {/* Emojis e corretor em português, como no WhatsApp (pedido da dona, 25/11) */}
+        <button className="mini" title="Emojis" onClick={() => setEmojis(!emojis)}>😊</button>
+        {emojis && (
+          <div className="wa-emojis" onMouseLeave={() => setEmojis(false)}>
+            {EMOJIS.map((e) => <button key={e} onMouseDown={(ev) => {
+              ev.preventDefault();
+              const el = caixaInt.current;
+              const ini = el?.selectionStart ?? texto.length, fimSel = el?.selectionEnd ?? texto.length;
+              setTexto(texto.slice(0, ini) + e + texto.slice(fimSel));
+              window.setTimeout(() => { el?.focus(); el?.setSelectionRange(ini + e.length, ini + e.length); }, 0);
+            }}>{e}</button>)}
+          </div>
+        )}
+        <textarea ref={caixaInt} spellCheck lang="pt-BR" autoCapitalize="sentences"
+          value={texto} placeholder="Mensagem para a equipe… (Enter envia, Shift+Enter pula linha)"
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void enviar(); } }} />
         <button className="primario" disabled={enviando || !texto.trim()} onClick={() => void enviar()}>Enviar</button>

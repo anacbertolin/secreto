@@ -155,7 +155,7 @@ export default function Telefone() {
     return (
       <div className="tel tel-aberto">
         <div className="tel-titulo">Ligação encerrada · {fmtNumeroTel(tel.ultimaEncerrada.numero)}</div>
-        <textarea rows={3} placeholder="Anotação (opcional): o que o paciente pediu" value={nota} onChange={(e) => setNota(e.target.value)} />
+        <textarea rows={3} spellCheck lang="pt-BR" placeholder="Anotação (opcional): o que o paciente pediu" value={nota} onChange={(e) => setNota(e.target.value)} />
         <div className="linha" style={{ marginTop: 8 }}>
           <button className="primario mini" onClick={salvarNota}>{nota.trim() ? "Salvar anotação" : "Fechar"}</button>
           {tel.ultimaEncerrada.pacienteId && <Link className="botao mini-l" to={`/pacientes/${tel.ultimaEncerrada.pacienteId}`} onClick={() => void salvarNota()}>Abrir ficha</Link>}
