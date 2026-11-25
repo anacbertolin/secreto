@@ -1656,3 +1656,8 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
   da ligação; botão 😊 de emojis na conversa interna. O WhatsApp da Central usa o mesmo `Chat` da Orientação (já tem
   respostas rápidas por número, emojis, corretor e Corrigir). Vigia do recebimento passa a aparecer também no número da
   clínica assim que ele estiver ligado à API (`estado.configurado`).
+
+## 25/11/2026 — Repasse abre em "Para conferir" quando há venda esperando
+Primeira venda real (vitrectomia, venda nº 3): entrou certo no caixa da Orientação e ficou "aguardando", mas o Luciano
+abriu o Repasse na aba "Lançamentos" e não achou. Agora, sem aba escolhida, a tela abre direto em "Para conferir" se houver
+venda aguardando, e as outras abas mostram um aviso com botão para ir até elas.

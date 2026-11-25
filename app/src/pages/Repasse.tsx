@@ -75,9 +75,10 @@ async function carregarBase() {
 // ================================================================== tela principal
 export default function RepasseMedico() {
   const [params, setParams] = useSearchParams();
-  const aba = params.get("aba") ?? "lancamentos";
   const base = useCarregar(carregarBase, []);
-  const pend = useCarregar(async () => (await supabase.from("orientacao_vendas").select("id", { count: "exact", head: true }).eq("status", "aguardando")).count ?? 0, [aba]);
+  const pend = useCarregar(async () => (await supabase.from("orientacao_vendas").select("id", { count: "exact", head: true }).eq("status", "aguardando")).count ?? 0, [params.get("aba")]);
+  // sem aba escolhida: se há venda da Orientação esperando, abre direto em "Para conferir"
+  const aba = params.get("aba") ?? ((pend.dados ?? 0) > 0 ? "conferir" : "lancamentos");
   return (
     <div>
       <div className="cabecalho">
@@ -87,6 +88,12 @@ export default function RepasseMedico() {
         </div>
       </div>
       <Aviso>{base.erro}</Aviso>
+      {aba !== "conferir" && (pend.dados ?? 0) > 0 && (
+        <Aviso tipo="alerta">
+          {pend.dados === 1 ? "Há 1 venda da Orientação Cirúrgica esperando" : `Há ${pend.dados} vendas da Orientação Cirúrgica esperando`} a sua conferência.{" "}
+          <button className="primario pequeno" onClick={() => setParams({ aba: "conferir" })}>Ver para conferir →</button>
+        </Aviso>
+      )}
       <div className="abas">
         <button className={aba === "conferir" ? "ativa" : ""} onClick={() => setParams({ aba: "conferir" })}>Para conferir{(pend.dados ?? 0) > 0 && <span className="etiqueta amarelo" style={{ marginLeft: 6 }}>{pend.dados}</span>}</button>
         <button className={aba === "lancamentos" ? "ativa" : ""} onClick={() => setParams({ aba: "lancamentos" })}>Lançamentos</button>
