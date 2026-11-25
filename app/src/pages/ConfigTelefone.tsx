@@ -15,7 +15,7 @@ export default function ConfigTelefone() {
   const tel = useTelefone();
   const cfg = useCarregar(async () => ok(await supabase.from("telefonia_config").select("ligado, provedor, wss_url, sip_dominio").eq("id", 1).single()) as Cfg, []);
   const ramais = useCarregar(async () => ok(await supabase.from("telefonia_ramais").select("*").order("ramal")) as Ramal[], []);
-  const equipe = useCarregar(async () => ok(await supabase.from("profissionais").select("id, nome, funcao").eq("ativo", true).order("nome")) as Pessoa[], []);
+  const equipe = useCarregar(async () => ok(await supabase.from("profissionais").select("id, nome, funcao").eq("ativo", true).not("agenda_recurso", "is", true).not("sem_acesso", "is", true).order("nome")) as Pessoa[], []);
   const [f, setF] = useState<Cfg | null>(null);
   const [editar, setEditar] = useState<Partial<Ramal> | null>(null);
   const [erro, setErro] = useState("");
