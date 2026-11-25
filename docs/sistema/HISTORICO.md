@@ -1656,3 +1656,51 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
   da ligação; botão 😊 de emojis na conversa interna. O WhatsApp da Central usa o mesmo `Chat` da Orientação (já tem
   respostas rápidas por número, emojis, corretor e Corrigir). Vigia do recebimento passa a aparecer também no número da
   clínica assim que ele estiver ligado à API (`estado.configurado`).
+
+## 25/11/2026 — Repasse abre em "Para conferir" quando há venda esperando
+Primeira venda real (vitrectomia, venda nº 3): entrou certo no caixa da Orientação e ficou "aguardando", mas o Luciano
+abriu o Repasse na aba "Lançamentos" e não achou. Agora, sem aba escolhida, a tela abre direto em "Para conferir" se houver
+venda aguardando, e as outras abas mostram um aviso com botão para ir até elas.
+- (25/11) **Editar mensagem na conversa interna** (migração 0104): o autor edita a própria mensagem por até 24 h
+  ("✏️ Editar" no rodapé); fica marcada "editada" e o texto original é guardado em `texto_original` (gatilho
+  `editada`; só o texto pode mudar). No WhatsApp, o "✏️ Corrigir" virou um botão azul mais visível (aparece só nas
+  mensagens de texto que nós enviamos, enquanto a janela de 24 h estiver aberta).
+- (0152) Anestesista pago DIRETO pelo paciente: `orientacao_vendas.anestesista_direto`. A Alessandra informa o valor (o que
+  foi pago à clínica vai em "valor"); no repasse a linha do anestesista entra com valor 0 e a anotação "pago direto pelo
+  paciente (R$ X)" — não é descontado de novo. No Novo repasse manual há a marcação "pago direto pelo paciente" na linha do
+  anestesista. Custos de valor 0 não aparecem em "a pagar". Venda nº 3 (vitrectomia, R$ 23.000 + R$ 2.000 ao Fábio) ajustada.
+- (0153, decisão do Dr. Gelson) Caixa é só DINHEIRO em espécie: a venda da Orientação só entra no caixa da Orientação se a
+  forma for dinheiro; cartão e PIX não entram. Correção da venda acompanha (mudou para dinheiro → entra; deixou de ser → sai).
+  Só precisa de caixa aberto para venda em dinheiro. A venda nº 3 (cartão) ficou no caixa de 25/11, que já estava fechado
+  (não altera a conta da gaveta); para tirar, é preciso devolver o caixa e rodar a limpeza da 0153 de novo.
+  Pendente perguntar: o caixa da RECEPÇÃO também deve deixar de registrar cartão/PIX?
+- (0154) Correção: o Luciano não conseguia DEVOLVER a venda nº 3 (cartão) porque o gatilho da 0153 tentava tirá-la do caixa
+  já fechado. Agora caixa fechado só bloqueia quando muda forma, valor ou a venda é cancelada.
+- (25/11, migração 0112) A dona esclareceu: a conferência em duas etapas é **só do caixa da recepção**. O caixa da Orientação
+  Cirúrgica voltou ao caminho simples (fechado → "Conferir" com um clique → aprovado).
+- (0155, decisão do Dr. Gelson) Parcela do cartão "entra" sozinha: toda parcela (menos cobrança ao médico) nasce com
+  recebido_em = data_prevista (gatilho `entra_sozinha`); repasses abertos foram preenchidos. Saiu o botão "Entrou hoje";
+  a tela mostra "Cai na conta" (✅ já caiu / ⏳ futura). O relatório por médico filtra pelo mês em que a parcela cai
+  (serve também de previsão). "Marcar pago hoje" (pagamento ao médico) continua manual.
+- (25/11) **Atendimentos encerrados: busca em todos os dias.** Encerrar só arquiva (`arquivada = true`); nada é apagado.
+  Na visão 📋 Atendimentos, escrevendo nome ou telefone na busca, a lista procura em todos os encerrados (não só no dia).
+  Para o conteúdo, continua 🧰 Ferramentas → 🔎 Pesquisar mensagens (texto e transcrição dos áudios).
+- Lançamentos do repasse: o filtro "até" era HOJE e escondia repasses de cirurgia futura (venda paga antes da cirurgia —
+  repasse nº 29, vitrectomia de 26/11, "sumiu"). Agora o padrão vai até daqui a 1 ano.
+- (25/11) Menu "📋 Atendimentos" da Central/Orientação virou **"📋 Encerradas"**; cartões com "✅ Encerrada · quem
+  atendeu"; cabeçalho da conversa encerrada diz quem encerrou e que ela fica guardada em "Encerradas".
+- (0156, decisões do Dr. Gelson) Pagamentos AUTOMÁTICOS, sem botão: médico no CRÉDITO → fechamento no dia 20 (parcela que cai
+  até o dia 20 é paga no dia 25 do mês; depois, no dia 25 do mês seguinte); PIX/dinheiro/débito → no dia da cirurgia;
+  terceiros (auxiliar/instrumentação/anestesista) → à vista no dia da cirurgia. Fim de semana/feriado não importa.
+  `interno.repasse_dia_pagamento`, gatilhos `pagar_medico` (parcelas) e `pagar_terceiro` (custos); mudar a data da cirurgia
+  recalcula. "Pago" = data de hoje ou passada (a tela calcula "Médico pago"; status no banco fica "aberto", só cobrança fecha).
+  Cancelar só é bloqueado se já houver pagamento com data passada. Relatório por médico filtra pela data em que o médico recebe.
+  Vitrectomia (repasse 29): parcela 1 cai 25/12 → médico recebe 25/01.
+- Repasse: nova aba "Previsão de pagamentos" — tabela médico × mês (3/6/12/24 meses) com quanto cada médico recebe, pelas
+  datas automáticas da 0156; clicar no valor mostra de quais repasses/parcelas vem.
+- (0157, decisão do Dr. Gelson) Sociedade Dr. Gelson + Dr. Max: em todo repasse de um dos dois (qualquer procedimento,
+  qualquer forma de pagamento, venda de lente, Clínica Vital) a parte do médico é dividida 50/50; o centavo que sobra fica com
+  o Dr. Gelson. Tabela `repasse_sociedade` (fica_centavo) + visão `repasse_parcelas_medicos` (security_invoker; uma linha por
+  parcela e por médico que recebe; demais partes divididas na mesma proporção). Relatório por médico e Previsão usam a visão;
+  o repasse mostra a metade de cada um por parcela. Vale para os já lançados (vitrectomia nº 29: R$ 410,48 + R$ 410,48 por
+  parcela). Clínica Vital: continua sem imposto e sem os 20%; cirurgião padrão = Dr. Max (R$ 250 para cada).

@@ -24,7 +24,16 @@ interface Custo {
 interface ProcCusto { id?: string; tipo: string; descricao: string; valor: number; favorecido_profissional_id: string | null; favorecido_nome: string | null; ordem: number }
 interface Procedimento { id: string; nome: string; regra: string; profissional_id: string | null; valor_sugerido: number | null; observacoes: string | null; ativo: boolean; repasse_procedimento_custos: ProcCusto[] }
 /** custo sendo digitado na tela */
-interface CustoEdit { tipo: string; descricao: string; valor: string; favorecido_profissional_id: string; favorecido_nome: string }
+interface CustoEdit { tipo: string; descricao: string; valor: string; favorecido_profissional_id: string; favorecido_nome: string; direto?: string }
+const SUFIXO_DIRETO = " — pago direto pelo paciente";
+/** anestesista pago direto pelo paciente (0152): a linha fica com valor 0 e anotação; não é descontado de novo */
+function marcarDireto(c: CustoEdit, valorPago?: string): CustoEdit {
+  const v = valorPago ?? c.valor;
+  return { ...c, direto: v, valor: "0", descricao: c.descricao.replace(SUFIXO_DIRETO, "").replace(/ \(R\$ [^)]*\)$/, "") + `${SUFIXO_DIRETO} (R$ ${v})` };
+}
+function desmarcarDireto(c: CustoEdit): CustoEdit {
+  return { ...c, valor: c.direto ?? c.valor, direto: undefined, descricao: c.descricao.split(SUFIXO_DIRETO)[0] };
+}
 interface Repasse {
   id: string; numero: number; conta_id: string | null; paciente_id: string | null; profissional_id: string; procedimento: string;
   data_cirurgia: string; data_pagamento: string; valor_total: number; forma_pagamento: string; parcelas: number;
@@ -41,7 +50,7 @@ interface Config extends RegrasRepasse { id: string }
 export interface VendaOrientacao {
   id: string; numero: number; tipo: string; paciente_id: string; profissional_id: string; procedimento_id: string | null; procedimento: string;
   lente_id: string | null; data_cirurgia: string | null; data_pagamento: string; valor_total: number; forma_pagamento: string; parcelas: number;
-  observacoes: string | null; status: string; motivo: string | null; criado_em: string;
+  observacoes: string | null; status: string; motivo: string | null; criado_em: string; anestesista_direto?: number | null;
   pacientes?: { id: string; nome: string; nome_social: string | null; numero_prontuario: number } | null;
   profissionais?: { nome: string } | null; criador?: { nome: string } | null;
 }
@@ -75,9 +84,10 @@ async function carregarBase() {
 // ================================================================== tela principal
 export default function RepasseMedico() {
   const [params, setParams] = useSearchParams();
-  const aba = params.get("aba") ?? "lancamentos";
   const base = useCarregar(carregarBase, []);
-  const pend = useCarregar(async () => (await supabase.from("orientacao_vendas").select("id", { count: "exact", head: true }).eq("status", "aguardando")).count ?? 0, [aba]);
+  const pend = useCarregar(async () => (await supabase.from("orientacao_vendas").select("id", { count: "exact", head: true }).eq("status", "aguardando")).count ?? 0, [params.get("aba")]);
+  // sem aba escolhida: se há venda da Orientação esperando, abre direto em "Para conferir"
+  const aba = params.get("aba") ?? ((pend.dados ?? 0) > 0 ? "conferir" : "lancamentos");
   return (
     <div>
       <div className="cabecalho">
@@ -87,16 +97,24 @@ export default function RepasseMedico() {
         </div>
       </div>
       <Aviso>{base.erro}</Aviso>
+      {aba !== "conferir" && (pend.dados ?? 0) > 0 && (
+        <Aviso tipo="alerta">
+          {pend.dados === 1 ? "Há 1 venda da Orientação Cirúrgica esperando" : `Há ${pend.dados} vendas da Orientação Cirúrgica esperando`} a sua conferência.{" "}
+          <button className="primario pequeno" onClick={() => setParams({ aba: "conferir" })}>Ver para conferir →</button>
+        </Aviso>
+      )}
       <div className="abas">
         <button className={aba === "conferir" ? "ativa" : ""} onClick={() => setParams({ aba: "conferir" })}>Para conferir{(pend.dados ?? 0) > 0 && <span className="etiqueta amarelo" style={{ marginLeft: 6 }}>{pend.dados}</span>}</button>
         <button className={aba === "lancamentos" ? "ativa" : ""} onClick={() => setParams({ aba: "lancamentos" })}>Lançamentos</button>
         <button className={aba === "medicos" ? "ativa" : ""} onClick={() => setParams({ aba: "medicos" })}>Relatório por médico</button>
+        <button className={aba === "previsao" ? "ativa" : ""} onClick={() => setParams({ aba: "previsao" })}>Previsão de pagamentos</button>
         <button className={aba === "regras" ? "ativa" : ""} onClick={() => setParams({ aba: "regras" })}>Regras e taxas</button>
         <button className={aba === "lentes" ? "ativa" : ""} onClick={() => setParams({ aba: "lentes" })}>Lentes</button>
       </div>
       {base.dados && aba === "lancamentos" && <Lancamentos base={base.dados} />}
       {base.dados && aba === "conferir" && <ParaConferir base={base.dados} aoMudar={pend.recarregar} />}
       {base.dados && aba === "medicos" && <RelatorioMedicos medicos={base.dados.medicos} />}
+      {aba === "previsao" && <Previsao />}
       {base.dados && aba === "regras" && <Regras cfg={base.dados.cfg} taxas={base.dados.taxas} aoMudar={base.recarregar} />}
       {aba === "lentes" && <LentesCatalogo />}
       {base.dados && aba === "regras" && <Procedimentos procs={base.dados.procedimentos} medicos={base.dados.medicos} aoMudar={base.recarregar} />}
@@ -109,17 +127,21 @@ function Lancamentos({ base }: { base: Awaited<ReturnType<typeof carregarBase>> 
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
   const contaParam = params.get("conta");
-  const [f, setF] = useState({ status: "aberto", medico: "todos", de: isoDia(new Date(new Date().getFullYear(), new Date().getMonth() - 2, 1)), ate: isoDia(new Date()) });
+  const [f, setF] = useState({ status: "aberto", medico: "todos", de: isoDia(new Date(new Date().getFullYear(), new Date().getMonth() - 2, 1)),
+    // inclui cirurgias futuras: o pagamento costuma vir antes da cirurgia (venda da Orientação)
+    ate: isoDia(new Date(new Date().getFullYear() + 1, new Date().getMonth(), new Date().getDate())) });
   const [nova, setNova] = useState(!!contaParam);
 
   const { dados, erro, carregando } = useCarregar(async () => {
     let q = supabase.from("repasses").select(SEL).gte("data_cirurgia", f.de).lte("data_cirurgia", f.ate)
       .order("data_cirurgia", { ascending: false }).limit(500);
-    if (f.status !== "todos") q = q.eq("status", f.status);
+    // "em andamento" × "médico pago" é calculado pelas datas (0156); no banco só "cancelado" é definitivo
+    if (f.status === "cancelado") q = q.eq("status", "cancelado");
+    else if (f.status !== "todos") q = q.neq("status", "cancelado");
     if (f.medico !== "todos") q = q.eq("profissional_id", f.medico);
     return ok(await q) as Repasse[];
   }, [f.status, f.medico, f.de, f.ate]);
-  const lista = dados ?? [];
+  const lista = (dados ?? []).filter((r) => f.status === "todos" || f.status === "cancelado" || situacaoRepasse(r) === f.status);
 
   return (
     <div className="painel grade">
@@ -146,8 +168,9 @@ function Lancamentos({ base }: { base: Awaited<ReturnType<typeof carregarBase>> 
             <tbody>
               {lista.map((r) => {
                 const ps = r.repasse_parcelas ?? [];
-                const entrou = ps.filter((p) => p.recebido_em).length;
-                const pagas = ps.filter((p) => p.pago_medico_em).length;
+                const hojeIso = isoDia(new Date());
+                const entrou = ps.filter((p) => p.recebido_em && p.recebido_em <= hojeIso).length;
+                const pagas = ps.filter((p) => jaPago(p.pago_medico_em)).length;
                 return (
                   <tr key={r.id} className="clicavel" onClick={() => nav(`/repasse/${r.id}`)}>
                     <td>{r.numero}</td>
@@ -157,8 +180,8 @@ function Lancamentos({ base }: { base: Awaited<ReturnType<typeof carregarBase>> 
                     <td>{FORMAS_REPASSE[r.forma_pagamento]}{r.parcelas > 1 && ` ${r.parcelas}x`}</td>
                     <td style={num}>{fmtMoeda(r.valor_total)}</td>
                     <td style={num}>{fmtMoeda(soma(ps, "medico"))}</td>
-                    <td className="pequeno">{entrou}/{r.parcelas} entraram<div className="muted">{pagas}/{r.parcelas} pagas ao médico</div></td>
-                    <td><Etiqueta cor={STATUS[r.status].cor}>{STATUS[r.status].rotulo}</Etiqueta></td>
+                    <td className="pequeno">{entrou}/{r.parcelas} já caíram<div className="muted">{pagas}/{r.parcelas} pagas ao médico</div></td>
+                    <td><Etiqueta cor={STATUS[situacaoRepasse(r)].cor}>{STATUS[situacaoRepasse(r)].rotulo}</Etiqueta></td>
                   </tr>
                 );
               })}
@@ -207,6 +230,10 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
         cs[i] = { ...linha, descricao: `Lente ${l.descricao} (${l.codigo})`, valor: String(l.custo_compra ?? 0).replace(".", ",") };
         setPremium({ id: l.id, acrescimo, linha, indice: i });
       }
+    }
+    if (venda.anestesista_direto) {
+      const v = String(venda.anestesista_direto).replace(".", ",");
+      cs = cs.map((c) => (c.tipo === "anestesista" ? marcarDireto(c, v) : c));
     }
     setCustos(cs);
     setF((x) => ({
@@ -461,6 +488,10 @@ export function RepasseDetalhe() {
     return r;
   }, [id]);
   // veio de uma venda da Orientação Cirúrgica? (migração 0101: o cancelamento leva a venda junto)
+  // sócios (0157): divisão da parte do médico por parcela
+  const divisao = useCarregar(async () => ok(await supabase.from("repasse_parcelas_medicos")
+    .select("parcela_id, profissional_id, medico_nome, medico, dividido").eq("repasse_id", id!).eq("dividido", true)) as
+    { parcela_id: string; profissional_id: string; medico_nome: string; medico: number; dividido: boolean }[], [id]);
   const vendaLigada = useCarregar(async () =>
     (ok(await supabase.from("orientacao_vendas").select("id, numero").eq("repasse_id", id!).limit(1)) as { id: string; numero: number }[])[0] ?? null, [id]);
 
@@ -469,15 +500,10 @@ export function RepasseDetalhe() {
   const r = dados;
   const ps = r.repasse_parcelas ?? [];
   const ativo = r.status !== "cancelado";
-  const entraram = ps.filter((p) => p.recebido_em);
+  // parcela conta como recebida na data prevista (migração 0155: confiamos que o cartão paga)
+  const entraram = ps.filter((p) => p.recebido_em && p.recebido_em <= isoDia(new Date()));
   const cob = r.regra === "cobranca";
   const cs = (r.repasse_custos ?? []).sort((a, b) => a.ordem - b.ordem);
-  async function pagarCusto(c: Custo, pago: string | null) {
-    setErro(""); setOkMsg("");
-    const { error } = await supabase.from("repasse_custos").update({ pago_em: pago }).eq("id", c.id);
-    if (error) return setErro(msgErro(error));
-    setOkMsg(pago ? `${c.descricao} marcado como pago.` : `Pagamento de ${c.descricao} desmarcado.`); recarregar();
-  }
 
   async function atualizar(p: Parcela, campos: Record<string, unknown>, msg: string) {
     setErro(""); setOkMsg("");
@@ -500,7 +526,7 @@ export function RepasseDetalhe() {
     <div>
       <div className="cabecalho">
         <div>
-          <div className="linha"><h1 style={{ margin: 0 }}>{cob ? "Cobrança" : "Repasse"} nº {r.numero}</h1>{r.regra && r.regra !== "geral" && <Etiqueta cor="roxo">{REGRAS[r.regra]?.rotulo}</Etiqueta>}<Etiqueta cor={STATUS[r.status].cor}>{STATUS[r.status].rotulo}</Etiqueta></div>
+          <div className="linha"><h1 style={{ margin: 0 }}>{cob ? "Cobrança" : "Repasse"} nº {r.numero}</h1>{r.regra && r.regra !== "geral" && <Etiqueta cor="roxo">{REGRAS[r.regra]?.rotulo}</Etiqueta>}<Etiqueta cor={STATUS[situacaoRepasse(r)].cor}>{STATUS[situacaoRepasse(r)].rotulo}</Etiqueta></div>
           <p className="sub" style={{ margin: "4px 0 0" }}>
             <b>{r.profissionais?.nome}</b> · {r.procedimento} · cirurgia em {fmtData(r.data_cirurgia)}
             {r.pacientes && <> · {r.paciente_id ? <Link to={`/pacientes/${r.paciente_id}`}>{nomeExibicao(r.pacientes)}</Link> : nomeExibicao(r.pacientes)} (pront. {r.pacientes.numero_prontuario})</>}
@@ -535,9 +561,9 @@ export function RepasseDetalhe() {
               <tr><td>Clínica ({pct(r.centro_cirurgico_pct)} dos honorários)</td><td style={num}>{fmtMoeda(r.centro_cirurgico_total)}</td></tr>
             </>}
             <tr><td><b>Médico</b> {(r.regra ?? "geral") === "geral" ? `(${pct(100 - r.centro_cirurgico_pct)} dos honorários)` : "(sem imposto e sem os 20%)"}</td><td style={num}><b>{fmtMoeda(r.medico_total)}</b></td></tr>
-            <tr><td className="muted">Parcelas que já entraram</td><td style={num} className="muted">{entraram.length} de {r.parcelas} · médico {fmtMoeda(soma(entraram, "medico"))}</td></tr>
+            <tr><td className="muted">Parcelas que já caíram</td><td style={num} className="muted">{entraram.length} de {r.parcelas} · médico {fmtMoeda(soma(entraram, "medico"))}</td></tr>
             <tr><td className="muted">Já pago ao médico / falta pagar</td><td style={num} className="muted">
-              {fmtMoeda(soma(ps.filter((p) => p.pago_medico_em), "medico"))} / {fmtMoeda(soma(ps.filter((p) => !p.pago_medico_em), "medico"))}</td></tr>
+              {fmtMoeda(soma(ps.filter((p) => jaPago(p.pago_medico_em)), "medico"))} / {fmtMoeda(soma(ps.filter((p) => !jaPago(p.pago_medico_em)), "medico"))}</td></tr>
             </>}
           </tbody>
         </table>
@@ -556,15 +582,13 @@ export function RepasseDetalhe() {
 
       {!cob && cs.some((c) => !custoDaClinica(c.tipo)) && (
         <div className="painel rolagem">
-          <h2>A pagar: auxiliar, anestesista e instrumentação</h2>
+          <h2>Auxiliar, anestesista e instrumentação (pagos à vista no dia da cirurgia)</h2>
           <table className="tabela">
             <thead><tr><th>Custo</th><th>Quem recebe</th><th style={num}>Valor</th><th>Pago</th></tr></thead>
             <tbody>
               {cs.filter((c) => !custoDaClinica(c.tipo)).map((c) => (
                 <tr key={c.id}><td>{c.descricao}</td><td>{favorecido(c) || <span className="muted">não informado</span>}</td><td style={num}>{fmtMoeda(c.valor)}</td>
-                  <td>{c.pago_em ? (
-                    <span className="linha">✅ {fmtData(c.pago_em)}{ativo && <button className="sutil pequeno" onClick={() => confirm(`Desmarcar o pagamento de ${c.descricao}?`) && pagarCusto(c, null)}>desfazer</button>}</span>
-                  ) : ativo ? <button className="pequeno" onClick={() => pagarCusto(c, isoDia(new Date()))}>Marcar pago hoje</button> : "—"}</td></tr>
+                  <td>{Number(c.valor) === 0 ? <span className="muted pequeno">nada a pagar</span> : <DataPagamento d={c.pago_em} />}</td></tr>
               ))}
             </tbody>
           </table>
@@ -573,13 +597,18 @@ export function RepasseDetalhe() {
 
       {!cob && <div className="painel">
         <h2>Parcelas</h2>
+        {(divisao.dados ?? []).length > 0 && (
+          <Aviso tipo="info">Sociedade: a parte do médico é dividida <b>50% para cada</b> — {[...new Set((divisao.dados ?? []).map((d) => d.medico_nome))].join(" e ")} (o centavo que sobra fica com o Dr. Gelson).
+            Total para cada: {[...new Set((divisao.dados ?? []).map((d) => d.medico_nome))].map((nome) =>
+              `${nome.split(" ")[0]} ${fmtMoeda((divisao.dados ?? []).filter((d) => d.medico_nome === nome).reduce((x, d) => x + Number(d.medico), 0))}`).join(" · ")}</Aviso>
+        )}
         {ativo && r.parcelas > 1 && (
-          <p className="muted pequeno">Quando cada parcela cair na conta, clique em <b>"Entrou hoje"</b>. Depois de transferir ao médico, clique em <b>"Marcar pago hoje"</b>.</p>
+          <p className="muted pequeno">Tudo automático: a parcela conta como recebida na data prevista (o cartão paga). Fechamento no dia 20: o que cai até o dia 20 é pago ao médico no dia 25 do mesmo mês; depois do dia 20, no dia 25 do mês seguinte.</p>
         )}
         <div className="rolagem">
           <table className="tabela">
             <thead><tr><th>Parcela</th><th>Prevista</th><th style={num}>Valor</th><th style={num}>Imposto</th><th style={num}>Taxa cartão</th><th style={num}>Custos</th>
-              <th style={num}>Clínica</th><th style={num}>Médico</th><th>Entrou</th><th>Pago ao médico</th></tr></thead>
+              <th style={num}>Clínica</th><th style={num}>Médico</th><th>Cai na conta</th><th>Médico recebe</th></tr></thead>
             <tbody>
               {ps.map((p) => (
                 <tr key={p.id}>
@@ -590,22 +619,16 @@ export function RepasseDetalhe() {
                   <td style={num}>{fmtMoeda(p.taxa_interna)}</td>
                   <td style={num}>{fmtMoeda(p.custos)}</td>
                   <td style={num}>{fmtMoeda(p.centro_cirurgico)}</td>
-                  <td style={num}><b>{fmtMoeda(p.medico)}</b></td>
+                  <td style={num}><b>{fmtMoeda(p.medico)}</b>
+                    {(divisao.dados ?? []).filter((d) => d.parcela_id === p.id).map((d) => (
+                      <div key={d.profissional_id} className="muted pequeno">{d.medico_nome.split(" ")[0]} {fmtMoeda(d.medico)}</div>))}</td>
                   <td>
-                    {p.recebido_em ? (
-                      <span className="linha">✅ {fmtData(p.recebido_em)}
-                        {ativo && !p.pago_medico_em && <button className="sutil pequeno" onClick={() => confirm(`Desmarcar a entrada da parcela ${p.numero}?`) && atualizar(p, { recebido_em: null }, `Entrada da parcela ${p.numero} desmarcada.`)}>desfazer</button>}</span>
-                    ) : ativo ? (
-                      <button className="pequeno" onClick={() => atualizar(p, { recebido_em: isoDia(new Date()) }, `Parcela ${p.numero} marcada como recebida.`)}>Entrou hoje</button>
-                    ) : <span className="muted pequeno">—</span>}
+                    {p.recebido_em ? (p.recebido_em <= isoDia(new Date())
+                      ? <span>✅ {fmtData(p.recebido_em)}</span>
+                      : <span className="muted">⏳ {fmtData(p.recebido_em)}</span>) : <span className="muted pequeno">—</span>}
                   </td>
                   <td>
-                    {p.pago_medico_em ? (
-                      <span className="linha">✅ {fmtData(p.pago_medico_em)}
-                        {ativo && <button className="sutil pequeno" onClick={() => confirm(`Desmarcar o pagamento da parcela ${p.numero}?`) && atualizar(p, { pago_medico_em: null }, `Pagamento da parcela ${p.numero} desmarcado.`)}>desfazer</button>}</span>
-                    ) : ativo && p.recebido_em ? (
-                      <button className="pequeno" onClick={() => atualizar(p, { pago_medico_em: isoDia(new Date()) }, `Parcela ${p.numero} marcada como paga ao médico.`)}>Marcar pago hoje</button>
-                    ) : <span className="muted pequeno">—</span>}
+                    <DataPagamento d={p.pago_medico_em} />
                   </td>
                 </tr>
               ))}
@@ -651,17 +674,37 @@ function CancelarRepasse({ venda, aoFechar, aoConfirmar }: {
 // ------------------------------------------------------------------ relatório por médico
 interface LinhaRel extends Parcela { repasses: Pick<Repasse, "numero" | "procedimento" | "data_cirurgia" | "profissional_id" | "forma_pagamento" | "parcelas" | "status"> & { profissionais: { nome: string } | null; pacientes: { nome: string; nome_social: string | null } | null } }
 
+/** linha da visão repasse_parcelas_medicos (0157): uma por parcela e por médico que recebe (sócios Gelson + Max: 50/50) */
+interface ParcelaMedico {
+  parcela_id: string; repasse_id: string; numero: number; data_prevista: string; recebido_em: string | null; pago_medico_em: string | null;
+  profissional_id: string; medico_nome: string; dividido: boolean; cirurgiao_id: string; cirurgiao_nome: string;
+  repasse_numero: number; procedimento: string; data_cirurgia: string; forma_pagamento: string; parcelas: number; status: string; regra: string;
+  paciente_nome: string | null; paciente_nome_social: string | null;
+  valor: number; imposto: number; taxa_interna: number; custos: number; centro_cirurgico: number; medico: number;
+}
+function paraLinhaRel(v: ParcelaMedico): LinhaRel {
+  return {
+    id: `${v.parcela_id}-${v.profissional_id}`, repasse_id: v.repasse_id, numero: v.numero, data_prevista: v.data_prevista, valor: v.valor, valor_recebido: null,
+    recebido_em: v.recebido_em, imposto: v.imposto, custos: v.custos, centro_cirurgico: v.centro_cirurgico, taxa_interna: v.taxa_interna, medico: v.medico,
+    pago_medico_em: v.pago_medico_em,
+    repasses: {
+      numero: v.repasse_numero, procedimento: v.dividido ? `${v.procedimento} (cirurgião: ${v.cirurgiao_nome.split(" ")[0]} · 50%)` : v.procedimento,
+      data_cirurgia: v.data_cirurgia, profissional_id: v.profissional_id, forma_pagamento: v.forma_pagamento, parcelas: v.parcelas, status: v.status,
+      profissionais: { nome: v.medico_nome }, pacientes: v.paciente_nome ? { nome: v.paciente_nome, nome_social: v.paciente_nome_social } : null,
+    },
+  };
+}
+
 function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
-  const [f, setF] = useState({ de: primeiroDiaMes(), ate: isoDia(new Date()), medico: "todos", situacao: "todas" });
+  const [f, setF] = useState({ de: primeiroDiaMes(), ate: isoDia(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)), medico: "todos", situacao: "todas" });
   const { dados, erro, carregando } = useCarregar(async () => {
-    const q = supabase.from("repasse_parcelas")
-      .select("*, repasses!inner(numero, procedimento, data_cirurgia, profissional_id, forma_pagamento, parcelas, status, profissionais!repasses_profissional_id_fkey(nome), pacientes(nome, nome_social))")
-      .not("recebido_em", "is", null).gte("recebido_em", f.de).lte("recebido_em", f.ate).neq("repasses.status", "cancelado").neq("repasses.regra", "cobranca")
-      .order("recebido_em").limit(5000);
-    return ok(await (f.medico === "todos" ? q : q.eq("repasses.profissional_id", f.medico))) as LinhaRel[];
+    const q = supabase.from("repasse_parcelas_medicos").select("*")
+      .not("pago_medico_em", "is", null).gte("pago_medico_em", f.de).lte("pago_medico_em", f.ate).neq("status", "cancelado").neq("regra", "cobranca")
+      .order("pago_medico_em").limit(5000);
+    return (ok(await (f.medico === "todos" ? q : q.eq("profissional_id", f.medico))) as ParcelaMedico[]).map(paraLinhaRel);
   }, [f.de, f.ate, f.medico]);
 
-  const linhas = (dados ?? []).filter((l) => f.situacao === "todas" || (f.situacao === "pagar" ? !l.pago_medico_em : !!l.pago_medico_em));
+  const linhas = (dados ?? []).filter((l) => f.situacao === "todas" || (f.situacao === "pagar" ? !jaPago(l.pago_medico_em) : jaPago(l.pago_medico_em)));
   const grupos = useMemo(() => {
     const m = new Map<string, { nome: string; ls: LinhaRel[] }>();
     for (const l of linhas) {
@@ -673,7 +716,7 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
   }, [linhas]);
 
   function exportarCSV() {
-    const cab = ["Medico", "Repasse", "Procedimento", "Cirurgia", "Pagamento", "Parcela", "Entrou em", "Valor", "Imposto", "Taxa cartao", "Clinica", "Medico", "Pago ao medico em"];
+    const cab = ["Medico", "Repasse", "Procedimento", "Cirurgia", "Pagamento", "Parcela", "Cai na conta em", "Valor", "Imposto", "Taxa cartao", "Clinica", "Medico", "Medico recebe em"];
     const v = (x: number | null) => (x === null ? "" : Number(x).toFixed(2).replace(".", ","));
     const corpo = linhas.map((l) => [l.repasses.profissionais?.nome ?? "", l.repasses.numero, l.repasses.procedimento, l.repasses.data_cirurgia,
       FORMAS_REPASSE[l.repasses.forma_pagamento], `${l.numero}/${l.repasses.parcelas}`, l.recebido_em ?? "", v(l.valor), v(l.imposto),
@@ -687,13 +730,13 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
   return (
     <div>
       <div className="painel linha">
-        <label className="linha pequeno muted">parcelas que entraram de <input type="date" style={{ width: 150 }} value={f.de} onChange={(e) => setF({ ...f, de: e.target.value })} /></label>
+        <label className="linha pequeno muted">médico recebe de <input type="date" style={{ width: 150 }} value={f.de} onChange={(e) => setF({ ...f, de: e.target.value })} /></label>
         <label className="linha pequeno muted">até <input type="date" style={{ width: 150 }} value={f.ate} onChange={(e) => setF({ ...f, ate: e.target.value })} /></label>
         <select style={{ width: 200 }} value={f.medico} onChange={(e) => setF({ ...f, medico: e.target.value })}>
           <option value="todos">Todos os médicos</option>{medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
         </select>
         <select style={{ width: 170 }} value={f.situacao} onChange={(e) => setF({ ...f, situacao: e.target.value })}>
-          <option value="todas">Pagas e a pagar</option><option value="pagar">Só a pagar</option><option value="pagas">Só já pagas</option>
+          <option value="todas">Pagas e a pagar</option><option value="pagar">Só a pagar (data futura)</option><option value="pagas">Só já pagas</option>
         </select>
         <span style={{ marginLeft: "auto" }} />
         <button disabled={!linhas.length} onClick={exportarCSV}>⬇️ Planilha</button>
@@ -702,7 +745,7 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
       <Aviso>{erro}</Aviso>
       <CobrancasMedicos />
       <CustosAPagar de={f.de} ate={f.ate} situacao={f.situacao} />
-      {carregando && !dados ? <Carregando /> : grupos.length === 0 ? <div className="painel vazio">Nenhuma parcela entrou neste período.</div> : (
+      {carregando && !dados ? <Carregando /> : grupos.length === 0 ? <div className="painel vazio">Nenhum pagamento ao médico neste período.</div> : (
         <>
           <div className="painel rolagem">
             <h2>Resumo do período</h2>
@@ -714,15 +757,15 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
                   <tr key={g.nome}><td><b>{g.nome}</b></td><td>{g.ls.length}</td><td style={num}>{fmtMoeda(soma(g.ls, "valor"))}</td>
                     <td style={num}>{fmtMoeda(soma(g.ls, "imposto"))}</td><td style={num}>{fmtMoeda(soma(g.ls, "taxa_interna"))}</td>
                     <td style={num}>{fmtMoeda(soma(g.ls, "centro_cirurgico"))}</td><td style={num}><b>{fmtMoeda(soma(g.ls, "medico"))}</b></td>
-                    <td style={num}>{fmtMoeda(soma(g.ls.filter((l) => l.pago_medico_em), "medico"))}</td>
-                    <td style={num}>{fmtMoeda(soma(g.ls.filter((l) => !l.pago_medico_em), "medico"))}</td></tr>
+                    <td style={num}>{fmtMoeda(soma(g.ls.filter((l) => jaPago(l.pago_medico_em)), "medico"))}</td>
+                    <td style={num}>{fmtMoeda(soma(g.ls.filter((l) => !jaPago(l.pago_medico_em)), "medico"))}</td></tr>
                 ))}
               </tbody>
               {grupos.length > 1 && (
                 <tfoot><tr><th>Total</th><th>{linhas.length}</th><th style={num}>{fmtMoeda(soma(linhas, "valor"))}</th><th style={num}>{fmtMoeda(soma(linhas, "imposto"))}</th>
                   <th style={num}>{fmtMoeda(soma(linhas, "taxa_interna"))}</th><th style={num}>{fmtMoeda(soma(linhas, "centro_cirurgico"))}</th>
-                  <th style={num}>{fmtMoeda(soma(linhas, "medico"))}</th><th style={num}>{fmtMoeda(soma(linhas.filter((l) => l.pago_medico_em), "medico"))}</th>
-                  <th style={num}>{fmtMoeda(soma(linhas.filter((l) => !l.pago_medico_em), "medico"))}</th></tr></tfoot>
+                  <th style={num}>{fmtMoeda(soma(linhas, "medico"))}</th><th style={num}>{fmtMoeda(soma(linhas.filter((l) => jaPago(l.pago_medico_em)), "medico"))}</th>
+                  <th style={num}>{fmtMoeda(soma(linhas.filter((l) => !jaPago(l.pago_medico_em)), "medico"))}</th></tr></tfoot>
               )}
             </table>
           </div>
@@ -730,8 +773,8 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
             <div className="painel rolagem" key={g.nome}>
               <h2>{g.nome}</h2>
               <table className="tabela">
-                <thead><tr><th>Entrou em</th><th>Repasse</th><th>Paciente / procedimento</th><th>Parcela</th><th style={num}>Valor</th>
-                  <th style={num}>Imposto</th><th style={num}>Taxa cartão</th><th style={num}>Clínica</th><th style={num}>Médico</th><th>Pago em</th></tr></thead>
+                <thead><tr><th>Cai na conta</th><th>Repasse</th><th>Paciente / procedimento</th><th>Parcela</th><th style={num}>Valor</th>
+                  <th style={num}>Imposto</th><th style={num}>Taxa cartão</th><th style={num}>Clínica</th><th style={num}>Médico</th><th>Médico recebe</th></tr></thead>
                 <tbody>
                   {g.ls.map((l) => (
                     <tr key={l.id}><td>{fmtData(l.recebido_em)}</td><td><Link to={`/repasse/${l.repasse_id}`}>nº {l.repasses.numero}</Link></td>
@@ -739,7 +782,7 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
                       <td>{l.numero}/{l.repasses.parcelas}<div className="muted pequeno">{FORMAS_REPASSE[l.repasses.forma_pagamento]}</div></td>
                       <td style={num}>{fmtMoeda(l.valor)}</td><td style={num}>{fmtMoeda(l.imposto)}</td><td style={num}>{fmtMoeda(l.taxa_interna)}</td>
                       <td style={num}>{fmtMoeda(l.centro_cirurgico)}</td><td style={num}><b>{fmtMoeda(l.medico)}</b></td>
-                      <td>{l.pago_medico_em ? fmtData(l.pago_medico_em) : <Etiqueta cor="amarelo">a pagar</Etiqueta>}</td></tr>
+                      <td><DataPagamento d={l.pago_medico_em} /></td></tr>
                   ))}
                 </tbody>
               </table>
@@ -857,7 +900,14 @@ function EditorCustos({ custos, medicos, aoMudar, cobranca = false }: { custos: 
               <td><select value={c.tipo} onChange={(e) => muda(i, "tipo", e.target.value)} aria-label="Tipo do custo">
                 {Object.entries(TIPOS_CUSTO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
               <td><input value={c.descricao} onChange={(e) => muda(i, "descricao", e.target.value)} aria-label="Descrição do custo" /></td>
-              <td><input style={{ width: 100, textAlign: "right" }} inputMode="decimal" value={c.valor} onChange={(e) => muda(i, "valor", e.target.value)} aria-label="Valor do custo" /></td>
+              <td><input style={{ width: 100, textAlign: "right" }} inputMode="decimal" value={c.valor} disabled={c.direto !== undefined} onChange={(e) => muda(i, "valor", e.target.value)} aria-label="Valor do custo" />
+                {c.tipo === "anestesista" && !cobranca && (
+                  <label className="pequeno" style={{ display: "block", whiteSpace: "nowrap" }}>
+                    <input type="checkbox" checked={c.direto !== undefined}
+                      onChange={(e) => aoMudar(custos.map((x, j) => (j === i ? (e.target.checked ? marcarDireto(x) : desmarcarDireto(x)) : x)))} />
+                    {" "}pago direto pelo paciente
+                  </label>
+                )}</td>
               <td>{custoDaClinica(c.tipo) || cobranca ? <span className="muted pequeno">{cobranca ? "devido à clínica" : "fica para a clínica"}</span> : (
                 <div className="linha" style={{ gap: 4 }}>
                   <select style={{ width: 170 }} value={c.favorecido_profissional_id} onChange={(e) => muda(i, "favorecido_profissional_id", e.target.value)} aria-label="Profissional que recebe">
@@ -970,24 +1020,18 @@ function Procedimentos({ procs, medicos, aoMudar }: { procs: Procedimento[]; med
 // ------------------------------------------------------------------ relatório: auxiliares e instrumentação a pagar
 interface CustoRel extends Custo { repasses: { numero: number; procedimento: string; data_cirurgia: string; status: string; profissionais: { nome: string } | null } }
 function CustosAPagar({ de, ate, situacao }: { de: string; ate: string; situacao: string }) {
-  const [erro, setErro] = useState("");
-  const { dados, erro: e1, recarregar } = useCarregar(async () => ok(await supabase.from("repasse_custos")
+  const erro = "";
+  const { dados, erro: e1 } = useCarregar(async () => ok(await supabase.from("repasse_custos")
     .select("*, profissionais(nome), repasses!inner(numero, procedimento, data_cirurgia, status, profissionais!repasses_profissional_id_fkey(nome))")
-    .not("tipo", "in", "(sala,insumo)").neq("repasses.regra", "cobranca").gte("repasses.data_cirurgia", de).lte("repasses.data_cirurgia", ate).neq("repasses.status", "cancelado")
+    .not("tipo", "in", "(sala,insumo)").gt("valor", 0).neq("repasses.regra", "cobranca").gte("repasses.data_cirurgia", de).lte("repasses.data_cirurgia", ate).neq("repasses.status", "cancelado")
     .limit(5000)) as CustoRel[], [de, ate]);
-  const linhas = (dados ?? []).filter((c) => situacao === "todas" || (situacao === "pagar" ? !c.pago_em : !!c.pago_em))
+  const linhas = (dados ?? []).filter((c) => situacao === "todas" || (situacao === "pagar" ? !jaPago(c.pago_em) : jaPago(c.pago_em)))
     .sort((a, b) => favorecido(a).localeCompare(favorecido(b)) || a.repasses.data_cirurgia.localeCompare(b.repasses.data_cirurgia));
-  async function pagar(c: Custo, v: string | null) {
-    setErro("");
-    const { error } = await supabase.from("repasse_custos").update({ pago_em: v }).eq("id", c.id);
-    if (error) return setErro(msgErro(error));
-    recarregar();
-  }
   const total = (ls: CustoRel[]) => ls.reduce((s, c) => s + Number(c.valor), 0);
   if (!linhas.length && !e1) return null;
   return (
     <div className="painel rolagem">
-      <h2>Auxiliares, anestesista e instrumentação (cirurgias do período)</h2>
+      <h2>Auxiliares, anestesista e instrumentação — pagos à vista no dia da cirurgia (cirurgias do período)</h2>
       <Aviso>{erro || e1}</Aviso>
       <table className="tabela">
         <thead><tr><th>Quem recebe</th><th>Cirurgia</th><th>Repasse</th><th>Custo</th><th style={num}>Valor</th><th>Pago</th></tr></thead>
@@ -996,13 +1040,64 @@ function CustosAPagar({ de, ate, situacao }: { de: string; ate: string; situacao
             <tr key={c.id}><td><b>{favorecido(c) || <span className="muted">não informado</span>}</b></td>
               <td>{fmtData(c.repasses.data_cirurgia)}<div className="muted pequeno">{c.repasses.procedimento} · {c.repasses.profissionais?.nome}</div></td>
               <td><Link to={`/repasse/${c.repasse_id}`}>nº {c.repasses.numero}</Link></td><td>{c.descricao}</td><td style={num}>{fmtMoeda(c.valor)}</td>
-              <td>{c.pago_em ? <span className="linha">✅ {fmtData(c.pago_em)}<button className="sutil pequeno" onClick={() => confirm("Desmarcar o pagamento?") && pagar(c, null)}>desfazer</button></span>
-                : <button className="pequeno" onClick={() => pagar(c, isoDia(new Date()))}>Marcar pago hoje</button>}</td></tr>
+              <td><DataPagamento d={c.pago_em} /></td></tr>
           ))}
         </tbody>
-        <tfoot><tr><th colSpan={4}>Total · já pago {fmtMoeda(total(linhas.filter((c) => c.pago_em)))} · a pagar {fmtMoeda(total(linhas.filter((c) => !c.pago_em)))}</th>
+        <tfoot><tr><th colSpan={4}>Total · já pago {fmtMoeda(total(linhas.filter((c) => jaPago(c.pago_em))))} · a pagar {fmtMoeda(total(linhas.filter((c) => !jaPago(c.pago_em))))}</th>
           <th style={num}>{fmtMoeda(total(linhas))}</th><th></th></tr></tfoot>
       </table>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ previsão: quanto cada médico recebe em cada mês (0156)
+function Previsao() {
+  const [meses, setMeses] = useState(12);
+  const hoje = isoDia(new Date());
+  const { dados, erro, carregando } = useCarregar(async () => (ok(await supabase.from("repasse_parcelas_medicos").select("*")
+    .gte("pago_medico_em", hoje).neq("status", "cancelado").neq("regra", "cobranca")
+    .order("pago_medico_em").limit(5000)) as ParcelaMedico[]).map(paraLinhaRel) as (LinhaRel & { pago_medico_em: string })[], []);
+  const [aberto, setAberto] = useState<string | null>(null);
+  const colunas = Array.from({ length: meses }, (_, i) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + i); return isoDia(d).slice(0, 7); });
+  const linhas = (dados ?? []).filter((l) => colunas.includes(l.pago_medico_em.slice(0, 7)));
+  const medicos = [...new Map(linhas.map((l) => [l.repasses.profissional_id, l.repasses.profissionais?.nome ?? "—"])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  const valor = (med: string | null, mes: string) => linhas.filter((l) => (!med || l.repasses.profissional_id === med) && l.pago_medico_em.startsWith(mes)).reduce((s, l) => s + Number(l.medico), 0);
+  const nomeMes = (m: string) => new Date(Number(m.slice(0, 4)), Number(m.slice(5)) - 1, 1).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+  const detalhe = aberto ? linhas.filter((l) => `${l.repasses.profissional_id}|${l.pago_medico_em.slice(0, 7)}` === aberto) : [];
+  return (
+    <div className="painel rolagem">
+      <div className="linha"><h2 style={{ margin: 0 }}>Previsão de pagamentos aos médicos</h2><span style={{ marginLeft: "auto" }} />
+        <select style={{ width: 150 }} value={meses} onChange={(e) => setMeses(Number(e.target.value))}>
+          <option value={3}>Próximos 3 meses</option><option value={6}>Próximos 6 meses</option><option value={12}>Próximos 12 meses</option><option value={24}>Próximos 24 meses</option>
+        </select>
+        <button onClick={() => window.print()}>🖨️ Imprimir</button></div>
+      <p className="muted pequeno">Quanto cada médico vai receber em cada mês, pelas regras automáticas: crédito com fechamento no dia 20 e pagamento no dia 25; PIX, dinheiro e débito no dia da cirurgia. Clique num valor para ver de onde vem.</p>
+      <Aviso>{erro}</Aviso>
+      {carregando && !dados ? <Carregando /> : medicos.length === 0 ? <div className="vazio">Nenhum pagamento previsto.</div> : (
+        <table className="tabela">
+          <thead><tr><th>Médico</th>{colunas.map((m) => <th key={m} style={num}>{nomeMes(m)}</th>)}<th style={num}>Total</th></tr></thead>
+          <tbody>
+            {medicos.map(([id, nome]) => (
+              <tr key={id}><td><b>{nome}</b></td>
+                {colunas.map((m) => { const v = valor(id, m); return (
+                  <td key={m} style={{ ...num, cursor: v ? "pointer" : undefined }} onClick={() => v && setAberto(`${id}|${m}`)}>{v ? <span style={{ textDecoration: "underline dotted" }}>{fmtMoeda(v)}</span> : <span className="muted">—</span>}</td>); })}
+                <td style={num}><b>{fmtMoeda(colunas.reduce((s, m) => s + valor(id, m), 0))}</b></td></tr>
+            ))}
+          </tbody>
+          <tfoot><tr><th>Total</th>{colunas.map((m) => <th key={m} style={num}>{fmtMoeda(valor(null, m))}</th>)}<th style={num}>{fmtMoeda(colunas.reduce((s, m) => s + valor(null, m), 0))}</th></tr></tfoot>
+        </table>
+      )}
+      {aberto && (
+        <Modal titulo={`${detalhe[0]?.repasses.profissionais?.nome ?? ""} · ${nomeMes(aberto.split("|")[1])}`} aoFechar={() => setAberto(null)}>
+          <table className="tabela">
+            <thead><tr><th>Recebe em</th><th>Repasse</th><th>Procedimento</th><th>Parcela</th><th style={num}>Valor</th></tr></thead>
+            <tbody>{detalhe.map((l) => (
+              <tr key={l.id}><td>{fmtData(l.pago_medico_em)}</td><td><Link to={`/repasse/${l.repasse_id}`}>nº {l.repasses.numero}</Link></td>
+                <td>{l.repasses.procedimento}</td><td>{l.numero}/{l.repasses.parcelas}</td><td style={num}>{fmtMoeda(l.medico)}</td></tr>
+            ))}</tbody>
+          </table>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -1117,6 +1212,18 @@ function LentesCatalogo() {
 }
 
 // ------------------------------------------------------------------ vendas da Orientação Cirúrgica para conferir (migração 0097)
+/** pagamentos automáticos (migração 0156): pago = data de pagamento hoje ou passada */
+const jaPago = (d: string | null | undefined) => !!d && d <= isoDia(new Date());
+function DataPagamento({ d }: { d: string | null | undefined }) {
+  if (!d) return <span className="muted pequeno">—</span>;
+  return jaPago(d) ? <span>✅ {fmtData(d)}</span> : <span className="muted">⏳ {fmtData(d)}</span>;
+}
+/** situação exibida: cancelado / (cobrança: pelo status) / médico pago quando todas as datas já passaram */
+function situacaoRepasse(r: { status: string; regra?: string; repasse_parcelas?: { pago_medico_em: string | null }[] }) {
+  if (r.status === "cancelado" || r.regra === "cobranca") return r.status;
+  const ps = r.repasse_parcelas ?? [];
+  return ps.length > 0 && ps.every((p) => jaPago(p.pago_medico_em)) ? "concluido" : "aberto";
+}
 export const SEL_VENDA = "*, pacientes(id, nome, nome_social, numero_prontuario), profissionais!orientacao_vendas_profissional_id_fkey(nome), criador:profissionais!orientacao_vendas_criado_por_fkey(nome)";
 function ParaConferir({ base, aoMudar }: { base: Awaited<ReturnType<typeof carregarBase>>; aoMudar: () => void }) {
   const nav = useNavigate();
@@ -1150,7 +1257,7 @@ function ParaConferir({ base, aoMudar }: { base: Awaited<ReturnType<typeof carre
                 <td>{v.pacientes ? nomeExibicao(v.pacientes) : "—"}<div className="muted pequeno">Pront. {v.pacientes?.numero_prontuario}</div></td>
                 <td><b>{v.profissionais?.nome}</b><div className="muted pequeno">{v.procedimento}{v.tipo === "lente" && " · só a lente (convênio)"}</div></td>
                 <td>{FORMAS_REPASSE[v.forma_pagamento]}{v.parcelas > 1 && ` ${v.parcelas}x`}<div className="muted pequeno">{fmtData(v.data_pagamento)}</div></td>
-                <td style={num}>{fmtMoeda(v.valor_total)}</td>
+                <td style={num}>{fmtMoeda(v.valor_total)}{v.anestesista_direto ? <div className="muted pequeno">+ {fmtMoeda(v.anestesista_direto)} pago direto ao anestesista</div> : null}</td>
                 <td>{v.status === "devolvida" ? <><Etiqueta cor="vermelho">devolvida</Etiqueta><div className="muted pequeno">{v.motivo}</div></> : <Etiqueta cor="amarelo">aguardando</Etiqueta>}</td>
                 <td>{v.status === "aguardando" && <div className="linha" style={{ gap: 4 }}>
                   <button className="primario pequeno" onClick={() => setAbrir(v)}>Conferir e lançar</button>

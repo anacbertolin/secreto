@@ -56,8 +56,8 @@ export default function VendasOrientacao() {
       </div>
       <Aviso>{erro || base.erro}</Aviso>
       {!caixa.carregando && (caixa.dados
-        ? <Aviso tipo="info">💵 Caixa da Orientação aberto ({fmtData(caixa.dados.data)}): cada venda registrada entra nele automaticamente. <Link to={`/caixa/${caixa.dados.id}`}>Ver o caixa →</Link></Aviso>
-        : <Aviso tipo="alerta">💵 O caixa da Orientação está fechado. Abra o caixa antes de registrar vendas: <Link to="/caixa">ir para o Caixa →</Link></Aviso>)}
+        ? <Aviso tipo="info">💵 Caixa da Orientação aberto ({fmtData(caixa.dados.data)}): as vendas em <b>dinheiro</b> entram nele automaticamente (cartão e PIX não entram no caixa). <Link to={`/caixa/${caixa.dados.id}`}>Ver o caixa →</Link></Aviso>
+        : <Aviso tipo="info">💵 O caixa da Orientação está fechado. Só é preciso abri-lo para registrar venda paga em <b>dinheiro</b>: <Link to="/caixa">ir para o Caixa →</Link></Aviso>)}
       {devolvidas > 0 && <Aviso tipo="alerta">{devolvidas} venda(s) devolvida(s) pelo Luciano: abra, corrija e reenvie.</Aviso>}
       <div className="painel grade">
         <div className="linha">
@@ -105,6 +105,7 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
     procedimento: venda?.procedimento ?? "", lente_id: venda?.lente_id ?? "", valor: venda ? String(venda.valor_total).replace(".", ",") : "",
     forma: venda?.forma_pagamento ?? "pix", parcelas: String(venda?.parcelas ?? 1), data_pagamento: venda?.data_pagamento ?? isoDia(new Date()),
     data_cirurgia: venda?.data_cirurgia ?? "", observacoes: venda?.observacoes ?? "",
+    anest: venda?.anestesista_direto ? String(venda.anestesista_direto).replace(".", ",") : "",
   });
   const [erro, setErro] = useState("");
   const [cancelar, setCancelar] = useState(false);
@@ -146,6 +147,7 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
       procedimento: descricao() || f.procedimento.trim(), lente_id: f.lente_id || null, valor_total: valor, forma_pagamento: f.forma,
       parcelas: f.forma === "credito" ? Number(f.parcelas) : 1, data_pagamento: f.data_pagamento, data_cirurgia: f.data_cirurgia || null,
       observacoes: f.observacoes.trim() || null,
+      anestesista_direto: f.tipo === "cirurgia" && (numOuNulo(f.anest) ?? 0) > 0 ? numOuNulo(f.anest) : null,
     };
     const r = venda
       ? await supabase.from("orientacao_vendas").update({ ...dados, status: "aguardando", motivo: null }).eq("id", venda.id)
@@ -215,7 +217,7 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
           <Campo rotulo="Forma de pagamento">
             <select value={f.forma} onChange={set("forma")}>{Object.entries(FORMAS_REPASSE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
           </Campo>
-          {f.forma === "credito" ? (
+          {f.forma === "dinheiro" ? <span className="muted pequeno" style={{ alignSelf: "end" }}>💵 Em dinheiro: entra no caixa da Orientação.</span> : f.forma === "credito" ? (
             <Campo rotulo="Parcelas"><select value={f.parcelas} onChange={set("parcelas")}>
               {Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1 === 1 ? "1x (à vista)" : `${i + 1}x`}</option>)}</select></Campo>
           ) : <span />}
@@ -224,6 +226,12 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
           <Campo rotulo="Data do pagamento"><input type="date" value={f.data_pagamento} onChange={set("data_pagamento")} /></Campo>
           <Campo rotulo="Data prevista da cirurgia"><input type="date" value={f.data_cirurgia} onChange={set("data_cirurgia")} /></Campo>
         </div>
+        {f.tipo === "cirurgia" && (
+          <Campo rotulo="Anestesista pago DIRETO pelo paciente (R$) — só se combinado">
+            <input inputMode="decimal" value={f.anest} onChange={set("anest")} placeholder="deixe vazio se o anestesista foi pago à clínica" />
+            {(numOuNulo(f.anest) ?? 0) > 0 && <span className="muted pequeno">Não entra no caixa: no campo “Valor que o paciente pagou” coloque só o que foi pago à clínica.</span>}
+          </Campo>
+        )}
         <Campo rotulo="Observações (opcional)"><input value={f.observacoes} onChange={set("observacoes")} placeholder="ex.: pagou entrada de R$ 1.000 no PIX e o resto no cartão" /></Campo>
       </fieldset>
       <p className="muted pequeno">O valor vem sugerido pela tabela (com a diferença da lente premium, quando houver). Se o paciente pagou outro valor, corrija.</p>

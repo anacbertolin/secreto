@@ -69,14 +69,18 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
   const lista = useCarregar(async () => ok(await supabase.from("whatsapp_conversas").select(SELECT_CONVERSA)
     .eq("setor", setor).eq("arquivada", false)
     .order("ultima_mensagem_em", { ascending: false, nullsFirst: false }).limit(300)) as Conversa[], [setor]);
-  // Atendimentos encerrados no dia escolhido
+  // Atendimentos encerrados no dia escolhido — ou, escrevendo na busca, em TODOS os dias (pedido da dona, 25/11:
+  // achar a conversa de um paciente que voltou para reclamar ou perguntar)
+  const buscaTodos = busca.trim().length >= 2;
   const encerradas = useCarregar(async () => {
     if (visao !== "atendimentos") return [] as Conversa[];
-    const ini = new Date(diaHistorico + "T00:00:00"), fim = new Date(ini.getTime() + 86400000);
-    return ok(await supabase.from("whatsapp_conversas").select(SELECT_CONVERSA).eq("setor", setor).eq("arquivada", true)
-      .gte("ultima_mensagem_em", ini.toISOString()).lt("ultima_mensagem_em", fim.toISOString())
-      .order("ultima_mensagem_em", { ascending: false }).limit(300)) as Conversa[];
-  }, [setor, visao, diaHistorico]);
+    let q = supabase.from("whatsapp_conversas").select(SELECT_CONVERSA).eq("setor", setor).eq("arquivada", true);
+    if (!buscaTodos) {
+      const ini = new Date(diaHistorico + "T00:00:00"), fim = new Date(ini.getTime() + 86400000);
+      q = q.gte("ultima_mensagem_em", ini.toISOString()).lt("ultima_mensagem_em", fim.toISOString());
+    }
+    return ok(await q.order("ultima_mensagem_em", { ascending: false }).limit(buscaTodos ? 3000 : 300)) as Conversa[];
+  }, [setor, visao, diaHistorico, buscaTodos]);
   const equipe = useCarregar(async () => {
     const [p, st] = await Promise.all([
       supabase.from("profissionais").select("id, nome, funcao, orientacao_cirurgica").eq("ativo", true).order("nome"),
@@ -179,7 +183,7 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
             {tipo === "fila" && <span className="ct-tag espera">⏳ {fmtEsperando(c.fila_desde)}</span>}
             {tipo === "meu" && (naoRespondida(c) ? <span className="ct-tag nao-resp">Não respondido</span> : <span className="ct-tag atendendo">Atendendo</span>)}
             {tipo === "equipe" && <span className="ct-tag atendendo">{nomeDe(c.responsavel_id) ?? "Atendendo"}</span>}
-            {tipo === "historico" && <span className="ct-tag cinza">{c.responsavel_id ? nomeDe(c.responsavel_id) ?? "Encerrada" : "Encerrada"}</span>}
+            {tipo === "historico" && <span className="ct-tag cinza">✅ Encerrada{c.responsavel_id && nomeDe(c.responsavel_id) ? ` · ${nomeDe(c.responsavel_id)}` : ""}</span>}
             {c.nao_lidas > 0 && tipo !== "historico" && <span className="wa-badge">{c.nao_lidas}</span>}
           </span>
         </span>
@@ -196,8 +200,8 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
           <span className="ct-icone">💬{fila.length > 0 && <span className="ct-bolha">{fila.length}</span>}</span>Conversas
         </button>
         {veCanais && (
-          <button className={visao === "atendimentos" ? "ativo" : ""} onClick={() => setVisao("atendimentos")} title="Atendimentos encerrados">
-            <span className="ct-icone">📋</span>Atendimentos
+          <button className={visao === "atendimentos" ? "ativo" : ""} onClick={() => setVisao("atendimentos")} title="Conversas encerradas (ficam guardadas para sempre)">
+            <span className="ct-icone">📋</span>Encerradas
           </button>
         )}
         {veCanais && podeResponder && (
@@ -302,12 +306,26 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
           </div>
         ) : (
           <div className="ct-rolagem">
-            <h3 className="ct-secao">Atendimentos encerrados</h3>
-            <label className="ct-campo">Dia
-              <input type="date" value={diaHistorico} onChange={(e) => setDiaHistorico(e.target.value)} />
-            </label>
+            <h3 className="ct-secao">Conversas encerradas</h3>
+            <div className="pequeno muted" style={{ margin: "0 0 8px" }}>
+              Encerrar não apaga nada: a conversa sai da lista de atendimento e fica guardada aqui. Se o paciente escrever de
+              novo, ela volta para a fila.
+            </div>
+            {buscaTodos ? (
+              <div className="ct-aviso-tel">🔍 Procurando “{busca.trim()}” em <b>todos os dias</b> (nome ou telefone). Apague a busca para ver por dia.</div>
+            ) : (
+              <>
+                <label className="ct-campo">Dia
+                  <input type="date" value={diaHistorico} onChange={(e) => setDiaHistorico(e.target.value)} />
+                </label>
+                <div className="pequeno muted" style={{ margin: "0 0 8px" }}>
+                  Para achar um paciente de qualquer dia, escreva o nome ou o telefone na busca (🔍 lá em cima).
+                  Para achar o que foi dito, use 🧰 Ferramentas → 🔎 Pesquisar mensagens.
+                </div>
+              </>
+            )}
             {encerradas.carregando && !encerradas.dados ? <Carregando /> : historico.length === 0
-              ? <div className="ct-vazio">Nenhum atendimento encerrado neste dia.</div>
+              ? <div className="ct-vazio">{buscaTodos ? "Nenhuma conversa encerrada com esse nome ou telefone." : "Nenhum atendimento encerrado neste dia."}</div>
               : historico.map((c) => <Cartao key={c.id} c={c} tipo="historico" />)}
           </div>
         )}
