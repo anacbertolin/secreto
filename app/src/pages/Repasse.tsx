@@ -24,7 +24,16 @@ interface Custo {
 interface ProcCusto { id?: string; tipo: string; descricao: string; valor: number; favorecido_profissional_id: string | null; favorecido_nome: string | null; ordem: number }
 interface Procedimento { id: string; nome: string; regra: string; profissional_id: string | null; valor_sugerido: number | null; observacoes: string | null; ativo: boolean; repasse_procedimento_custos: ProcCusto[] }
 /** custo sendo digitado na tela */
-interface CustoEdit { tipo: string; descricao: string; valor: string; favorecido_profissional_id: string; favorecido_nome: string }
+interface CustoEdit { tipo: string; descricao: string; valor: string; favorecido_profissional_id: string; favorecido_nome: string; direto?: string }
+const SUFIXO_DIRETO = " — pago direto pelo paciente";
+/** anestesista pago direto pelo paciente (0152): a linha fica com valor 0 e anotação; não é descontado de novo */
+function marcarDireto(c: CustoEdit, valorPago?: string): CustoEdit {
+  const v = valorPago ?? c.valor;
+  return { ...c, direto: v, valor: "0", descricao: c.descricao.replace(SUFIXO_DIRETO, "").replace(/ \(R\$ [^)]*\)$/, "") + `${SUFIXO_DIRETO} (R$ ${v})` };
+}
+function desmarcarDireto(c: CustoEdit): CustoEdit {
+  return { ...c, valor: c.direto ?? c.valor, direto: undefined, descricao: c.descricao.split(SUFIXO_DIRETO)[0] };
+}
 interface Repasse {
   id: string; numero: number; conta_id: string | null; paciente_id: string | null; profissional_id: string; procedimento: string;
   data_cirurgia: string; data_pagamento: string; valor_total: number; forma_pagamento: string; parcelas: number;
@@ -41,7 +50,7 @@ interface Config extends RegrasRepasse { id: string }
 export interface VendaOrientacao {
   id: string; numero: number; tipo: string; paciente_id: string; profissional_id: string; procedimento_id: string | null; procedimento: string;
   lente_id: string | null; data_cirurgia: string | null; data_pagamento: string; valor_total: number; forma_pagamento: string; parcelas: number;
-  observacoes: string | null; status: string; motivo: string | null; criado_em: string;
+  observacoes: string | null; status: string; motivo: string | null; criado_em: string; anestesista_direto?: number | null;
   pacientes?: { id: string; nome: string; nome_social: string | null; numero_prontuario: number } | null;
   profissionais?: { nome: string } | null; criador?: { nome: string } | null;
 }
@@ -214,6 +223,10 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
         cs[i] = { ...linha, descricao: `Lente ${l.descricao} (${l.codigo})`, valor: String(l.custo_compra ?? 0).replace(".", ",") };
         setPremium({ id: l.id, acrescimo, linha, indice: i });
       }
+    }
+    if (venda.anestesista_direto) {
+      const v = String(venda.anestesista_direto).replace(".", ",");
+      cs = cs.map((c) => (c.tipo === "anestesista" ? marcarDireto(c, v) : c));
     }
     setCustos(cs);
     setF((x) => ({
@@ -569,7 +582,7 @@ export function RepasseDetalhe() {
             <tbody>
               {cs.filter((c) => !custoDaClinica(c.tipo)).map((c) => (
                 <tr key={c.id}><td>{c.descricao}</td><td>{favorecido(c) || <span className="muted">não informado</span>}</td><td style={num}>{fmtMoeda(c.valor)}</td>
-                  <td>{c.pago_em ? (
+                  <td>{Number(c.valor) === 0 ? <span className="muted pequeno">nada a pagar</span> : c.pago_em ? (
                     <span className="linha">✅ {fmtData(c.pago_em)}{ativo && <button className="sutil pequeno" onClick={() => confirm(`Desmarcar o pagamento de ${c.descricao}?`) && pagarCusto(c, null)}>desfazer</button>}</span>
                   ) : ativo ? <button className="pequeno" onClick={() => pagarCusto(c, isoDia(new Date()))}>Marcar pago hoje</button> : "—"}</td></tr>
               ))}
@@ -864,7 +877,14 @@ function EditorCustos({ custos, medicos, aoMudar, cobranca = false }: { custos: 
               <td><select value={c.tipo} onChange={(e) => muda(i, "tipo", e.target.value)} aria-label="Tipo do custo">
                 {Object.entries(TIPOS_CUSTO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
               <td><input value={c.descricao} onChange={(e) => muda(i, "descricao", e.target.value)} aria-label="Descrição do custo" /></td>
-              <td><input style={{ width: 100, textAlign: "right" }} inputMode="decimal" value={c.valor} onChange={(e) => muda(i, "valor", e.target.value)} aria-label="Valor do custo" /></td>
+              <td><input style={{ width: 100, textAlign: "right" }} inputMode="decimal" value={c.valor} disabled={c.direto !== undefined} onChange={(e) => muda(i, "valor", e.target.value)} aria-label="Valor do custo" />
+                {c.tipo === "anestesista" && !cobranca && (
+                  <label className="pequeno" style={{ display: "block", whiteSpace: "nowrap" }}>
+                    <input type="checkbox" checked={c.direto !== undefined}
+                      onChange={(e) => aoMudar(custos.map((x, j) => (j === i ? (e.target.checked ? marcarDireto(x) : desmarcarDireto(x)) : x)))} />
+                    {" "}pago direto pelo paciente
+                  </label>
+                )}</td>
               <td>{custoDaClinica(c.tipo) || cobranca ? <span className="muted pequeno">{cobranca ? "devido à clínica" : "fica para a clínica"}</span> : (
                 <div className="linha" style={{ gap: 4 }}>
                   <select style={{ width: 170 }} value={c.favorecido_profissional_id} onChange={(e) => muda(i, "favorecido_profissional_id", e.target.value)} aria-label="Profissional que recebe">
@@ -980,7 +1000,7 @@ function CustosAPagar({ de, ate, situacao }: { de: string; ate: string; situacao
   const [erro, setErro] = useState("");
   const { dados, erro: e1, recarregar } = useCarregar(async () => ok(await supabase.from("repasse_custos")
     .select("*, profissionais(nome), repasses!inner(numero, procedimento, data_cirurgia, status, profissionais!repasses_profissional_id_fkey(nome))")
-    .not("tipo", "in", "(sala,insumo)").neq("repasses.regra", "cobranca").gte("repasses.data_cirurgia", de).lte("repasses.data_cirurgia", ate).neq("repasses.status", "cancelado")
+    .not("tipo", "in", "(sala,insumo)").gt("valor", 0).neq("repasses.regra", "cobranca").gte("repasses.data_cirurgia", de).lte("repasses.data_cirurgia", ate).neq("repasses.status", "cancelado")
     .limit(5000)) as CustoRel[], [de, ate]);
   const linhas = (dados ?? []).filter((c) => situacao === "todas" || (situacao === "pagar" ? !c.pago_em : !!c.pago_em))
     .sort((a, b) => favorecido(a).localeCompare(favorecido(b)) || a.repasses.data_cirurgia.localeCompare(b.repasses.data_cirurgia));
@@ -1157,7 +1177,7 @@ function ParaConferir({ base, aoMudar }: { base: Awaited<ReturnType<typeof carre
                 <td>{v.pacientes ? nomeExibicao(v.pacientes) : "—"}<div className="muted pequeno">Pront. {v.pacientes?.numero_prontuario}</div></td>
                 <td><b>{v.profissionais?.nome}</b><div className="muted pequeno">{v.procedimento}{v.tipo === "lente" && " · só a lente (convênio)"}</div></td>
                 <td>{FORMAS_REPASSE[v.forma_pagamento]}{v.parcelas > 1 && ` ${v.parcelas}x`}<div className="muted pequeno">{fmtData(v.data_pagamento)}</div></td>
-                <td style={num}>{fmtMoeda(v.valor_total)}</td>
+                <td style={num}>{fmtMoeda(v.valor_total)}{v.anestesista_direto ? <div className="muted pequeno">+ {fmtMoeda(v.anestesista_direto)} pago direto ao anestesista</div> : null}</td>
                 <td>{v.status === "devolvida" ? <><Etiqueta cor="vermelho">devolvida</Etiqueta><div className="muted pequeno">{v.motivo}</div></> : <Etiqueta cor="amarelo">aguardando</Etiqueta>}</td>
                 <td>{v.status === "aguardando" && <div className="linha" style={{ gap: 4 }}>
                   <button className="primario pequeno" onClick={() => setAbrir(v)}>Conferir e lançar</button>
