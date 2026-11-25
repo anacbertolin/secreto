@@ -1,7 +1,7 @@
 // Página pública (sem login): Política de Privacidade da clínica (LGPD).
 // Exigida pela Meta para publicar o aplicativo do WhatsApp oficial (17–18/11/2026).
 // Texto preparado pelo Claude e APROVADO pela dona em 19/11/2026 — mudanças de conteúdo só com ela.
-// 24/11/2026 (pedido da dona): encarregada de dados = Ana Bertolin; fornecedores e países listados; proteções atualizadas.
+// 24/11/2026 (pedido da dona): encarregada de dados = Ana Carolina Bertolin Moura Brasil; fornecedores e países listados; proteções atualizadas.
 import type { ReactNode } from "react";
 import { CLINICA } from "../lib/marca";
 
@@ -12,7 +12,7 @@ const CANAL = {
 };
 const ATUALIZADA_EM = "24 de novembro de 2026";
 /** Encarregada pelo tratamento de dados pessoais (LGPD, art. 41) — definida pela dona em 24/11/2026 */
-const ENCARREGADA = "Ana Bertolin";
+const ENCARREGADA = "Ana Carolina Bertolin Moura Brasil";
 
 function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
