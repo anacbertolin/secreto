@@ -21,8 +21,14 @@ import decimal
 import io
 import sys
 
+import encodings.cp1252 as _cp1252
+
 import psycopg
 from firebird.driver import connect, driver_config
+
+# O banco tem alguns bytes que não existem no WIN1252 (0x81, 0x8D, 0x8F, 0x90, 0x9D): ficam como o caractere
+# Latin-1 equivalente, em vez de interromper a cópia.
+_cp1252.decoding_table = "".join(chr(i) if c == "\ufffe" else c for i, c in enumerate(_cp1252.decoding_table))
 
 LOTE = 5000
 
