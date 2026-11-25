@@ -55,6 +55,12 @@ export const STATUS_CAIXA: Record<CaixaRow["status"], { rotulo: string; cor: str
   aprovado: { rotulo: "Aprovado", cor: "verde" },
   cancelado: { rotulo: "Cancelado (aberto por engano)", cor: "cinza" },
 };
+/** A conferência em duas etapas é só do caixa da recepção (migração 0112): a orientação usa os rótulos simples. */
+function rotuloStatus(c: Pick<CaixaRow, "status" | "setor">): string {
+  if (c.setor === "orientacao" && c.status === "fechado") return "Fechado · aguardando conferência";
+  if (c.setor === "orientacao" && c.status === "conferido") return "Conferido · aguardando aprovação";
+  return STATUS_CAIXA[c.status].rotulo;
+}
 /** O que foi recebido: um ou mais tipos + itens marcados, gravados juntos em `descricao`
  *  (ex.: "Consulta (Retorno) + Exame (Tonometria, Mapeamento de retina)"). */
 const TIPOS_RECEBIMENTO = ["Consulta", "Exame", "Procedimento"] as const;
@@ -210,7 +216,7 @@ export default function Caixa() {
               <h3 style={{ marginTop: 0 }}>Esperando por você (inclui caixas em conferência)</h3>
               <ul className="lista-simples">
                 {aguardando.map((c) => (
-                  <li key={c.id}><Link to={`/caixa/${c.id}`}>Caixa de {fmtData(c.data)}</Link> · <Etiqueta cor={STATUS_CAIXA[c.status].cor}>{STATUS_CAIXA[c.status].rotulo}</Etiqueta></li>
+                  <li key={c.id}><Link to={`/caixa/${c.id}`}>Caixa de {fmtData(c.data)}</Link> · <Etiqueta cor={STATUS_CAIXA[c.status].cor}>{rotuloStatus(c)}</Etiqueta></li>
                 ))}
               </ul>
             </div>
@@ -225,7 +231,7 @@ export default function Caixa() {
                   {dados.map((c) => (
                     <tr key={c.id} style={{ cursor: "pointer" }} onClick={() => nav(`/caixa/${c.id}`)}>
                       <td><Link to={`/caixa/${c.id}`}>{fmtData(c.data)}</Link></td>
-                      <td><Etiqueta cor={STATUS_CAIXA[c.status].cor}>{STATUS_CAIXA[c.status].rotulo}</Etiqueta></td>
+                      <td><Etiqueta cor={STATUS_CAIXA[c.status].cor}>{rotuloStatus(c)}</Etiqueta></td>
                       <td>{nomes.nome(c.aberto_por)}</td>
                       <td>{nomes.nome(c.fechado_por)}</td>
                       <td style={num}>{c.diferenca_dinheiro === null ? "—" : <Diferenca v={c.diferenca_dinheiro} />}</td>
@@ -338,7 +344,7 @@ export function CaixaDetalhe() {
     <div>
       <div className="cabecalho">
         <div>
-          <h1>{cx.setor === "orientacao" ? "Caixa da Orientação Cirúrgica" : "Caixa"} de {fmtData(cx.data)} <Etiqueta cor={STATUS_CAIXA[cx.status].cor}>{STATUS_CAIXA[cx.status].rotulo}</Etiqueta></h1>
+          <h1>{cx.setor === "orientacao" ? "Caixa da Orientação Cirúrgica" : "Caixa"} de {fmtData(cx.data)} <Etiqueta cor={STATUS_CAIXA[cx.status].cor}>{rotuloStatus(cx)}</Etiqueta></h1>
           <p className="sub" style={{ margin: 0 }}>
             Aberto por {nomes.nomeCompleto(cx.aberto_por)} em {fmtDataHora(cx.aberto_em)} · fundo de troco {fmtMoeda(cx.fundo_troco)}
           </p>
@@ -368,7 +374,9 @@ export function CaixaDetalhe() {
           <button onClick={() => setModal("fechar")} style={{ marginLeft: "auto" }}>🔒 Fechar caixa</button>
         </>}
         {cx.status === "fechado" && papel.conferir && <>
-          <button className="primario" onClick={() => setModal("dinheiro")}>💵 1º check: conferir o dinheiro</button>
+          {cx.setor === "orientacao"
+            ? <button className="primario" onClick={() => setModal("conferir")}>✔️ Conferir</button>
+            : <button className="primario" onClick={() => setModal("dinheiro")}>💵 1º check: conferir o dinheiro</button>}
           <button onClick={() => setModal("devolver")}>↩️ Devolver para correção</button>
         </>}
         {cx.status === "dinheiro_conferido" && souConferente && <button onClick={() => setModal("devolver")}>↩️ Devolver para correção</button>}
@@ -994,7 +1002,7 @@ function Decisao({ tipo, cx, souQuemFechou, aoFechar, aoSalvar }: {
 }) {
   const [obs, setObs] = useState("");
   const [erro, setErro] = useState("");
-  const titulo = { conferir: "Conferência completa: entregar ao Luciano", aprovar: "Aprovar o caixa", devolver: "Devolver para correção" }[tipo];
+  const titulo = { conferir: cx.setor === "orientacao" ? "Conferir o caixa" : "Conferência completa: entregar ao Luciano", aprovar: "Aprovar o caixa", devolver: "Devolver para correção" }[tipo];
   async function salvar() {
     setErro("");
     try {
@@ -1009,7 +1017,9 @@ function Decisao({ tipo, cx, souQuemFechou, aoFechar, aoSalvar }: {
     <Modal titulo={titulo} aoFechar={aoFechar} rodape={<><button onClick={aoFechar}>Voltar</button><button className="primario" onClick={salvar}>{titulo}</button></>}>
       <Aviso>{erro}</Aviso>
       {tipo === "conferir" && souQuemFechou && <Aviso tipo="alerta">Foi você quem fechou este caixa: outra pessoa precisa conferir.</Aviso>}
-      {tipo === "conferir" && <p>Dinheiro, cartões, PIX e notas fiscais conferidos. O caixa vai para a aprovação final.</p>}
+      {tipo === "conferir" && (cx.setor === "orientacao"
+        ? <p>Confira o dinheiro entregue, o relatório das maquininhas e o extrato do PIX com os totais desta tela.</p>
+        : <p>Dinheiro, cartões, PIX e notas fiscais conferidos. O caixa vai para a aprovação final.</p>)}
       {tipo === "aprovar" && <p>Aprovação final do caixa de {fmtData(cx.data)}.</p>}
       {tipo === "devolver" && <p>O caixa volta a ficar <b>aberto</b> para a recepção corrigir e fechar de novo. Só dá para devolver se não houver outro caixa aberto.</p>}
       <Campo rotulo={tipo === "devolver" ? "O que precisa ser corrigido" : "Observação (opcional)"}><input value={obs} onChange={(e) => setObs(e.target.value)} autoFocus /></Campo>
