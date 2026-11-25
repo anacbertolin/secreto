@@ -1669,3 +1669,8 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   foi pago à clínica vai em "valor"); no repasse a linha do anestesista entra com valor 0 e a anotação "pago direto pelo
   paciente (R$ X)" — não é descontado de novo. No Novo repasse manual há a marcação "pago direto pelo paciente" na linha do
   anestesista. Custos de valor 0 não aparecem em "a pagar". Venda nº 3 (vitrectomia, R$ 23.000 + R$ 2.000 ao Fábio) ajustada.
+- (0153, decisão do Dr. Gelson) Caixa é só DINHEIRO em espécie: a venda da Orientação só entra no caixa da Orientação se a
+  forma for dinheiro; cartão e PIX não entram. Correção da venda acompanha (mudou para dinheiro → entra; deixou de ser → sai).
+  Só precisa de caixa aberto para venda em dinheiro. A venda nº 3 (cartão) ficou no caixa de 25/11, que já estava fechado
+  (não altera a conta da gaveta); para tirar, é preciso devolver o caixa e rodar a limpeza da 0153 de novo.
+  Pendente perguntar: o caixa da RECEPÇÃO também deve deixar de registrar cartão/PIX?
