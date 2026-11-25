@@ -1635,3 +1635,10 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
 - Os dois só para quem tem `profissionais.caixa_corrigir` (decisão da dona: **só ela**; não aparece na tela Equipe) + duas etapas da administração.
 - Teste no banco (transação desfeita): incluir 100→250 com novo pagamento; Soraline não cancela; caixa com lançamento não cancela;
   fechar → reabrir; cancelar linhas → cancelar caixa → abrir outro. Build OK.
+- (25/11) **Corretor, emojis e corrigir mensagem** na conversa do WhatsApp:
+  - Caixa de texto com corretor do navegador em português (`spellCheck`, `lang="pt-BR"`): sublinha em vermelho; botão
+    direito mostra as sugestões.
+  - Botão 😊 com os emojis mais usados (a lista completa do Windows: tecla Windows + ponto).
+  - "✏️ Corrigir" nas mensagens de texto enviadas (dentro das 24 h): a API da Meta NÃO permite editar nem apagar
+    mensagem enviada; o sistema manda "✏️ *Correção:*" + texto certo como resposta citando a mensagem errada
+    (`whatsapp-enviar` v17, parâmetro `corrige`; grava `em_resposta_a`). A mensagem errada fica marcada "corrigida abaixo".

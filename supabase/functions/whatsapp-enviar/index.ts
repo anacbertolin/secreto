@@ -6,7 +6,9 @@
 //
 // Ações (POST, corpo JSON com "acao"):
 //   estado     → o WhatsApp já está configurado? (sem segredos na resposta)
-//   texto      → { conversa_id, texto }  resposta livre (só até 24 h depois da última mensagem do paciente)
+//   texto      → { conversa_id, texto, corrige? }  resposta livre (só até 24 h depois da última mensagem do paciente);
+//                "corrige" = id de uma mensagem enviada: vai como resposta citando a mensagem errada (a API da Meta
+//                não deixa editar mensagem já enviada)
 //   retomar    → { conversa_id } ou { paciente_id, setor? }  envia o modelo "retomar_conversa"
 //                (ou "retomar_orientacao" no número da orientação) — fora das 24 h;
 //                { finalidade: "aviso_novo_numero_orientacao" } escolhe o aviso do número novo;
@@ -121,6 +123,7 @@ async function gravarEnviada(db: SupabaseClient, dados: {
   conversa_id: string; tipo: string; texto: string | null; modelo?: string; agendamento_id?: string;
   enviado_por: string; wa_id?: string; erro?: string;
   id?: string; midia_id?: string | null; midia_tipo?: string | null; midia_nome?: string | null; midia_caminho?: string | null;
+  em_resposta_a?: string | null;
 }) {
   const agora = new Date().toISOString();
   const { data, error } = await db.from("whatsapp_mensagens").insert({
@@ -129,7 +132,7 @@ async function gravarEnviada(db: SupabaseClient, dados: {
     modelo: dados.modelo ?? null, agendamento_id: dados.agendamento_id ?? null, enviado_por: dados.enviado_por,
     wa_id: dados.wa_id ?? null, situacao: dados.wa_id ? "enviada" : "falhou", erro: dados.erro ?? null, quando: agora,
     midia_id: dados.midia_id ?? null, midia_tipo: dados.midia_tipo ?? null, midia_nome: dados.midia_nome ?? null,
-    midia_caminho: dados.midia_caminho ?? null,
+    midia_caminho: dados.midia_caminho ?? null, em_resposta_a: dados.em_resposta_a ?? null,
   }).select("*").single();
   if (error) console.error("Erro ao gravar mensagem enviada", error.message);
   if (dados.wa_id) await db.from("whatsapp_conversas").update({ ultima_mensagem_em: agora, arquivada: false }).eq("id", dados.conversa_id);
@@ -212,8 +215,18 @@ Deno.serve(async (req) => {
     if (!c.ultima_recebida_em || Date.now() - new Date(c.ultima_recebida_em).getTime() > JANELA_MS) {
       return resposta({ erro: "Passaram mais de 24 h desde a última mensagem do paciente. Pela regra da Meta, use “Chamar o paciente de novo”." }, 409);
     }
-    const r = await enviarMeta({ to: c.telefone, type: "text", text: { body: texto, preview_url: true } }, c.setor);
-    const msg = await gravarEnviada(db, { conversa_id: c.id, tipo: "texto", texto, enviado_por: eu_prof.id, ...r });
+    // Correção: responde citando a mensagem errada (aparece "em cima" no celular do paciente)
+    let citada: string | null = null;
+    if (typeof corpo.corrige === "string" && corpo.corrige) {
+      const { data: orig } = await db.from("whatsapp_mensagens").select("wa_id, conversa_id, direcao")
+        .eq("id", corpo.corrige).maybeSingle();
+      if (orig?.conversa_id === c.id && orig.direcao === "enviada" && orig.wa_id) citada = orig.wa_id;
+    }
+    const r = await enviarMeta({
+      to: c.telefone, type: "text", text: { body: texto, preview_url: true },
+      ...(citada ? { context: { message_id: citada } } : {}),
+    }, c.setor);
+    const msg = await gravarEnviada(db, { conversa_id: c.id, tipo: "texto", texto, enviado_por: eu_prof.id, em_resposta_a: citada, ...r });
     return r.erro ? resposta({ erro: r.erro, mensagem: msg }, 502) : resposta({ ok: true, mensagem: msg });
   }
 
