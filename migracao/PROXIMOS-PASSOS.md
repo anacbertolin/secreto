@@ -34,6 +34,7 @@
   - os 8 médicos atuais e o Luciano foram LIGADOS aos cadastros do sistema novo (pelo CRM ou pelo nome); o Pedro tem 2 códigos no Micrologos;
   - 9 médicos antigos entram como inativos, sem login;
   - ❓ **Agendas de recurso:** Centro Cirúrgico, Ortóptica, Orientação Cirúrgica, Contatólogo, Eveline/Campo Visual e Sem Médico aguardam a decisão da dona.
+- **Usuários** (SECURITY.FDB, 72), pedido da dona em 25/11 via outra sessão: cadastrar em `profissionais` os funcionários ATIVOS do Micrologos, com `usuario` no formato nome.sobrenome (como `sugerirUsuario` em app/src/lib/util.ts). Ela depois cria a senha na tela Equipe. **Conferir a lista com ela antes de gravar.** O Dr. Antonio Carlos continua na Agenda e no Faturamento (médico sem login).
 - **Próximos:** convênios e planos direto do banco (CONVENIOS_MESTRE/CONVENIOS/PRECOS_PRODUTOS…), profissionais, agenda,
   atendimentos (PEP) e contas.
 - **Canal para a carga no Supabase:** ainda falta. A dona não conseguiu criar a chave secreta; os links assinados servem
