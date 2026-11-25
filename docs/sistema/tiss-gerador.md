@@ -55,6 +55,22 @@ cd app && npx -y tsx@4.19.2 scripts/tiss/testar.ts /tmp/tiss && scripts/tiss/val
 ## Decisão da dona (22/11/2026)
 - Prestador em todas as guias e XML: **Consumed Consultórios Médicos Ltda**, CNPJ 05.894.660/0001-87, CNES 3176479. "Hospital de Olhos da Baixada" é só um nome fantasia para o futuro (2027).
 
+## Cadastro TISS dos convênios (migração 0150, 25/11/2026)
+- `convenios.tiss` (jsonb) guarda as regras de cada operadora copiadas do Micrologos. Chaves principais:
+  - **prestador:** `prestador{tipo PJ/PF, identificacao codigo_operadora|cnpj|cpf, codigo_operadora, cnpj, nome, cnes}`;
+  - **versão e formato:** `versao`, `encoding`, `formato_data`;
+  - **dígitos:** `digitos_lote`, `digitos_lote_arquivo`, `digitos_guia`, `digitos_codigo_tiss`;
+  - **limites:** `max_procedimentos_guia`, `max_guias_lote`;
+  - **numeração:** `numeracao_guia` (manual/automatica), `numeracao_unica`;
+  - **tipo de guia:** `consulta_em_sadt`, `honorarios_se_cirurgia`, `honorarios_somente_cirurgicos`, `sessao_em_serie`;
+  - **conteúdo da guia:** `mostra_fator`, `data_autorizacao_vazia_usa_data_conta`, `guia_operadora_igual_prestador`, `guia_principal_mesmo_numero`, `nao_preenche_guia_principal`, `nao_escreve_equipe_guia_medico_principal`, `uma_guia_toda_equipe`, `observacao_descricao_cid`, `usa_codigos_medicos_cadastro`;
+  - **arquivo e controle:** `exige_zip`, `ultimo_lote`, `fonte`.
+- `convenios.descontos`: 2º ao 5º procedimento (cirurgia e exames), em %.
+- `precos`: `codigo_guia` e `tabela_guia` (o que vai na guia), `necessita_autorizacao` e `tabela_preco` (origem no Micrologos).
+  O gatilho `interno.tg_item_preco` usa o código e a tabela da guia do preço do convênio.
+- `hospitais` + `hospital_convenio_codigos` (localContratado) e `profissional_convenio_codigos` (executante/solicitante).
+- Convênios cadastrados: ver `docs/micrologos/mapeamento-telas/convenios/LEIAME.md`.
+
 ## Próximos passos
 1. Teste de igualdade com 1 XML real de cada tipo: Honorários Bradesco, Honorários Amil, SP/SADT pacote Unimed,
    SP/SADT exames, Consulta Bradesco, Consulta Amil na SP/SADT.
