@@ -13,7 +13,7 @@ import { fmtData, fmtDataHora, fmtMoeda } from "../lib/util";
 type Setor = "recepcao" | "orientacao";
 export const SETORES: Record<Setor, string> = { recepcao: "Caixa da recepção", orientacao: "Caixa da Orientação Cirúrgica" };
 interface CaixaRow {
-  id: string; data: string; setor: Setor; status: "aberto" | "fechado" | "conferido" | "aprovado" | "cancelado"; fundo_troco: number;
+  id: string; data: string; setor: Setor; status: "aberto" | "fechado" | "dinheiro_conferido" | "conferido" | "aprovado" | "cancelado"; fundo_troco: number;
   aberto_por: string | null; aberto_em: string; fechado_por: string | null; fechado_em: string | null;
   esperado_dinheiro: number | null; contado_dinheiro: number | null; diferenca_dinheiro: number | null; obs_fechamento: string | null;
   conferido_por: string | null; conferido_em: string | null; obs_conferencia: string | null;
@@ -21,6 +21,9 @@ interface CaixaRow {
   devolvido_por: string | null; devolvido_em: string | null; motivo_devolucao: string | null;
   cancelado_por?: string | null; cancelado_em?: string | null; motivo_cancelamento?: string | null;
   reaberto_por?: string | null; reaberto_em?: string | null; motivo_reabertura?: string | null;
+  dinheiro_conferido_por?: string | null; dinheiro_conferido_em?: string | null; dinheiro_recebido?: number | null; obs_dinheiro?: string | null;
+  check_cartoes_em?: string | null; obs_cartoes?: string | null; check_pix_em?: string | null; obs_pix?: string | null;
+  check_notas_em?: string | null; obs_notas?: string | null;
 }
 interface Pagamento {
   id: string; caixa_id: string; atendimento_id: string; forma: Forma; parcelas: number; valor: number; pagador: string | null;
@@ -46,8 +49,9 @@ export const FORMAS_CAIXA: Record<Forma, string> = {
 const ORDEM_FORMAS = Object.keys(FORMAS_CAIXA) as Forma[];
 export const STATUS_CAIXA: Record<CaixaRow["status"], { rotulo: string; cor: string }> = {
   aberto: { rotulo: "Aberto", cor: "azul" },
-  fechado: { rotulo: "Fechado · aguardando conferência", cor: "amarelo" },
-  conferido: { rotulo: "Conferido · aguardando aprovação", cor: "roxo" },
+  fechado: { rotulo: "Fechado · aguardando conferência do dinheiro", cor: "amarelo" },
+  dinheiro_conferido: { rotulo: "Dinheiro conferido · conferência em andamento", cor: "amarelo" },
+  conferido: { rotulo: "Conferência completa · aguardando aprovação", cor: "roxo" },
   aprovado: { rotulo: "Aprovado", cor: "verde" },
   cancelado: { rotulo: "Cancelado (aberto por engano)", cor: "cinza" },
 };
@@ -166,7 +170,8 @@ export default function Caixa() {
   const [abrir, setAbrir] = useState(false);
   const dados = (todos ?? []).filter((c) => (c.setor ?? "recepcao") === setor);
   const aberto = dados.find((c) => c.status === "aberto");
-  const aguardando = dados.filter((c) => (c.status === "fechado" && papel.conferir) || (c.status === "conferido" && papel.aprovar));
+  const aguardando = dados.filter((c) => (c.status === "fechado" && papel.conferir) || (c.status === "conferido" && papel.aprovar)
+    || (c.status === "dinheiro_conferido" && (c.dinheiro_conferido_por === eu?.id || !!eu?.caixa_corrigir)));
   function trocar(s: Setor) { setSetor(s); try { sessionStorage.setItem("caixa_setor", s); } catch { /* sem armazenamento */ } }
 
   return (
@@ -202,7 +207,7 @@ export default function Caixa() {
 
           {aguardando.length > 0 && (
             <div className="painel" style={{ marginBottom: 16 }}>
-              <h3 style={{ marginTop: 0 }}>Esperando por você</h3>
+              <h3 style={{ marginTop: 0 }}>Esperando por você (inclui caixas em conferência)</h3>
               <ul className="lista-simples">
                 {aguardando.map((c) => (
                   <li key={c.id}><Link to={`/caixa/${c.id}`}>Caixa de {fmtData(c.data)}</Link> · <Etiqueta cor={STATUS_CAIXA[c.status].cor}>{STATUS_CAIXA[c.status].rotulo}</Etiqueta></li>
@@ -285,7 +290,7 @@ export function CaixaDetalhe() {
     }
     return { cx, ats, pags, sais, pendentes };
   }, [id]);
-  const [modal, setModal] = useState<"" | "receber" | "cortesia" | "saida" | "fechar" | "conferir" | "aprovar" | "devolver">("");
+  const [modal, setModal] = useState<"" | "receber" | "cortesia" | "saida" | "fechar" | "dinheiro" | "conferir" | "aprovar" | "devolver">("");
   const [pagarAt, setPagarAt] = useState<Atendimento | null>(null);
   const [incluirAt, setIncluirAt] = useState<Atendimento | null>(null);
   const [erroAcao, setErroAcao] = useState("");
@@ -296,6 +301,7 @@ export function CaixaDetalhe() {
   const papel = papelCaixa(eu, cx.setor ?? "recepcao");
   const aberto = cx.status === "aberto";
   const podeLancar = aberto && papel.lancar;
+  const souConferente = !!eu && (cx.dinheiro_conferido_por === eu.id || !!eu.caixa_corrigir);
 
   const pagsValidos = pags.filter((p) => !p.cancelado);
   const porForma = Object.fromEntries(ORDEM_FORMAS.map((f) => [f, n2(pagsValidos.filter((p) => p.forma === f).reduce((s, p) => s + Number(p.valor), 0))])) as Record<Forma, number>;
@@ -362,16 +368,22 @@ export function CaixaDetalhe() {
           <button onClick={() => setModal("fechar")} style={{ marginLeft: "auto" }}>🔒 Fechar caixa</button>
         </>}
         {cx.status === "fechado" && papel.conferir && <>
-          <button className="primario" onClick={() => setModal("conferir")}>✔️ Conferir</button>
+          <button className="primario" onClick={() => setModal("dinheiro")}>💵 1º check: conferir o dinheiro</button>
           <button onClick={() => setModal("devolver")}>↩️ Devolver para correção</button>
         </>}
+        {cx.status === "dinheiro_conferido" && souConferente && <button onClick={() => setModal("devolver")}>↩️ Devolver para correção</button>}
         {cx.status === "conferido" && papel.aprovar && <>
           <button className="primario" onClick={() => setModal("aprovar")}>✅ Aprovar</button>
           <button onClick={() => setModal("devolver")}>↩️ Devolver para correção</button>
         </>}
         {eu?.caixa_corrigir && aberto && <button onClick={() => corrigir("caixa_cancelar")} title="Só para caixa aberto por engano">🚫 Cancelar caixa</button>}
-        {eu?.caixa_corrigir && ["fechado", "conferido", "aprovado"].includes(cx.status) && <button onClick={() => corrigir("caixa_reabrir")}>🔁 Reabrir para correção</button>}
+        {eu?.caixa_corrigir && ["fechado", "dinheiro_conferido", "conferido", "aprovado"].includes(cx.status) && <button onClick={() => corrigir("caixa_reabrir")}>🔁 Reabrir para correção</button>}
       </div>
+
+      {cx.status === "dinheiro_conferido" && (
+        <PainelConferencia cx={cx} pode={souConferente} nomeConferente={nomes.nomeCompleto(cx.dinheiro_conferido_por)}
+          aoMudar={recarregar} aoConcluir={() => setModal("conferir")} />
+      )}
 
       {/* ---------- Totais ---------- */}
       <div className="cartoes">
@@ -383,6 +395,9 @@ export function CaixaDetalhe() {
         <div className="cartao"><div className="rot">Dinheiro que deve estar na gaveta</div><div className="num" style={{ fontSize: "1.35rem" }}>{fmtMoeda(aberto ? esperadoDinheiro : cx.esperado_dinheiro)}</div><div className="pequeno muted">fundo + dinheiro − saídas</div></div>
         {cx.contado_dinheiro !== null && (
           <div className="cartao"><div className="rot">Contado na gaveta</div><div className="num" style={{ fontSize: "1.35rem" }}>{fmtMoeda(cx.contado_dinheiro)}</div><div className="pequeno"><Diferenca v={Number(cx.diferenca_dinheiro)} /></div></div>
+        )}
+        {cx.dinheiro_recebido != null && (
+          <div className="cartao"><div className="rot">Dinheiro recebido na conferência</div><div className="num" style={{ fontSize: "1.35rem" }}>{fmtMoeda(cx.dinheiro_recebido)}</div><div className="pequeno"><Diferenca v={n2(Number(cx.dinheiro_recebido) - Number(cx.esperado_dinheiro ?? 0))} /> <span className="muted">(vs. esperado)</span></div></div>
         )}
         <div className="cartao"><div className="rot">Atendimentos</div><div className="num" style={{ fontSize: "1.35rem" }}>{atsValidos.length}</div><div className="pequeno muted">{cortesias} cortesia(s){faltaReceber > 0 ? ` · falta receber ${fmtMoeda(faltaReceber)}` : ""}</div></div>
       </div>
@@ -495,7 +510,11 @@ export function CaixaDetalhe() {
         <ul className="lista-simples">
           <li>🔓 Aberto por <b>{nomes.nomeCompleto(cx.aberto_por)}</b> em {fmtDataHora(cx.aberto_em)}</li>
           {cx.fechado_em && <li>🔒 Fechado por <b>{nomes.nomeCompleto(cx.fechado_por)}</b> em {fmtDataHora(cx.fechado_em)}{cx.obs_fechamento ? ` — ${cx.obs_fechamento}` : ""}</li>}
-          {cx.conferido_em && <li>✔️ Conferido por <b>{nomes.nomeCompleto(cx.conferido_por)}</b> em {fmtDataHora(cx.conferido_em)}{cx.obs_conferencia ? ` — ${cx.obs_conferencia}` : ""}</li>}
+          {cx.dinheiro_conferido_em && <li>💵 Dinheiro conferido por <b>{nomes.nomeCompleto(cx.dinheiro_conferido_por)}</b> em {fmtDataHora(cx.dinheiro_conferido_em)} — recebeu {fmtMoeda(cx.dinheiro_recebido)}{cx.obs_dinheiro ? ` — ${cx.obs_dinheiro}` : ""}</li>}
+          {cx.check_cartoes_em && <li>💳 Cartões conferidos em {fmtDataHora(cx.check_cartoes_em)}{cx.obs_cartoes ? ` — ${cx.obs_cartoes}` : ""}</li>}
+          {cx.check_pix_em && <li>📲 PIX conferido em {fmtDataHora(cx.check_pix_em)}{cx.obs_pix ? ` — ${cx.obs_pix}` : ""}</li>}
+          {cx.check_notas_em && <li>🧾 Notas fiscais conferidas em {fmtDataHora(cx.check_notas_em)}{cx.obs_notas ? ` — ${cx.obs_notas}` : ""}</li>}
+          {cx.conferido_em && <li>✔️ Conferência completa por <b>{nomes.nomeCompleto(cx.conferido_por)}</b> em {fmtDataHora(cx.conferido_em)}{cx.obs_conferencia ? ` — ${cx.obs_conferencia}` : ""}</li>}
           {cx.aprovado_em && <li>✅ Aprovado por <b>{nomes.nomeCompleto(cx.aprovado_por)}</b> em {fmtDataHora(cx.aprovado_em)}{cx.obs_aprovacao ? ` — ${cx.obs_aprovacao}` : ""}</li>}
           {cx.reaberto_em && <li>🔁 Reaberto para correção por <b>{nomes.nomeCompleto(cx.reaberto_por)}</b> em {fmtDataHora(cx.reaberto_em)} — {cx.motivo_reabertura}</li>}
           {cx.cancelado_em && <li>🚫 Cancelado por <b>{nomes.nomeCompleto(cx.cancelado_por)}</b> em {fmtDataHora(cx.cancelado_em)} — {cx.motivo_cancelamento}</li>}
@@ -507,6 +526,7 @@ export function CaixaDetalhe() {
       {modal === "cortesia" && <NovoAtendimento cortesia caixaId={cx.id} medicos={nomes.medicos} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
       {modal === "saida" && <NovaSaida caixaId={cx.id} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
       {modal === "fechar" && <FecharCaixa cx={cx} esperado={esperadoDinheiro} porForma={porForma} faltaReceber={faltaReceber} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
+      {modal === "dinheiro" && <ConferirDinheiro cx={cx} souQuemFechou={!!eu && cx.fechado_por === eu.id} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
       {(modal === "conferir" || modal === "aprovar" || modal === "devolver") && (
         <Decisao tipo={modal} cx={cx} souQuemFechou={!!eu && cx.fechado_por === eu.id} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />
       )}
@@ -883,12 +903,98 @@ function FecharCaixa({ cx, esperado, porForma, faltaReceber, aoFechar, aoSalvar 
   );
 }
 
+function ConferirDinheiro({ cx, souQuemFechou, aoFechar, aoSalvar }: { cx: CaixaRow; souQuemFechou: boolean; aoFechar: () => void; aoSalvar: () => void }) {
+  const [contado, setContado] = useState("");
+  const [obs, setObs] = useState("");
+  const [erro, setErro] = useState("");
+  const v = lerValor(contado);
+  async function salvar() {
+    if (v === null || v < 0) return setErro("Digite quanto dinheiro você recebeu (contou).");
+    try { await rpc("caixa_conferir_dinheiro", { p_caixa: cx.id, p_contado: v, p_obs: obs }); aoSalvar(); } catch (e) { setErro(msgErro(e)); }
+  }
+  return (
+    <Modal titulo="1º check: conferir o dinheiro" aoFechar={aoFechar} rodape={<><button onClick={aoFechar}>Voltar</button><button className="primario" onClick={salvar}>✔️ Dinheiro OK</button></>}>
+      <Aviso>{erro}</Aviso>
+      {souQuemFechou && <Aviso tipo="alerta">Foi você quem fechou este caixa: outra pessoa precisa conferir.</Aviso>}
+      <table className="tabela" style={{ marginBottom: 12 }}>
+        <tbody>
+          <tr><td>Dinheiro que deveria estar no caixa</td><td style={num}>{fmtMoeda(cx.esperado_dinheiro)}</td></tr>
+          <tr><td>Quem fechou contou</td><td style={num}>{fmtMoeda(cx.contado_dinheiro)}</td></tr>
+        </tbody>
+      </table>
+      <Campo rotulo="Dinheiro que você recebeu e contou (R$)"><input inputMode="decimal" value={contado} onChange={(e) => setContado(e.target.value)} autoFocus /></Campo>
+      {v !== null && <p>Comparado com o que deveria ter: <Diferenca v={n2(v - Number(cx.esperado_dinheiro ?? 0))} />
+        {cx.contado_dinheiro != null && Math.abs(v - Number(cx.contado_dinheiro)) >= 0.005 && <> · <b style={{ color: "#c62828" }}>diferente do que a recepção contou ({fmtMoeda(cx.contado_dinheiro)})</b></>}</p>}
+      <Campo rotulo="Observação (opcional)"><input value={obs} onChange={(e) => setObs(e.target.value)} /></Campo>
+      <p className="pequeno muted">Depois deste check o caixa fica com você. Durante a semana você confere cartões, PIX e notas fiscais e dá o 2º check.</p>
+    </Modal>
+  );
+}
+
+const ITENS_CONFERENCIA = [
+  { item: "cartoes", rotulo: "💳 Cartões", ajuda: "conferido com o relatório/comprovantes da maquininha", em: "check_cartoes_em", obs: "obs_cartoes" },
+  { item: "pix", rotulo: "📲 PIX", ajuda: "conferido com o extrato do banco", em: "check_pix_em", obs: "obs_pix" },
+  { item: "notas", rotulo: "🧾 Notas fiscais", ajuda: "todas as notas do dia conferidas", em: "check_notas_em", obs: "obs_notas" },
+] as const;
+
+function PainelConferencia({ cx, pode, nomeConferente, aoMudar, aoConcluir }: {
+  cx: CaixaRow; pode: boolean; nomeConferente: string; aoMudar: () => void; aoConcluir: () => void;
+}) {
+  const [obs, setObs] = useState<Record<string, string>>(() => Object.fromEntries(ITENS_CONFERENCIA.map((i) => [i.item, (cx[i.obs] as string | null | undefined) ?? ""])));
+  const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState("");
+  async function marcar(item: string, feito: boolean) {
+    setErro(""); setSalvando(item);
+    try { await rpc("caixa_conferencia_marcar", { p_caixa: cx.id, p_item: item, p_feito: feito, p_obs: obs[item] ?? "" }); aoMudar(); }
+    catch (e) { setErro(msgErro(e)); }
+    setSalvando("");
+  }
+  const tudo = ITENS_CONFERENCIA.every((i) => !!cx[i.em]);
+  return (
+    <div className="painel nao-imprimir" style={{ marginBottom: 16 }}>
+      <h3 style={{ marginTop: 0 }}>2º check: conferência da semana <span className="pequeno muted">(com {nomeConferente})</span></h3>
+      <Aviso>{erro}</Aviso>
+      {!pode && <Aviso tipo="info">Só {nomeConferente}, que conferiu o dinheiro, pode continuar esta conferência.</Aviso>}
+      <table className="tabela">
+        <tbody>
+          {ITENS_CONFERENCIA.map((i) => {
+            const feito = !!cx[i.em];
+            return (
+              <tr key={i.item}>
+                <td style={{ whiteSpace: "nowrap" }}>
+                  <label className="check">
+                    <input type="checkbox" checked={feito} disabled={!pode || salvando === i.item} onChange={(e) => marcar(i.item, e.target.checked)} />
+                    <b>&nbsp;{i.rotulo}</b>
+                  </label>
+                  <div className="pequeno muted">{i.ajuda}</div>
+                  {feito && <div className="pequeno">✔ {fmtDataHora(cx[i.em] as string)}</div>}
+                </td>
+                <td style={{ width: "100%" }}>
+                  <input value={obs[i.item]} disabled={!pode} placeholder="Observação (ex.: falta a nota da paciente Maria)"
+                    onChange={(e) => setObs({ ...obs, [i.item]: e.target.value })}
+                    onBlur={() => { if (pode && (obs[i.item] ?? "") !== ((cx[i.obs] as string | null | undefined) ?? "")) marcar(i.item, feito); }} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {pode && (
+        <div className="linha" style={{ marginTop: 10 }}>
+          <button className="primario" disabled={!tudo} onClick={aoConcluir}>✔️ Conferência completa: entregar ao Luciano</button>
+          {!tudo && <span className="pequeno muted">Marque os três itens para liberar.</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Decisao({ tipo, cx, souQuemFechou, aoFechar, aoSalvar }: {
   tipo: "conferir" | "aprovar" | "devolver"; cx: CaixaRow; souQuemFechou: boolean; aoFechar: () => void; aoSalvar: () => void;
 }) {
   const [obs, setObs] = useState("");
   const [erro, setErro] = useState("");
-  const titulo = { conferir: "Conferir o caixa", aprovar: "Aprovar o caixa", devolver: "Devolver para correção" }[tipo];
+  const titulo = { conferir: "Conferência completa: entregar ao Luciano", aprovar: "Aprovar o caixa", devolver: "Devolver para correção" }[tipo];
   async function salvar() {
     setErro("");
     try {
@@ -903,7 +1009,7 @@ function Decisao({ tipo, cx, souQuemFechou, aoFechar, aoSalvar }: {
     <Modal titulo={titulo} aoFechar={aoFechar} rodape={<><button onClick={aoFechar}>Voltar</button><button className="primario" onClick={salvar}>{titulo}</button></>}>
       <Aviso>{erro}</Aviso>
       {tipo === "conferir" && souQuemFechou && <Aviso tipo="alerta">Foi você quem fechou este caixa: outra pessoa precisa conferir.</Aviso>}
-      {tipo === "conferir" && <p>Confira o dinheiro entregue, o relatório das maquininhas e o extrato do PIX com os totais desta tela.</p>}
+      {tipo === "conferir" && <p>Dinheiro, cartões, PIX e notas fiscais conferidos. O caixa vai para a aprovação final.</p>}
       {tipo === "aprovar" && <p>Aprovação final do caixa de {fmtData(cx.data)}.</p>}
       {tipo === "devolver" && <p>O caixa volta a ficar <b>aberto</b> para a recepção corrigir e fechar de novo. Só dá para devolver se não houver outro caixa aberto.</p>}
       <Campo rotulo={tipo === "devolver" ? "O que precisa ser corrigido" : "Observação (opcional)"}><input value={obs} onChange={(e) => setObs(e.target.value)} autoFocus /></Campo>
