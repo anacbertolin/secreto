@@ -39,6 +39,11 @@
   - Os setores vão para as colunas da 0152 e a Orientação vai para a coluna da Alessandra.
   - A migração 0153 permite encaixe (e histórico atendido) no mesmo horário.
   - ❓ Confirmar com a dona o significado das letras de status (A, O, X, C, E, M, D, P, 1, 2, 5).
+- **Prontuários** (`05_prontuarios.sql` + `migracao/firebird/converter_rtf.py`), testados no ensaio, vão para `prontuario_legado`:
+  - **250.835 atendimentos**, com o texto da consulta convertido de RTF, campos de ficha preenchidos, CID, medicamentos e indicação TISS;
+  - **356.158 documentos**: 81 mil óculos, 75 mil receitas, 56 mil pedidos de exame, 22 mil atestados, 12 mil laudos e 60 mil outros;
+  - **49.768 referências de imagem**: os arquivos ficam no servidor da clínica (❓ pasta a combinar com o técnico);
+  - a tabela `legacy_micrologos.textos_convertidos` precisa existir no Supabase na carga real (criar por migração).
 - **Usuários** (SECURITY.FDB, 72), pedido da dona em 25/11 via outra sessão: cadastrar em `profissionais` os funcionários ATIVOS do Micrologos, com `usuario` no formato nome.sobrenome (como `sugerirUsuario` em app/src/lib/util.ts). Ela depois cria a senha na tela Equipe. **Conferir a lista com ela antes de gravar.** O Dr. Antonio Carlos continua na Agenda e no Faturamento (médico sem login).
 - **Próximos:** convênios e planos direto do banco (CONVENIOS_MESTRE/CONVENIOS/PRECOS_PRODUTOS…), profissionais, agenda,
   atendimentos (PEP) e contas.
