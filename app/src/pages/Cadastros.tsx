@@ -23,30 +23,46 @@ export function Equipe() {
       </Aviso>
       <Aviso>{erro}</Aviso>
       {carregando ? <Carregando /> : (
-        <div className="painel rolagem">
-          <table className="tabela">
-            <thead><tr><th>Nome</th><th>Login</th><th>Função</th><th>Registro</th><th></th></tr></thead>
-            <tbody>
-              {(dados ?? []).map((p) => (
-                <tr key={p.id} style={{ opacity: p.ativo ? 1 : 0.5 }}>
-                  <td><b>{p.nome}</b>{!p.ativo && <> <Etiqueta cor="cinza">inativo</Etiqueta></>}{p.especialidade && <div className="muted pequeno">{p.especialidade}</div>}</td>
-                  <td>{p.usuario ? <>👤 {p.usuario}</> : p.email ?? <span className="muted">— (sem login)</span>}</td>
-                  <td>{FUNCOES[p.funcao]}{p.orientacao_cirurgica && <div><Etiqueta cor="azul">Orientação cirúrgica</Etiqueta></div>}{p.caixa_conferir && <div><Etiqueta cor="amarelo">Confere o caixa</Etiqueta></div>}{p.caixa_aprovar && <div><Etiqueta cor="verde">Aprova o caixa</Etiqueta></div>}</td>
-                  <td>{p.conselho && `${p.conselho} ${p.numero_conselho ?? ""}/${p.uf_conselho ?? ""}`}</td>
-                  <td style={{ textAlign: "right" }}>
-                    <div className="linha" style={{ justifyContent: "flex-end" }}>
-                      <button className="mini" onClick={() => setEdit(p)}>Editar</button>
-                      {p.ativo && p.email && <button className="mini" onClick={() => setAcesso(p)}>🔑 Senha de acesso</button>}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TabelaEquipe lista={(dados ?? []).filter((p) => !p.agenda_recurso)} aoEditar={setEdit} aoAcesso={setAcesso} />
+          {(dados ?? []).some((p) => p.agenda_recurso) && <>
+            <h2 style={{ marginTop: 24 }}>Colunas de agenda de setor</h2>
+            <p className="sub">Não são pessoas: são colunas da Agenda (como no Micrologos) e não entram no sistema. Aparecem só na Agenda e nos horários.</p>
+            <TabelaEquipe lista={(dados ?? []).filter((p) => p.agenda_recurso)} aoEditar={setEdit} aoAcesso={setAcesso} />
+          </>}
+        </>
       )}
       {edit && <EditarProfissional p={edit} aoFechar={() => setEdit(null)} aoSalvar={() => { setEdit(null); recarregar(); }} />}
       {acesso && <SenhaAcesso p={acesso} aoFechar={() => setAcesso(null)} />}
+    </div>
+  );
+}
+
+function TabelaEquipe({ lista, aoEditar, aoAcesso }: { lista: Profissional[]; aoEditar: (p: Profissional) => void; aoAcesso: (p: Profissional) => void }) {
+  return (
+    <div className="painel rolagem">
+      <table className="tabela">
+        <thead><tr><th>Nome</th><th>Login</th><th>Função</th><th>Registro</th><th></th></tr></thead>
+        <tbody>
+          {lista.map((p) => (
+            <tr key={p.id} style={{ opacity: p.ativo ? 1 : 0.5 }}>
+              <td><b>{p.nome}</b>{!p.ativo && <> <Etiqueta cor="cinza">inativo</Etiqueta></>}
+                {p.agenda_recurso && <> <Etiqueta cor="cinza">coluna de agenda (sem login)</Etiqueta></>}
+                {!p.agenda_recurso && p.sem_acesso && <> <Etiqueta cor="cinza">sem login</Etiqueta></>}
+                {p.especialidade && <div className="muted pequeno">{p.especialidade}</div>}</td>
+              <td>{p.usuario ? <>👤 {p.usuario}</> : p.email ?? <span className="muted">— (sem login)</span>}</td>
+              <td>{p.agenda_recurso ? <span className="muted">—</span> : FUNCOES[p.funcao]}{p.orientacao_cirurgica && <div><Etiqueta cor="azul">Orientação cirúrgica</Etiqueta></div>}{p.caixa_conferir && <div><Etiqueta cor="amarelo">Confere o caixa</Etiqueta></div>}{p.caixa_aprovar && <div><Etiqueta cor="verde">Aprova o caixa</Etiqueta></div>}</td>
+              <td>{p.conselho && `${p.conselho} ${p.numero_conselho ?? ""}/${p.uf_conselho ?? ""}`}</td>
+              <td style={{ textAlign: "right" }}>
+                <div className="linha" style={{ justifyContent: "flex-end" }}>
+                  <button className="mini" onClick={() => aoEditar(p)}>Editar</button>
+                  {p.ativo && p.email && !p.sem_acesso && !p.agenda_recurso && <button className="mini" onClick={() => aoAcesso(p)}>🔑 Senha de acesso</button>}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

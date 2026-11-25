@@ -784,7 +784,7 @@ export function iniciais(nome: string): string {
 function Transferir(props: { setor: SetorWA; atual: string | null; aoFechar: () => void; aoEscolher: (id: string) => void }) {
   const lista = useCarregar(async () => {
     const [eq, st] = await Promise.all([
-      supabase.from("profissionais").select("id, nome, funcao, orientacao_cirurgica").eq("ativo", true).order("nome"),
+      supabase.from("profissionais").select("id, nome, funcao, orientacao_cirurgica").eq("ativo", true).not("agenda_recurso", "is", true).not("sem_acesso", "is", true).order("nome"),
       supabase.from("central_status").select("profissional_id, status"),
     ]);
     const status = new Map(((st.data ?? []) as { profissional_id: string; status: StatusCentral }[]).map((x) => [x.profissional_id, x.status]));

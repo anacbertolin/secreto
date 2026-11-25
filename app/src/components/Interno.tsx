@@ -89,7 +89,7 @@ function EscolherPessoas(props: { titulo: string; unica?: boolean; comNome?: boo
   const [marcados, setMarcados] = useState<string[]>([]);
   const [nome, setNome] = useState("");
   const [filtro, setFiltro] = useState("");
-  const pessoas = useCarregar(async () => ok(await supabase.from("profissionais").select("id, nome, funcao").eq("ativo", true).order("nome")) as Pessoa[], []);
+  const pessoas = useCarregar(async () => ok(await supabase.from("profissionais").select("id, nome, funcao").eq("ativo", true).not("agenda_recurso", "is", true).not("sem_acesso", "is", true).order("nome")) as Pessoa[], []);
   const lista = (pessoas.dados ?? []).filter((p) => p.id !== eu?.id && !(props.jaEstao ?? []).includes(p.id)
     && (!filtro.trim() || p.nome.toLowerCase().includes(filtro.trim().toLowerCase())));
   return (

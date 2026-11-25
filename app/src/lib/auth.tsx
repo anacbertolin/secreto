@@ -22,6 +22,10 @@ export interface Profissional {
   caixa_aprovar?: boolean;
   /** Pode cancelar caixa aberto por engano e reabrir caixa para correção (migração 0110 — só a dona) */
   caixa_corrigir?: boolean;
+  /** Coluna de agenda de setor do Micrologos (Centro Cirúrgico, Ortóptica...), não é pessoa (migração 0152) */
+  agenda_recurso?: boolean;
+  /** Sem login no sistema (colunas de setor, cirurgião de fora — migração 0152) */
+  sem_acesso?: boolean;
 }
 
 interface Ctx {
