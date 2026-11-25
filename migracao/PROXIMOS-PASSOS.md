@@ -12,6 +12,23 @@
 | Sistema (app) e migrações 0005–0008 | branch `claude/trusting-tesla-e5u50x` (sessão "Desenvolvimento do sistema", `session_01RxZddnY3mA77HY8MtevrQ7`) |
 | Banco | Supabase "secreto" `ogflxjolbwrzayjtxvhj` (sa-east-1) |
 
+## 🗄️ Cópia completa do banco do Micrologos RECEBIDA (25/11/2026)
+- O técnico (Marcio) copiou o banco **Firebird 5** para `\\192.168.10.114\BdGelson`. A dona enviou os arquivos direto para
+  o Storage `migracao-micrologos/banco-2026-11-25/`: MLMASTER.FDB 2,4 GB (principal), SECURITY.FDB 1 GB (usuários e log de acesso)
+  e MLCORREIO.FDB 13 MB.
+- A integridade foi conferida: tamanhos exatos, SHA-256 registrado e `gfix` sem erros. Inventário de tabelas e linhas em
+  `migracao/INVENTARIO-BANCO-2026-11-25.md`.
+- Destaques: 117 mil pacientes, 388 mil agendamentos, 251 mil atendimentos (PEP), 333 mil contas, 411 mil itens faturados,
+  37 convênios / 398 planos, 65 tabelas de preço com 1.139 itens e 118 códigos de médicos nas operadoras.
+- **Para abrir numa sessão nova:**
+  1. baixar do Storage (link assinado gerado pela dona no painel, ou chave secreta);
+  2. `dockerd &`;
+  3. `docker run -d --name fb5 -e FIREBIRD_ROOT_PASSWORD=... -v <pasta>:/dados firebirdsql/firebird:5.0.3`;
+  4. `isql -user SYSDBA`.
+  Os dados ficam fora do repositório (`/home/user/dados-micrologos`).
+- Consequência: convênios, planos, preços e códigos podem vir **direto do banco**, sem copiar tela por tela. A cópia diária de
+  convênios pela tela vira só **conferência**.
+
 ## 🗺️ Mapeamento das telas do Micrologos (22/11/2026)
 - Feito pela dona com o Claude Desktop, só leitura e sem dados de pacientes: `docs/micrologos/mapeamento-telas/MAPEAMENTO-COMPLETO-2026-11-22.md`. Comece pela Parte 1 (RESUMÃO).
 - Versão do Micrologos: **ML Clinic Master ASP 13.13.30.00**. É um programa Windows, no computador DESKTOP-MCDT7V5.
