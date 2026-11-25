@@ -1579,3 +1579,22 @@ Pedido do Dr. Gelson: o dinheiro que a Alessandra recebe (cirurgias, lentes) ent
   "Para conferir" (dinheiro continua no caixa); "paciente desistiu" → venda cancelada e valor sai do caixa da Orientação.
   Bloqueia se já há parcela paga ao médico ou custo pago, e (para desistência) se o caixa do dia já foi fechado.
   Cancelar um repasse com venda por outro caminho devolve a venda para conferência (padrão seguro).
+
+## 25/11/2026: Cadastro dos convênios do Micrologos começa pelo Bradesco Saúde (sessão "Dados para migração")
+- A dona vai copiar **um convênio por dia** do Micrologos, com um texto padrão no Claude do computador (só leitura).
+  Os arquivos ficam em `docs/micrologos/mapeamento-telas/convenios/`. O acompanhamento está no `LEIAME.md` dessa pasta.
+- **Migração 0150 `tiss_cadastro_convenios`** (numeração 0150+ da sessão de migração, para não colidir com 0101…):
+  - `convenios`: `tiss` (regras), `descontos`, `micrologos_codigo`;
+  - `convenio_planos`: `mascara_carteirinha`, `micrologos_codigo`;
+  - `precos`: `codigo_guia`, `tabela_guia`, `necessita_autorizacao`, `tabela_preco`;
+  - tabelas novas `hospitais`, `hospital_convenio_codigos` e `profissional_convenio_codigos` (RLS: equipe lê, faturamento/admin alteram);
+  - `interno.preco_linha` e `interno.tg_item_preco`: o item da conta pega o código e a tabela da guia do preço do convênio
+    (ex.: Facectomia, código interno 19, sai como TUSS 30306027 tabela 22 no Bradesco).
+    Conta particular continua igual (preços particulares não têm `codigo_guia`).
+- **Migração 0151 `convenio_bradesco_saude`:**
+  - convênio Bradesco Saúde (ANS 005711, código 0000110502, TISS 4.03.00, .zip) e planos Empresa (4) e Individual (5);
+  - 47 procedimentos novos (código interno do Micrologos, tabela '00');
+  - preços: 58 no plano Empresa e 55 no Individual, tirados das tabelas 31, 4, 3 e 20 do Micrologos;
+  - os 14 hospitais (Unidades) e os 6 códigos de hospital no Bradesco.
+  - Teste (desfeito): conta Bradesco Individual com OCT, Corpo estranho e Fluoresceína → 22/41501144 = 77,84; 22/30304032 = 64,04; 20/90548906 = 6,46.
+- Pendências do Bradesco: no `LEIAME.md` da pasta de convênios (Epilação em duas tabelas, colírios como tabela 20…).

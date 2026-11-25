@@ -1,6 +1,6 @@
 # MAPEAMENTO COMPLETO DO MICROLOGOS – arquivo único para o Code
 
-Este arquivo junta os 15 arquivos do mapeamento. Comece pela Parte 1 (RESUMÃO). As partes seguintes são o detalhe.
+Este arquivo junta os 17 arquivos do mapeamento. Comece pela Parte 1 (RESUMÃO). As partes seguintes são o detalhe.
 
 
 ---
@@ -22,6 +22,11 @@ Este arquivo junta os 15 arquivos do mapeamento. Comece pela Parte 1 (RESUMÃO).
 
 > **Regra de ouro (dona do sistema):** as configurações atuais do Micrologos **não geram glosa**. Replicar exatamente, convênio por convênio (arquivo I), e conferir contra os XML reais já aceitos.
 > **Versão TISS:** a ANS publicou como vigente o Componente de Comunicação **04.03.00** (Padrão TISS Setembro/2026). O sistema deve gerar 4.01/4.02/4.03 por convênio e estar pronto para migrar todos para 4.03.00. Os links oficiais dos XSD estão no fim do arquivo I.
+
+> **Novos arquivos (22/11/2026, tarde):**
+> - **J-codigos-medicos-por-convenio.md:** códigos de cada médico por convênio, plano e hospital (executante e solicitante).
+> - **K-hospitais-por-convenio.md:** os 14 hospitais e unidades, com CNES e código de cada um em cada operadora, e quais ainda são usados.
+> - Pasta **"XML exemplos"** (Área de Trabalho): 9 XML reais, um de cada tipo de guia. **Contêm dados de pacientes**, então mandar só por canal seguro.
 
 ## 0. Prioridades (na ordem)
 
@@ -2357,7 +2362,7 @@ Estas configurações são o "manual" de como a Micrologos ajustou cada XML às 
 ### Formato de data/hora
 - **aaaa-mm-dd** e **aaaa-mm-ddT99:99:99**: o padrão ANS (xs:date / xs:dateTime).
 - **dd/mm/aaaa** e **dd/mm/aaaaH99:99:99**: usado por Geap, Hapvida, Porto Seguro, Portomed e Unimed Luciano.
-- Esse segundo formato não é o tipo de data do XSD. Provavelmente é só a máscara de tela/impressão. Como as guias são aceitas sem glosa, o sistema novo deve gerar o XML **igual aos XML reais aceitos** desses convênios.
+- ✅ **Confirmado em 22/11/2026:** os XML reais da Geap e da Unimed Gelson saem com data **aaaa-mm-dd**. O "dd/mm/aaaa" do cadastro é só o formato de tela/impressão. Como as guias são aceitas sem glosa, o sistema novo deve gerar o XML **igual aos XML reais aceitos** desses convênios.
 
 ---
 
@@ -2662,4 +2667,124 @@ Também não abri a **configuração geral do sistema** ("nº de guias por XML")
   - TUSS / tabelas de domínio: https://www.ans.gov.br/arquivos/extras/tiss/Padrao_TISS_Representacao_de_Conceitos_em_Saude_202609.zip
   - Componente Organizacional (regras): https://www.gov.br/ans/pt-br/assuntos/prestadores/padrao-para-troca-de-informacao-de-saude-suplementar-2013-tiss/PadroTISS_ComponenteOrganizacional_202609.pdf
   - Histórico das versões (para baixar os XSD 4.01.00 e 4.02.00): https://www.gov.br/ans/pt-br/assuntos/prestadores/padrao-para-troca-de-informacao-de-saude-suplementar-2013-tiss/padrao-tiss-historico-das-versoes-dos-componentes-do-padrao-tiss
+
+
+---
+
+**PARTE 16 – arquivo original: J-codigos-medicos-por-convenio.md**
+
+# J) Códigos de cada médico em cada convênio (Staff Médico ▸ Detalhamento ▸ Inf. TISS)
+
+**Visto em:** 22/11/2026. Só olhando, nada alterado.
+**Onde fica no Micrologos:** Cadastros ▸ Staff Médico ▸ Detalhamento ▸ sub-aba **Inf. TISS**.
+**Privacidade:** não copiei CPF, RG, endereço nem telefone. Em alguns cadastros, o campo "código na operadora" está preenchido com o **CPF** do profissional. Esses campos aparecem aqui como **[CPF – omitido]**.
+
+## Como o Micrologos guarda isso
+- **Bloco "Layout TISS" (um por profissional):**
+  - Código CNES (quase todos usam 9999999, o genérico);
+  - Conselho Profissional;
+  - Nº no Conselho (sem prefixo e sem DV);
+  - UF do Conselho;
+  - Cód. na Operadora (geral);
+  - Cód. UF (IBGE);
+  - caixa "Ñ faz parte da guia de honorários".
+- **Tabela por convênio**, com as colunas:
+  - Convênio, Plano e Unidade (hospital);
+  - Cód. Operadora e Nome do Profissional **Executante**;
+  - Cód. Operadora e Nome do Profissional **Solicitante**.
+  - ➜ Um mesmo médico pode ter **códigos diferentes por convênio, por plano e por unidade (hospital)**.
+- **CBO:** não aparece nessas telas. Vem da **especialidade** do médico (Staff ▸ Relações ▸ Especialidades: "Oftalmo Geral", "Oftalmo Retina e Vítreo"…). Nos XML reais, o CBO é sempre **225265** (médico oftalmologista).
+- **Nº no Conselho no cadastro × no XML:** no cadastro do médico, o "CRM" aparece com o prefixo 52 (código do RJ). Ex.: 52863602. No bloco TISS, vai sem prefixo (863602). Isso combina com a regra "Usa campo C.R.M. do médico (completo)" vista no arquivo I.
+
+## Profissionais ativos (20 no cadastro)
+
+### Médicos (conselho CRM-RJ)
+| Cód | Médico | Nº Conselho (TISS) | UF | CNES no cadastro | Convênio → código Executante / Solicitante |
+|---|---|---|---|---|---|
+| 1 | Gelson Moura Brasil | 863602 | RJ | 9999999 | Assim: 30725 / 30725 · Geap: (sem código, só nome) · Hapvida: (sem código) · Klini: (sem código) · **Unimed Consumed Cirurgia** (unid. Consumed): 863602 / 863602 · **Unimed Gelson**: 863602 |
+| 3 | Gisele Moura Brasil | 873799 | RJ | 9999999 | Assim (unid. Consumed Consultórios, Barra Day e UTI Rio): 30724 (solic. 30724 na Consumed) · Geap: 17101182 (= código da clínica) · Hapvida: (sem código) · **Unimed Consumed Cirurgia** (Consumed): 873799 / 873799 · **Unimed Gisele**: 873799 |
+| 2 | Max Oliveira Guimarães | 863866 | RJ | **3176479** | Geap: (sem código) · Hapvida: (sem código) · **Unimed Max** (unidades Clínica e Cirurgia de Olhos Dr…, Consumed, Barra Day): 410374 |
+| 4 | Luiza Morone Pereira | 917753 | RJ | 9999999 | Assim: 36987 / 36987 · Geap: 17101182 · Hapvida: (sem código) |
+| 5 | Marcos Aurelio Costa Leal Arnaut | 937118 | RJ | (vazio) | Assim: 36988 / 36988 · Geap: (sem código) · Hapvida: [CPF – omitido], com nome "Prestador Nao Identificado Migracao" ⚠️ |
+| 19 | Pedro Boni Goncalves | 866989 | RJ | 9999999 | Assim: 45538 / 45538 · Amil, Assist, Bradesco Saúde, Bradesco Operadora, Fundação Itaú, Geap, Hapvida, Klini, Mediservice (unid. Consumed Consultórios), Notre Dame, Porto Seguro, Siass-Geap, Unimed Consumed Cirurgia (Consumed): **sem código**, só o nome |
+| 22 | Matheus de Souza Cerveira Pereira | 5201277375 ⚠️ (parece incluir o prefixo 52) | RJ | **3176479** | Assim: 51467 / 51467 · Geap: 17101182 · Amil, Assist, Bradesco Saúde, Bradesco Operadora, Fundação Itaú, Hapvida, Klini, Mediservice, Notre Dame, Porto Seguro: sem código, só o nome |
+| 15 | Renato Sztern Queiroz | 927430 | RJ | 9999999 | Assim (Consumed Consultórios e Barra Day): 43099 / 43099 · Amil, Assist, Bradesco Saúde, Bradesco Operadora, Fundação Itaú, Geap, Hapvida, Klini, Notre Dame, Porto Seguro: sem código, só o nome |
+| 27 | Annamaria Ciminelli Barbosa | 947300 | RJ | 9999999 | nenhum convênio cadastrado |
+| 24 | Antonio Carlos de Souza Ferreira (cirurgião externo) | 788066 | RJ | 9999999 | **Unimed Antonio** (unid. Consumed): 788066 / 788066 · **Unimed Consumed Cirurgia** (Consumed): 788066 / 788066 |
+| 9 | Fernanda | – | – | – | sem dados TISS |
+| 25 | Medico Transcrição Rio de Janeiro | 41231 | RJ | – | sem convênios (cadastro de apoio) |
+| 26 | Prestador Nao Identificado Migracao | 99880 | RJ | – | sem convênios (cadastro da migração antiga) |
+
+### Outros profissionais
+| Cód | Profissional | Conselho | Convênios |
+|---|---|---|---|
+| 8 | Luciano Campino Pinto – **Instrumentador** | **COREN-RJ** 192354 (Conselho Regional de Enfermagem) | Assim (Largo do Machado e Barra Day) e Geap: código = [CPF – omitido] · **Unimed Luciano** (unid. Clínica e Cirurgia de Olhos Dr…, Consumed, Barra Day): **941222** |
+| 6 | Eveline – Campo Visual | CRM nº "123" (provisório?) | nenhum |
+| 12 | Centro Cirurgico (cadastro de apoio) | – | Unimed Gelson (Consumed): executante **1474** "Consumed Olhos"; solicitante 863602 (Gelson) |
+| 23, 31, 28, 20 | Consumed Olhos, Contatólogo, Orientação Cirúrgica, Ortóptica (cadastros de apoio/agenda) | – | nenhum |
+
+## O que isso significa para o sistema novo
+1. **Tabela "profissional × convênio × plano × unidade(hospital) → código executante / código solicitante".** O mesmo médico tem códigos diferentes por hospital em alguns convênios (Assim, Unimed Max, Unimed Luciano).
+2. Quando não há código, o Micrologos usa o que está configurado no convênio. Pela regra "Usa Executante e Solicitante pelo cadastro de códigos", quase sempre vale o **código da clínica** (ex.: Bradesco 0000110502, Amil 10453164) mais o **CRM do médico**.
+3. Nas **Unimed**, o código de cooperado do médico é obrigatório: Gelson 863602, Gisele 873799, Max 410374, Antonio 788066. Luciano (instrumentador) usa 941222.
+4. O **instrumentador** (COREN) também entra nas guias da Unimed Luciano. O sistema novo precisa aceitar profissionais de **outros conselhos**, não só CRM.
+
+## Pontos para conferir com a clínica
+- **Matheus:** o Nº no Conselho está como 5201277375. Parece ter o prefixo 52 junto. Confirmar o CRM correto.
+- **Marcos, na Hapvida:** o código está preenchido com o CPF e com o nome "Prestador Nao Identificado Migracao". Parece um resto da migração antiga.
+- **Luciano, na Assim e na Geap:** o código está preenchido com o CPF. Confirmar se é exigência da operadora.
+- **Max e Matheus** estão com o CNES da clínica (3176479); os demais usam 9999999.
+
+
+---
+
+**PARTE 17 – arquivo original: K-hospitais-por-convenio.md**
+
+# K) Hospitais e centros cirúrgicos (Cadastros ▸ Unidades) e códigos por convênio
+
+**Visto em:** 22/11/2026. Só olhando, nada alterado.
+**Onde fica no Micrologos:** Cadastros ▸ Unidades ▸ Detalhamento ▸ sub-aba **Informações TISS** ("Informações TISS utilizadas para honorários médicos – contratado aonde foi executado o serviço, casos de cirurgia externa").
+Cada unidade tem:
+- um **Código CNES** próprio;
+- uma tabela **Convênio → Código na Operadora → Código CNES** (o CNES da linha só é preenchido quando difere do CNES da unidade).
+
+Esses dados vão no bloco **`localContratado`** da guia de Honorários (ver D2).
+
+**CNPJ e cidade/UF:** a tela de Unidades **não mostra** CNPJ nem endereço. Eles ficam no cadastro do **Emitente** (módulo financeiro Cash Master), que não abri.
+- Em alguns convênios, o campo "código na operadora" está preenchido com o **CNPJ da própria unidade**. Esses CNPJs aparecem na coluna "CNPJ (quando aparece)".
+- Pelos nomes, todas parecem ser do Rio de Janeiro/RJ. Não confirmei.
+
+| Cód | Unidade | Emitente (cód) | CNES da unidade | CNPJ (quando aparece) | Convênio → código na operadora (CNES da linha) |
+|---|---|---|---|---|---|
+| 1 | **Consumed Consultórios Médicos Ltda** (principal) | Consumed (23) | **3176479** | 05.894.660/0001-87 | Assim 30717 (3176479) · Unimed Gisele 873799 (3176479) · Unimed Luciano [CPF – omitido] (9999999) · Unimed Gelson 863602 (3176479) · Geap 17101182 (3176479) · Hapvida 17687 (3176479) · Fundação Saúde Itaú 00119315 (3176479) · Klini 05894660000187 (3176479) |
+| 12 | Consumed | Consumed (18069) | 3176479 | 05.894.660/0001-87 (Saúde Caixa) | Unimed Gelson 863602 · Unimed Gisele 873799 · Unimed Luciano 941222 · Unimed Max 410374 · Saúde Caixa 05894660000187 |
+| 3 | Barra Day Serviços Médicos Ltda | idem (15174) | **102881** | 04.781.174/0001-90 | Assim 43303 · Hapvida 102905 · Notre Dame 102905 · Golden Cross 04781174000190 · **Amil 73122076** |
+| 11 | Clínica e Cirurgia de Olhos Dr. Armando Augusto Guedes Ltda | idem (15217) | 9260854 | – | Unimed Gelson 863602 · Unimed Luciano 941222 · Unimed Max 410374 |
+| 6 | Day Clinic Méier | idem (9181) | 5136989 | – | Amil 10477071 · Bradesco Saúde 203114 |
+| 5 | Hospital Daniel Lipp Ltda | idem (2846) | 3014673 | 73.372.427/0001-94 | Hapvida 8083 · Golden Cross 73372427000194 · Bradesco Saúde 195510 · Unimed Gelson 73372427000194 |
+| 7 | Hospital Oftalmológico da Barra | idem (9182) | 7544227 | – | Bradesco Saúde 427810 · Bradesco Operadora 427810 |
+| 4 | Jardim de Alah Centro Cirúrgico Ltda | idem (2535) | 3135659 | 01.124.549/0001-50 | Golden Cross 01124549000150 |
+| 2 | Largo do Machado | idem (179) | 3135268 | – | Assim 22349 · Geap 17084059 · Bradesco Saúde 684724 · Fundação Saúde Itaú 00197066 · Bradesco Operadora 684724 |
+| 14 | Oftalmo Rio Centro de Micro Cirurgia Ocular Ltda EPP | idem (25984) | 5417643 | – | Amil 10485520 |
+| 10 | **Pro Oftalmo Micro Cirurgia Ocular S/C Ltda** | idem (15181) | **5325722** | 97.515.480/0001-65 | **Bradesco Saúde 193216** · **Bradesco Operadora 193216** · Amil 10467203 · Porto Seguro 50800004 · Mediservice 97515480000165 · Hapvida 97515480000165 |
+| 13 | Rio Vision Hospital Ltda | idem (25068) | 4708490 | – | Bradesco Saúde 54409 · Bradesco Operadora 54409 |
+| 15 | Unimed Regional Fluminense Cooperativa de Trabalho Médico | idem (27088) | 8403708 | 28.714.533/0017-11 | Unimed Gelson 28714533001711 |
+| 9 | UTI Rio Serviços Médicos Ltda | idem (10126) | 7536747 | – | Geap 17102995 · Assim 31272 (7536747) |
+
+**Conferência com os XML reais (D2):**
+- Bradesco → Pro Oftalmo, código 193216, CNES 5325722.
+- Amil → Barra Day, código 73122076, CNES 102881.
+- Os dois ✅ batem com esta tabela.
+
+## O que isso significa para o sistema novo
+- O cadastro de **Hospital / Local de execução** precisa ter: CNES, CNPJ e uma tabela **convênio → código do hospital na operadora** (e CNES, se for diferente).
+- Na guia de Honorários, o `localContratado` é preenchido a partir do **hospital onde a cirurgia foi feita** e do **convênio do paciente**. Se faltar esse código, a guia é glosada ou rejeitada.
+- Algumas operadoras usam o **CNPJ** do hospital como código. Exemplos: Mediservice e Hapvida na Pro Oftalmo, Golden Cross, Unimed Gelson no Daniel Lipp.
+
+## Quais hospitais ainda são usados?
+(resposta da Ana Carolina – ver abaixo)
+
+**Resposta da Ana Carolina (22/11/2026):**
+- **Ainda usados:** Pro Oftalmo · Barra Day · Day Clinic Méier · Hospital Oftalmológico da Barra · Rio Vision Hospital · Oftalmo Rio · Largo do Machado · Hospital Daniel Lipp. Mais as duas unidades da própria clínica: Consumed Consultórios Médicos e Consumed.
+- **Sem resposta (a confirmar):** Clínica e Cirurgia de Olhos Dr. Armando Guedes · Jardim de Alah · UTI Rio · Unimed Regional Fluminense.
 
