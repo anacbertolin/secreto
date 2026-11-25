@@ -36,7 +36,8 @@ function desmarcarDireto(c: CustoEdit): CustoEdit {
 }
 interface Repasse {
   id: string; numero: number; conta_id: string | null; paciente_id: string | null; profissional_id: string; procedimento: string;
-  data_cirurgia: string; data_pagamento: string; valor_total: number; forma_pagamento: string; parcelas: number;
+  data_cirurgia: string | null; data_pagamento: string; valor_total: number; forma_pagamento: string; parcelas: number;
+  realizada_em?: string | null; fora_clinica?: boolean;
   imposto_pct: number; centro_cirurgico_pct: number; taxa_interna_pct: number; taxa_arredondamento: "truncar" | "arredondar";
   imposto_total: number; centro_cirurgico_total: number; taxa_interna_total: number; medico_total: number; custos_total: number;
   procedimento_id: string | null; regra: string; status: string; motivo_cancelamento: string | null; observacoes: string | null;
@@ -50,7 +51,7 @@ interface Config extends RegrasRepasse { id: string }
 export interface VendaOrientacao {
   id: string; numero: number; tipo: string; paciente_id: string; profissional_id: string; procedimento_id: string | null; procedimento: string;
   lente_id: string | null; data_cirurgia: string | null; data_pagamento: string; valor_total: number; forma_pagamento: string; parcelas: number;
-  observacoes: string | null; status: string; motivo: string | null; criado_em: string; anestesista_direto?: number | null;
+  observacoes: string | null; status: string; motivo: string | null; criado_em: string; anestesista_direto?: number | null; fora_clinica?: boolean; realizada_em?: string | null;
   pacientes?: { id: string; nome: string; nome_social: string | null; numero_prontuario: number } | null;
   profissionais?: { nome: string } | null; criador?: { nome: string } | null;
 }
@@ -133,8 +134,9 @@ function Lancamentos({ base }: { base: Awaited<ReturnType<typeof carregarBase>> 
   const [nova, setNova] = useState(!!contaParam);
 
   const { dados, erro, carregando } = useCarregar(async () => {
-    let q = supabase.from("repasses").select(SEL).gte("data_cirurgia", f.de).lte("data_cirurgia", f.ate)
-      .order("data_cirurgia", { ascending: false }).limit(500);
+    // inclui os que ainda não têm data de cirurgia (0158)
+    let q = supabase.from("repasses").select(SEL).or(`data_cirurgia.is.null,and(data_cirurgia.gte.${f.de},data_cirurgia.lte.${f.ate})`)
+      .order("data_cirurgia", { ascending: false, nullsFirst: true }).limit(500);
     // "em andamento" × "médico pago" é calculado pelas datas (0156); no banco só "cancelado" é definitivo
     if (f.status === "cancelado") q = q.eq("status", "cancelado");
     else if (f.status !== "todos") q = q.neq("status", "cancelado");
@@ -170,11 +172,12 @@ function Lancamentos({ base }: { base: Awaited<ReturnType<typeof carregarBase>> 
                 const ps = r.repasse_parcelas ?? [];
                 const hojeIso = isoDia(new Date());
                 const entrou = ps.filter((p) => p.recebido_em && p.recebido_em <= hojeIso).length;
-                const pagas = ps.filter((p) => jaPago(p.pago_medico_em)).length;
+                const pagas = ps.filter((p) => jaPago(p.pago_medico_em, r.realizada_em)).length;
                 return (
                   <tr key={r.id} className="clicavel" onClick={() => nav(`/repasse/${r.id}`)}>
                     <td>{r.numero}</td>
-                    <td>{fmtData(r.data_cirurgia)}</td>
+                    <td>{r.data_cirurgia ? fmtData(r.data_cirurgia) : <Etiqueta cor="vermelho">sem data</Etiqueta>}
+                      {r.regra !== "cobranca" && r.status !== "cancelado" && <div className="pequeno">{r.realizada_em ? "✔ realizada" : <span className="muted">aguarda realização</span>}</div>}</td>
                     <td><b>{r.profissionais?.nome}</b></td>
                     <td>{r.pacientes ? nomeExibicao(r.pacientes) : <span className="muted">—</span>}<div className="muted pequeno">{r.procedimento}</div>{r.regra && r.regra !== "geral" && <Etiqueta cor="roxo">{r.regra === "cobranca" ? "médico deve" : "parceiro"}</Etiqueta>}</td>
                     <td>{FORMAS_REPASSE[r.forma_pagamento]}{r.parcelas > 1 && ` ${r.parcelas}x`}</td>
@@ -238,7 +241,7 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
     setCustos(cs);
     setF((x) => ({
       ...x, regra: p?.regra ?? "geral", profissional_id: venda.profissional_id, procedimento_id: venda.procedimento_id ?? "",
-      procedimento: venda.procedimento, data_cirurgia: venda.data_cirurgia ?? x.data_cirurgia, data_pagamento: venda.data_pagamento,
+      procedimento: venda.procedimento, data_cirurgia: venda.data_cirurgia ?? "", data_pagamento: venda.data_pagamento,
       valor: String(venda.valor_total).replace(".", ","), forma: venda.forma_pagamento, parcelas: String(venda.parcelas),
       observacoes: venda.observacoes ?? "",
     }));
@@ -363,7 +366,7 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
     setSalvando(true);
     const { data, error } = await supabase.rpc("repasse_lancar", { p: {
       venda_id: venda?.id ?? null, conta_id: conta, paciente_id: pac?.id ?? null, profissional_id: f.profissional_id, procedimento_id: f.procedimento_id || null,
-      regra: f.regra, procedimento: f.procedimento.trim(), data_cirurgia: f.data_cirurgia, data_pagamento: f.data_pagamento, valor_total: valor,
+      regra: f.regra, procedimento: f.procedimento.trim(), data_cirurgia: f.data_cirurgia || null, data_pagamento: f.data_pagamento, valor_total: valor,
       forma_pagamento: f.forma, parcelas: n, observacoes: f.observacoes.trim() || null,
       custos: custos.map((c, i) => ({ tipo: c.tipo, descricao: c.descricao.trim(), valor: custosNum[i],
         favorecido_profissional_id: c.favorecido_profissional_id || null, favorecido_nome: c.favorecido_nome.trim() || null })),
@@ -398,7 +401,7 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
           {procAtual?.profissional_id && procsAtivos.some((p) => p.nome === procAtual.nome && p.id !== procAtual.id) &&
             <div className="muted pequeno">Com as particularidades deste médico</div>}
         </Campo>
-        <Campo rotulo="Data da cirurgia"><input type="date" value={f.data_cirurgia} onChange={set("data_cirurgia")} /></Campo>
+        <Campo rotulo={venda ? "Data da cirurgia (vem da venda/agenda)" : "Data da cirurgia (vazio = ainda sem data)"}><input type="date" value={f.data_cirurgia} disabled={!!venda} onChange={set("data_cirurgia")} /></Campo>
       </div>
       {!cobranca && base.lentes.length > 0 && (
         <Campo rotulo="Ou: venda de lente ao paciente (catálogo)">
@@ -528,7 +531,9 @@ export function RepasseDetalhe() {
         <div>
           <div className="linha"><h1 style={{ margin: 0 }}>{cob ? "Cobrança" : "Repasse"} nº {r.numero}</h1>{r.regra && r.regra !== "geral" && <Etiqueta cor="roxo">{REGRAS[r.regra]?.rotulo}</Etiqueta>}<Etiqueta cor={STATUS[situacaoRepasse(r)].cor}>{STATUS[situacaoRepasse(r)].rotulo}</Etiqueta></div>
           <p className="sub" style={{ margin: "4px 0 0" }}>
-            <b>{r.profissionais?.nome}</b> · {r.procedimento} · cirurgia em {fmtData(r.data_cirurgia)}
+            <b>{r.profissionais?.nome}</b> · {r.procedimento} · {r.data_cirurgia ? `cirurgia em ${fmtData(r.data_cirurgia)}` : "cirurgia ainda sem data"}
+            {r.fora_clinica && " · fora da clínica"}
+            {r.regra !== "cobranca" && (r.realizada_em ? " · ✔ realizada" : " · aguarda o check de realizada (tela Cirurgias do dia)")}
             {r.pacientes && <> · {r.paciente_id ? <Link to={`/pacientes/${r.paciente_id}`}>{nomeExibicao(r.pacientes)}</Link> : nomeExibicao(r.pacientes)} (pront. {r.pacientes.numero_prontuario})</>}
             {r.conta_id && <> · <Link to={`/faturamento/conta/${r.conta_id}`}>ver conta</Link></>}
           </p>
@@ -563,7 +568,7 @@ export function RepasseDetalhe() {
             <tr><td><b>Médico</b> {(r.regra ?? "geral") === "geral" ? `(${pct(100 - r.centro_cirurgico_pct)} dos honorários)` : "(sem imposto e sem os 20%)"}</td><td style={num}><b>{fmtMoeda(r.medico_total)}</b></td></tr>
             <tr><td className="muted">Parcelas que já caíram</td><td style={num} className="muted">{entraram.length} de {r.parcelas} · médico {fmtMoeda(soma(entraram, "medico"))}</td></tr>
             <tr><td className="muted">Já pago ao médico / falta pagar</td><td style={num} className="muted">
-              {fmtMoeda(soma(ps.filter((p) => jaPago(p.pago_medico_em)), "medico"))} / {fmtMoeda(soma(ps.filter((p) => !jaPago(p.pago_medico_em)), "medico"))}</td></tr>
+              {fmtMoeda(soma(ps.filter((p) => jaPago(p.pago_medico_em, r.realizada_em)), "medico"))} / {fmtMoeda(soma(ps.filter((p) => !jaPago(p.pago_medico_em, r.realizada_em)), "medico"))}</td></tr>
             </>}
           </tbody>
         </table>
@@ -588,7 +593,7 @@ export function RepasseDetalhe() {
             <tbody>
               {cs.filter((c) => !custoDaClinica(c.tipo)).map((c) => (
                 <tr key={c.id}><td>{c.descricao}</td><td>{favorecido(c) || <span className="muted">não informado</span>}</td><td style={num}>{fmtMoeda(c.valor)}</td>
-                  <td>{Number(c.valor) === 0 ? <span className="muted pequeno">nada a pagar</span> : <DataPagamento d={c.pago_em} />}</td></tr>
+                  <td>{Number(c.valor) === 0 ? <span className="muted pequeno">nada a pagar</span> : <DataPagamento d={c.pago_em} realizada={r.realizada_em} />}</td></tr>
               ))}
             </tbody>
           </table>
@@ -628,7 +633,7 @@ export function RepasseDetalhe() {
                       : <span className="muted">⏳ {fmtData(p.recebido_em)}</span>) : <span className="muted pequeno">—</span>}
                   </td>
                   <td>
-                    <DataPagamento d={p.pago_medico_em} />
+                    <DataPagamento d={p.pago_medico_em} realizada={r.realizada_em} />
                   </td>
                 </tr>
               ))}
@@ -698,7 +703,8 @@ function paraLinhaRel(v: ParcelaMedico): LinhaRel {
 function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
   const [f, setF] = useState({ de: primeiroDiaMes(), ate: isoDia(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)), medico: "todos", situacao: "todas" });
   const { dados, erro, carregando } = useCarregar(async () => {
-    const q = supabase.from("repasse_parcelas_medicos").select("*")
+    // só cirurgias com o check "Realizada" (0158)
+    const q = supabase.from("repasse_parcelas_medicos").select("*").not("realizada_em", "is", null)
       .not("pago_medico_em", "is", null).gte("pago_medico_em", f.de).lte("pago_medico_em", f.ate).neq("status", "cancelado").neq("regra", "cobranca")
       .order("pago_medico_em").limit(5000);
     return (ok(await (f.medico === "todos" ? q : q.eq("profissional_id", f.medico))) as ParcelaMedico[]).map(paraLinhaRel);
@@ -1018,15 +1024,15 @@ function Procedimentos({ procs, medicos, aoMudar }: { procs: Procedimento[]; med
 }
 
 // ------------------------------------------------------------------ relatório: auxiliares e instrumentação a pagar
-interface CustoRel extends Custo { repasses: { numero: number; procedimento: string; data_cirurgia: string; status: string; profissionais: { nome: string } | null } }
+interface CustoRel extends Custo { repasses: { numero: number; procedimento: string; data_cirurgia: string | null; status: string; profissionais: { nome: string } | null } }
 function CustosAPagar({ de, ate, situacao }: { de: string; ate: string; situacao: string }) {
   const erro = "";
   const { dados, erro: e1 } = useCarregar(async () => ok(await supabase.from("repasse_custos")
-    .select("*, profissionais(nome), repasses!inner(numero, procedimento, data_cirurgia, status, profissionais!repasses_profissional_id_fkey(nome))")
-    .not("tipo", "in", "(sala,insumo)").gt("valor", 0).neq("repasses.regra", "cobranca").gte("repasses.data_cirurgia", de).lte("repasses.data_cirurgia", ate).neq("repasses.status", "cancelado")
+    .select("*, profissionais(nome), repasses!inner(numero, procedimento, data_cirurgia, status, realizada_em, profissionais!repasses_profissional_id_fkey(nome))")
+    .not("tipo", "in", "(sala,insumo)").gt("valor", 0).not("repasses.realizada_em", "is", null).neq("repasses.regra", "cobranca").gte("repasses.data_cirurgia", de).lte("repasses.data_cirurgia", ate).neq("repasses.status", "cancelado")
     .limit(5000)) as CustoRel[], [de, ate]);
   const linhas = (dados ?? []).filter((c) => situacao === "todas" || (situacao === "pagar" ? !jaPago(c.pago_em) : jaPago(c.pago_em)))
-    .sort((a, b) => favorecido(a).localeCompare(favorecido(b)) || a.repasses.data_cirurgia.localeCompare(b.repasses.data_cirurgia));
+    .sort((a, b) => favorecido(a).localeCompare(favorecido(b)) || (a.repasses.data_cirurgia ?? "").localeCompare(b.repasses.data_cirurgia ?? ""));
   const total = (ls: CustoRel[]) => ls.reduce((s, c) => s + Number(c.valor), 0);
   if (!linhas.length && !e1) return null;
   return (
@@ -1071,7 +1077,7 @@ function Previsao() {
           <option value={3}>Próximos 3 meses</option><option value={6}>Próximos 6 meses</option><option value={12}>Próximos 12 meses</option><option value={24}>Próximos 24 meses</option>
         </select>
         <button onClick={() => window.print()}>🖨️ Imprimir</button></div>
-      <p className="muted pequeno">Quanto cada médico vai receber em cada mês, pelas regras automáticas: crédito com fechamento no dia 20 e pagamento no dia 25; PIX, dinheiro e débito no dia da cirurgia. Clique num valor para ver de onde vem.</p>
+      <p className="muted pequeno">Quanto cada médico vai receber em cada mês, pelas regras automáticas: crédito com fechamento no dia 20 e pagamento no dia 25; PIX, dinheiro e débito no dia da cirurgia. Inclui cirurgias que ainda vão acontecer (só são pagas depois do check de realizada). Clique num valor para ver de onde vem.</p>
       <Aviso>{erro}</Aviso>
       {carregando && !dados ? <Carregando /> : medicos.length === 0 ? <div className="vazio">Nenhum pagamento previsto.</div> : (
         <table className="tabela">
@@ -1213,14 +1219,17 @@ function LentesCatalogo() {
 
 // ------------------------------------------------------------------ vendas da Orientação Cirúrgica para conferir (migração 0097)
 /** pagamentos automáticos (migração 0156): pago = data de pagamento hoje ou passada */
-const jaPago = (d: string | null | undefined) => !!d && d <= isoDia(new Date());
-function DataPagamento({ d }: { d: string | null | undefined }) {
+const jaPago = (d: string | null | undefined, realizada: unknown = true) => !!realizada && !!d && d <= isoDia(new Date());
+/** sem o check "Realizada" (0158) ninguém recebe: mostra a data prevista com o aviso */
+function DataPagamento({ d, realizada = true }: { d: string | null | undefined; realizada?: unknown }) {
+  if (!realizada) return <span className="muted pequeno">⏳ aguarda realização{d ? ` · ${fmtData(d)}` : ""}</span>;
   if (!d) return <span className="muted pequeno">—</span>;
   return jaPago(d) ? <span>✅ {fmtData(d)}</span> : <span className="muted">⏳ {fmtData(d)}</span>;
 }
 /** situação exibida: cancelado / (cobrança: pelo status) / médico pago quando todas as datas já passaram */
-function situacaoRepasse(r: { status: string; regra?: string; repasse_parcelas?: { pago_medico_em: string | null }[] }) {
+function situacaoRepasse(r: { status: string; regra?: string; realizada_em?: string | null; repasse_parcelas?: { pago_medico_em: string | null }[] }) {
   if (r.status === "cancelado" || r.regra === "cobranca") return r.status;
+  if (!r.realizada_em) return "aberto";
   const ps = r.repasse_parcelas ?? [];
   return ps.length > 0 && ps.every((p) => jaPago(p.pago_medico_em)) ? "concluido" : "aberto";
 }

@@ -1704,3 +1704,16 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   parcela e por médico que recebe; demais partes divididas na mesma proporção). Relatório por médico e Previsão usam a visão;
   o repasse mostra a metade de cada um por parcela. Vale para os já lançados (vitrectomia nº 29: R$ 410,48 + R$ 410,48 por
   parcela). Clínica Vital: continua sem imposto e sem os 20%; cirurgião padrão = Dr. Max (R$ 250 para cada).
+
+## 25/11/2026 — Cirurgias do dia: data pela agenda + check "Realizada" (migrações 0158–0159, decisões do Dr. Gelson)
+- A venda nasce SEM data de cirurgia; a Alessandra marca depois (quando o paciente volta para exames) — num quadro que
+  aparece ao selecionar o paciente na agenda da Orientação (`CirurgiaVendidaAgenda`), na lista de vendas ("marcar data")
+  ou em "Cirurgias do dia". Caixinha "Fora da clínica" (sem dizer onde). A venda é a fonte: data, fora e realização vão
+  sozinhas para o repasse (`tg_venda_repasse_cirurgia`); venda lançada aceita mudar só esses campos.
+- `repasses.data_cirurgia` aceita vazio; repasses/vendas ganharam `fora_clinica`, `realizada_em`, `realizada_por`.
+- Tela `/cirurgias-do-dia` (menu "Cirurgias do dia"): lista do dia (vendas + repasses sem venda), check "✔ Realizada"
+  (função `cirurgia_realizada`; Alessandra, faturamento/admin e sócios Gelson/Max; a partir do dia da cirurgia),
+  quanto cada um recebe (`cirurgias_valores`, só faturamento/admin/sócios; PIX/dinheiro/débito/terceiros no dia;
+  crédito → dia 25), WhatsApp/Copiar/Imprimir, e "Faltam data ou check" (`cirurgias_lista(p_pendentes)`).
+- SEM check ninguém recebe: relatório e custos a pagar só contam realizadas; o repasse mostra "aguarda realização";
+  cancelamento só é barrado se já realizada e com data de pagamento passada. Previsão inclui as futuras.
