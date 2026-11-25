@@ -1676,3 +1676,5 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   Pendente perguntar: o caixa da RECEPÇÃO também deve deixar de registrar cartão/PIX?
 - (0154) Correção: o Luciano não conseguia DEVOLVER a venda nº 3 (cartão) porque o gatilho da 0153 tentava tirá-la do caixa
   já fechado. Agora caixa fechado só bloqueia quando muda forma, valor ou a venda é cancelada.
+- (25/11, migração 0112) A dona esclareceu: a conferência em duas etapas é **só do caixa da recepção**. O caixa da Orientação
+  Cirúrgica voltou ao caminho simples (fechado → "Conferir" com um clique → aprovado).
