@@ -162,7 +162,8 @@ function Lancamentos({ base }: { base: Awaited<ReturnType<typeof carregarBase>> 
             <tbody>
               {lista.map((r) => {
                 const ps = r.repasse_parcelas ?? [];
-                const entrou = ps.filter((p) => p.recebido_em).length;
+                const hojeIso = isoDia(new Date());
+                const entrou = ps.filter((p) => p.recebido_em && p.recebido_em <= hojeIso).length;
                 const pagas = ps.filter((p) => p.pago_medico_em).length;
                 return (
                   <tr key={r.id} className="clicavel" onClick={() => nav(`/repasse/${r.id}`)}>
@@ -173,7 +174,7 @@ function Lancamentos({ base }: { base: Awaited<ReturnType<typeof carregarBase>> 
                     <td>{FORMAS_REPASSE[r.forma_pagamento]}{r.parcelas > 1 && ` ${r.parcelas}x`}</td>
                     <td style={num}>{fmtMoeda(r.valor_total)}</td>
                     <td style={num}>{fmtMoeda(soma(ps, "medico"))}</td>
-                    <td className="pequeno">{entrou}/{r.parcelas} entraram<div className="muted">{pagas}/{r.parcelas} pagas ao médico</div></td>
+                    <td className="pequeno">{entrou}/{r.parcelas} já caíram<div className="muted">{pagas}/{r.parcelas} pagas ao médico</div></td>
                     <td><Etiqueta cor={STATUS[r.status].cor}>{STATUS[r.status].rotulo}</Etiqueta></td>
                   </tr>
                 );
@@ -489,7 +490,8 @@ export function RepasseDetalhe() {
   const r = dados;
   const ps = r.repasse_parcelas ?? [];
   const ativo = r.status !== "cancelado";
-  const entraram = ps.filter((p) => p.recebido_em);
+  // parcela conta como recebida na data prevista (migração 0155: confiamos que o cartão paga)
+  const entraram = ps.filter((p) => p.recebido_em && p.recebido_em <= isoDia(new Date()));
   const cob = r.regra === "cobranca";
   const cs = (r.repasse_custos ?? []).sort((a, b) => a.ordem - b.ordem);
   async function pagarCusto(c: Custo, pago: string | null) {
@@ -555,7 +557,7 @@ export function RepasseDetalhe() {
               <tr><td>Clínica ({pct(r.centro_cirurgico_pct)} dos honorários)</td><td style={num}>{fmtMoeda(r.centro_cirurgico_total)}</td></tr>
             </>}
             <tr><td><b>Médico</b> {(r.regra ?? "geral") === "geral" ? `(${pct(100 - r.centro_cirurgico_pct)} dos honorários)` : "(sem imposto e sem os 20%)"}</td><td style={num}><b>{fmtMoeda(r.medico_total)}</b></td></tr>
-            <tr><td className="muted">Parcelas que já entraram</td><td style={num} className="muted">{entraram.length} de {r.parcelas} · médico {fmtMoeda(soma(entraram, "medico"))}</td></tr>
+            <tr><td className="muted">Parcelas que já caíram</td><td style={num} className="muted">{entraram.length} de {r.parcelas} · médico {fmtMoeda(soma(entraram, "medico"))}</td></tr>
             <tr><td className="muted">Já pago ao médico / falta pagar</td><td style={num} className="muted">
               {fmtMoeda(soma(ps.filter((p) => p.pago_medico_em), "medico"))} / {fmtMoeda(soma(ps.filter((p) => !p.pago_medico_em), "medico"))}</td></tr>
             </>}
@@ -594,12 +596,12 @@ export function RepasseDetalhe() {
       {!cob && <div className="painel">
         <h2>Parcelas</h2>
         {ativo && r.parcelas > 1 && (
-          <p className="muted pequeno">Quando cada parcela cair na conta, clique em <b>"Entrou hoje"</b>. Depois de transferir ao médico, clique em <b>"Marcar pago hoje"</b>.</p>
+          <p className="muted pequeno">Cada parcela conta como recebida na data prevista (o cartão paga). Depois de transferir ao médico, clique em <b>"Marcar pago hoje"</b>.</p>
         )}
         <div className="rolagem">
           <table className="tabela">
             <thead><tr><th>Parcela</th><th>Prevista</th><th style={num}>Valor</th><th style={num}>Imposto</th><th style={num}>Taxa cartão</th><th style={num}>Custos</th>
-              <th style={num}>Clínica</th><th style={num}>Médico</th><th>Entrou</th><th>Pago ao médico</th></tr></thead>
+              <th style={num}>Clínica</th><th style={num}>Médico</th><th>Cai na conta</th><th>Pago ao médico</th></tr></thead>
             <tbody>
               {ps.map((p) => (
                 <tr key={p.id}>
@@ -612,12 +614,9 @@ export function RepasseDetalhe() {
                   <td style={num}>{fmtMoeda(p.centro_cirurgico)}</td>
                   <td style={num}><b>{fmtMoeda(p.medico)}</b></td>
                   <td>
-                    {p.recebido_em ? (
-                      <span className="linha">✅ {fmtData(p.recebido_em)}
-                        {ativo && !p.pago_medico_em && <button className="sutil pequeno" onClick={() => confirm(`Desmarcar a entrada da parcela ${p.numero}?`) && atualizar(p, { recebido_em: null }, `Entrada da parcela ${p.numero} desmarcada.`)}>desfazer</button>}</span>
-                    ) : ativo ? (
-                      <button className="pequeno" onClick={() => atualizar(p, { recebido_em: isoDia(new Date()) }, `Parcela ${p.numero} marcada como recebida.`)}>Entrou hoje</button>
-                    ) : <span className="muted pequeno">—</span>}
+                    {p.recebido_em ? (p.recebido_em <= isoDia(new Date())
+                      ? <span>✅ {fmtData(p.recebido_em)}</span>
+                      : <span className="muted">⏳ {fmtData(p.recebido_em)}</span>) : <span className="muted pequeno">—</span>}
                   </td>
                   <td>
                     {p.pago_medico_em ? (
@@ -707,7 +706,7 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
   return (
     <div>
       <div className="painel linha">
-        <label className="linha pequeno muted">parcelas que entraram de <input type="date" style={{ width: 150 }} value={f.de} onChange={(e) => setF({ ...f, de: e.target.value })} /></label>
+        <label className="linha pequeno muted">parcelas que caem de <input type="date" style={{ width: 150 }} value={f.de} onChange={(e) => setF({ ...f, de: e.target.value })} /></label>
         <label className="linha pequeno muted">até <input type="date" style={{ width: 150 }} value={f.ate} onChange={(e) => setF({ ...f, ate: e.target.value })} /></label>
         <select style={{ width: 200 }} value={f.medico} onChange={(e) => setF({ ...f, medico: e.target.value })}>
           <option value="todos">Todos os médicos</option>{medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}

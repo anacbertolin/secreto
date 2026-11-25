@@ -1678,3 +1678,7 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   já fechado. Agora caixa fechado só bloqueia quando muda forma, valor ou a venda é cancelada.
 - (25/11, migração 0112) A dona esclareceu: a conferência em duas etapas é **só do caixa da recepção**. O caixa da Orientação
   Cirúrgica voltou ao caminho simples (fechado → "Conferir" com um clique → aprovado).
+- (0155, decisão do Dr. Gelson) Parcela do cartão "entra" sozinha: toda parcela (menos cobrança ao médico) nasce com
+  recebido_em = data_prevista (gatilho `entra_sozinha`); repasses abertos foram preenchidos. Saiu o botão "Entrou hoje";
+  a tela mostra "Cai na conta" (✅ já caiu / ⏳ futura). O relatório por médico filtra pelo mês em que a parcela cai
+  (serve também de previsão). "Marcar pago hoje" (pagamento ao médico) continua manual.
