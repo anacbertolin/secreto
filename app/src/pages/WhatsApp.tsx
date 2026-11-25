@@ -552,7 +552,7 @@ export function Chat(props: {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="ct-nome"><span className="ct-canal" title="WhatsApp">💬</span> <b>{nomeConversa(c)}</b> <span className="muted">· {fmtNumeroWA(c.telefone)}</span></div>
             <div className={"ct-desde" + (c.arquivada ? " encerrada" : !c.responsavel_id ? " fila" : "")}>
-              {c.arquivada ? "Conversa encerrada"
+              {c.arquivada ? `✅ Conversa encerrada${c.responsavel_id ? ` por ${c.responsavel_id === eu?.id ? "você" : nomeEquipe(c.responsavel_id) ?? "outra pessoa"}` : ""} — guardada em “Encerradas”`
                 : c.responsavel_id ? `Em conversa desde ${c.atendido_desde ? fmtDataHora(c.atendido_desde) : "—"} com ${c.responsavel_id === eu?.id ? "você" : nomeEquipe(c.responsavel_id) ?? "outra pessoa"}`
                 : `Na fila, esperando atendimento${c.fila_desde ? " desde " + fmtHora(c.fila_desde) : ""}`}
             </div>

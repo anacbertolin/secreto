@@ -1687,3 +1687,5 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   Para o conteúdo, continua 🧰 Ferramentas → 🔎 Pesquisar mensagens (texto e transcrição dos áudios).
 - Lançamentos do repasse: o filtro "até" era HOJE e escondia repasses de cirurgia futura (venda paga antes da cirurgia —
   repasse nº 29, vitrectomia de 26/11, "sumiu"). Agora o padrão vai até daqui a 1 ano.
+- (25/11) Menu "📋 Atendimentos" da Central/Orientação virou **"📋 Encerradas"**; cartões com "✅ Encerrada · quem
+  atendeu"; cabeçalho da conversa encerrada diz quem encerrou e que ela fica guardada em "Encerradas".
