@@ -145,3 +145,13 @@
 - Não commitar nenhum dado de paciente (o `.gitignore` em `migracao/` ajuda, mas confira).
 - Gatilhos do sistema que afetam a carga: `tg_bloquear_se_finalizado` (inserir os itens antes de finalizar o atendimento), `horarios_status` e `somente_equipe`.
 - Confirmar no ensaio se o status "Esp. Pend." do Micrologos significa mesmo "agendado".
+
+## Logins da equipe vinda do Micrologos (25/11/2026)
+- Migração 0161: 17 pessoas ativas no Micrologos (acesso nos últimos 6 meses) criadas na tela Equipe com usuário
+  nome.sobrenome e função inicial **recepção** (a dona confere a função e gera as senhas).
+- Não criados (já existiam na tela Equipe): Ana Bertolin, Andrea, Gelson, Gisele, Ingrid, Isabelle, Luana, Luciano,
+  Luiza, Matheus, Max, Pedro, Renato, Soraline. Dr. Marcos (saiu). Contas genéricas (Mlmaster, Mlsuporte, Sam Call Center).
+- ❓ Perguntar à dona: Alessandra Moura de Oliveira (é a Alessandra Galter já cadastrada?); Marcio (TI) precisa de login?;
+  ativos no Micrologos mas sem acesso há mais de 6 meses: Nicole Coutinho Couto, Marise Barreto Ramos,
+  Juliana do Valle Quintilhano, Kalini Lourenço dos Santos, Emilly Caroline Aguiar da Silva, Darlene Cardoso Marreiro,
+  Rafael Ramos da Costa.
