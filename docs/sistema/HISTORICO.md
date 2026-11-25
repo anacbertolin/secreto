@@ -1674,3 +1674,5 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   Só precisa de caixa aberto para venda em dinheiro. A venda nº 3 (cartão) ficou no caixa de 25/11, que já estava fechado
   (não altera a conta da gaveta); para tirar, é preciso devolver o caixa e rodar a limpeza da 0153 de novo.
   Pendente perguntar: o caixa da RECEPÇÃO também deve deixar de registrar cartão/PIX?
+- (0154) Correção: o Luciano não conseguia DEVOLVER a venda nº 3 (cartão) porque o gatilho da 0153 tentava tirá-la do caixa
+  já fechado. Agora caixa fechado só bloqueia quando muda forma, valor ou a venda é cancelada.
