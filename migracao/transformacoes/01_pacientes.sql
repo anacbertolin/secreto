@@ -8,8 +8,13 @@
 -- - Nº do prontuário = ID_PACIENTE do Micrologos (decisão da dona: o mesmo número). A FICHA, quando é
 --   diferente do ID (cerca de 3 mil casos, quase todos com letras), vai para prontuario_anterior.
 -- - Pacientes de teste do Micrologos (69489 "Teste" e 108477 "Teste Micrologos") e o registro 0 NÃO entram.
--- - CPF repetido (mesmo CPF válido em mais de um cadastro): NÃO funde sozinho. O CPF fica só no cadastro
---   mais recente; os outros ficam sem CPF, com observação apontando para o outro nº (a dona decide depois).
+-- - CPF repetido (decisão da dona, 25/11/2026):
+--   * MESMO CPF + MESMO NOME (sem acento/maiúsculas): é a mesma pessoa -> JUNTA num só prontuário. Fica o
+--     nº MAIS ANTIGO (o primeiro cadastro); os dados de contato vêm do cadastro mais recente; os outros nºs
+--     vão para prontuario_anterior e para legacy_micrologos.fusoes_pacientes. Agenda, atendimentos e contas
+--     dos nºs juntados apontam para o prontuário que ficou (legacy_micrologos.novo_id), em ordem cronológica.
+--   * MESMO CPF + NOMES DIFERENTES (ex.: dependente com o CPF do responsável): NÃO junta. O CPF fica só no
+--     cadastro mais recente; os outros ficam sem CPF, com observação.
 -- - Telefones: os do cadastro (TELEFONE1..4) e os da tabela PACIENTES_TELEFONES, só dígitos com DDD.
 --   Número sem DDD (8 ou 9 dígitos, cerca de 26 mil) recebe o DDD 21 da clínica (❓ confirmar com a dona).
 -- - Convênio/plano: pelo ID_CONVENIO (= plano no Micrologos) -> convenio_planos.micrologos_codigo, quando
@@ -26,7 +31,38 @@ where btrim(b.id_paciente) ~ '^[0-9]+$'
   and btrim(b.id_paciente)::bigint not in (0, 69489, 108477)
   and legacy_micrologos.txt(b.nome) is not null;
 
--- 2) CPF repetido: fica no cadastro de maior nº (mais recente)
+-- 2) CPF repetido
+create or replace function pg_temp.nome_norm(p text) returns text language sql immutable as $$
+  select upper(regexp_replace(translate(legacy_micrologos.txt(p),
+    'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ', 'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC'), '\s+', ' ', 'g'))
+$$;
+-- 2a) mesmo CPF + mesmo nome: juntar (fica o nº mais antigo)
+create temp table _grupo as
+select cpf_ok, min(num) as fica, max(num) as mais_recente, array_agg(num order by num) as nums
+from _pac where cpf_ok is not null
+group by cpf_ok having count(*) > 1 and count(distinct pg_temp.nome_norm(nome)) = 1;
+
+insert into legacy_micrologos.fusoes_pacientes (legacy_id_mantido, legacy_id_fundido, criterio, decidido_por)
+select g.fica::text, n::text, 'cpf+nome', 'dona (regra geral, 25/11/2026)'
+from _grupo g, unnest(g.nums) n where n <> g.fica
+on conflict (legacy_id_fundido) do nothing;
+
+-- quem foi juntado sai da lista; o que fica usa os dados do cadastro mais recente
+create temp table _junta as
+select g.fica, r.* from _grupo g join _pac r on r.num = g.mais_recente;
+delete from _pac p using legacy_micrologos.fusoes_pacientes f where f.legacy_id_fundido = p.num::text;
+update _pac p set
+  nome = j.nome, nome_social = j.nome_social, cpf = j.cpf, cartao_nacional_saude = coalesce(j.cartao_nacional_saude, p.cartao_nacional_saude),
+  rg = coalesce(j.rg, p.rg), mae = coalesce(j.mae, p.mae), e_mail = coalesce(j.e_mail, p.e_mail),
+  cep = j.cep, logradouro_tipo = j.logradouro_tipo, logradouro_nome = j.logradouro_nome, logradouro_numero = j.logradouro_numero,
+  logradouro_complemento = j.logradouro_complemento, bairro = j.bairro, cidade = j.cidade, estado = j.estado,
+  telefone1 = j.telefone1, telefone2 = j.telefone2, telefone3 = j.telefone3, telefone4 = j.telefone4,
+  id_convenio = j.id_convenio, matricula_convenio = j.matricula_convenio, data_validade_convenio = j.data_validade_convenio,
+  responsavel = j.responsavel, responsavel_telefone1 = j.responsavel_telefone1, responsavel_parentesco = j.responsavel_parentesco,
+  data_nascimento = coalesce(p.data_nascimento, j.data_nascimento)
+from _junta j where j.fica = p.num;
+
+-- 2b) mesmo CPF + nomes diferentes: o CPF fica no cadastro mais recente
 create temp table _cpf_dono as
 select distinct on (cpf_ok) cpf_ok, num from _pac where cpf_ok is not null order by cpf_ok, num desc;
 
@@ -52,9 +88,11 @@ with todos as (
   union all select num, 2, pg_temp.tel(telefone2) from _pac
   union all select num, 3, pg_temp.tel(telefone3) from _pac
   union all select num, 4, pg_temp.tel(telefone4) from _pac
-  union all select btrim(t.id_paciente)::bigint, 10,
+  union all select coalesce(f.legacy_id_mantido::bigint, btrim(t.id_paciente)::bigint), 10,
                    pg_temp.tel(coalesce(t.ddd, '') || coalesce(t.telefone, ''))
-  from legacy_micrologos.bruto_pacientes_telefones t where btrim(t.id_paciente) ~ '^[0-9]+$'
+  from legacy_micrologos.bruto_pacientes_telefones t
+  left join legacy_micrologos.fusoes_pacientes f on f.legacy_id_fundido = btrim(t.id_paciente)
+  where btrim(t.id_paciente) ~ '^[0-9]+$'
 ), unicos as (
   select distinct on (num, t) num, t, ordem from todos where t is not null order by num, t, ordem
 )
@@ -63,10 +101,28 @@ select num,
        (array_agg(t order by ordem))[2] as tel2
 from unicos group by num;
 
+-- 3b) Resumo dos juntados (para o prontuário que ficou)
+create temp table _junt_info as
+select f.legacy_id_mantido::bigint as fica, string_agg(f.legacy_id_fundido, ', ' order by f.legacy_id_fundido::bigint) as lista
+from legacy_micrologos.fusoes_pacientes f group by 1;
+create temp table _inclusao as
+select coalesce(f.legacy_id_mantido::bigint, btrim(b.id_paciente)::bigint) as num, min(legacy_micrologos.data_hora(b.data_inclusao)) as quando
+from legacy_micrologos.bruto_pacientes b
+left join legacy_micrologos.fusoes_pacientes f on f.legacy_id_fundido = btrim(b.id_paciente)
+where btrim(b.id_paciente) ~ '^[0-9]+$' group by 1;
+create index on _inclusao (num);
+create index on _junt_info (fica);
+create index on _tel (num);
+analyze _pac; analyze _tel; analyze _inclusao; analyze _junt_info;
+
+analyze legacy_micrologos.fusoes_pacientes;
+
 -- 4) De-para (um uuid novo por paciente)
 insert into legacy_micrologos.mapa_ids (entidade, legacy_id, novo_id, tabela_nova)
 select 'paciente', p.num::text, gen_random_uuid(), 'public.pacientes' from _pac p
 on conflict (entidade, legacy_id) do nothing;
+
+analyze legacy_micrologos.mapa_ids;
 
 -- 5) Inserção (mesmo nº do Micrologos: OVERRIDING SYSTEM VALUE)
 insert into public.pacientes (
@@ -77,7 +133,9 @@ insert into public.pacientes (
 overriding system value
 select m.novo_id,
   p.num,
-  case when legacy_micrologos.txt(p.ficha) is not null and btrim(p.ficha) <> p.num::text then legacy_micrologos.txt(p.ficha) end,
+  nullif(concat_ws(' · ',
+    case when legacy_micrologos.txt(p.ficha) is not null and btrim(p.ficha) <> p.num::text then 'Ficha ' || legacy_micrologos.txt(p.ficha) end,
+    case when ji.lista is not null then 'Juntado com nº ' || ji.lista end), ''),
   legacy_micrologos.txt(p.nome),
   legacy_micrologos.txt(p.nome_social),
   legacy_micrologos.data(p.data_nascimento),
@@ -105,11 +163,14 @@ select m.novo_id,
     case when legacy_micrologos.txt(p.historico) is not null then 'Histórico (Micrologos): ' || legacy_micrologos.txt(p.historico) end,
     case when legacy_micrologos.txt(p.observacao_atendimento) is not null then 'Obs. de atendimento (Micrologos): ' || legacy_micrologos.txt(p.observacao_atendimento) end,
     case when legacy_micrologos.txt(p.observacao_convenio) is not null then 'Obs. do convênio (Micrologos): ' || legacy_micrologos.txt(p.observacao_convenio) end,
-    case when d2.num is not null then 'Atenção: CPF igual ao do prontuário ' || d2.num || ' (possível cadastro duplicado).' end
+    case when d2.num is not null then 'Atenção: CPF igual ao do prontuário ' || d2.num || ' (nome diferente; pode ser dependente).' end,
+    case when ji.lista is not null then 'Prontuários juntados (mesmo CPF e nome): ' || ji.lista || '. O histórico deles está neste prontuário.' end
   ), ''),
   coalesce(p.inativo, 'N') <> 'S',
-  coalesce(legacy_micrologos.data_hora(p.data_inclusao), now())
+  coalesce(inc.quando, now())
 from _pac p
+left join _junt_info ji on ji.fica = p.num
+left join _inclusao inc on inc.num = p.num
 join legacy_micrologos.mapa_ids m on m.entidade = 'paciente' and m.legacy_id = p.num::text
 left join _cpf_dono d on d.cpf_ok = p.cpf_ok
 left join _cpf_dono d2 on d2.cpf_ok = p.cpf_ok and d2.num <> p.num
@@ -122,6 +183,8 @@ select setval(pg_get_serial_sequence('public.pacientes', 'numero_prontuario'),
               greatest((select max(numero_prontuario) from public.pacientes), 1));
 
 -- 7) Conferência
+analyze public.pacientes;
+analyze legacy_micrologos.mapa_ids;
 select
   (select count(*) from _pac)                                              as candidatos,
   (select count(*) from public.pacientes p join legacy_micrologos.mapa_ids m
@@ -130,4 +193,5 @@ select
   (select count(*) from public.pacientes where telefone is not null)       as com_telefone,
   (select count(*) from public.pacientes where data_nascimento is not null) as com_nascimento,
   (select count(*) from public.pacientes where plano_id is not null)       as com_plano,
-  (select count(*) from public.pacientes where prontuario_anterior is not null) as com_ficha_diferente;
+  (select count(*) from public.pacientes where prontuario_anterior is not null) as com_nr_anterior,
+  (select count(*) from legacy_micrologos.fusoes_pacientes)                 as juntados;
