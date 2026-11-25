@@ -1737,3 +1737,9 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   bloqueios dessas colunas são cadastrados na mesma tela dos médicos.
 - Pendente (tarefa sugerida à dona): esconder as colunas de setor das listas de PESSOAS (chat interno, ramais, WhatsApp, Equipe).
 - Médicos que saíram: Marcos Arnaut e Annamaria Ciminelli (inativos na migração).
+
+## 25/11/2026: Encaixe no mesmo horário (sessão "Dados para migração")
+- **Migração 0153 `agenda_encaixe_sobreposicao`:** a regra `agenda_sem_conflito` não vale mais para `encaixe = true` nem para
+  agendamentos `atendido`, além de cancelado/faltou como antes. Antes, o botão "Encaixar" (mesmo horário, 15 min) era
+  barrado pelo banco. No Micrologos, 26% dos agendamentos ficam no mesmo horário de outro.
+- Agenda do Micrologos (ensaio local): 387.732 agendamentos migráveis, 12.950 encaixes.

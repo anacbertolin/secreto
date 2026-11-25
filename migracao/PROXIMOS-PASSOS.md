@@ -34,6 +34,11 @@
   - os 8 médicos atuais e o Luciano foram LIGADOS aos cadastros do sistema novo (pelo CRM ou pelo nome); o Pedro tem 2 códigos no Micrologos;
   - 9 médicos antigos entram como inativos, sem login;
   - ❓ **Agendas de recurso:** Centro Cirúrgico, Ortóptica, Orientação Cirúrgica, Contatólogo, Eveline/Campo Visual e Sem Médico aguardam a decisão da dona.
+- **Agenda** (`04_agenda.sql`), testada no ensaio: **387.732 de 387.736** agendamentos (os 4 restantes são dos pacientes de teste).
+  - Resultado: 307.742 atendidos, 62.059 faltas, 17.075 cancelados, 856 futuros e 12.950 encaixes.
+  - Os setores vão para as colunas da 0152 e a Orientação vai para a coluna da Alessandra.
+  - A migração 0153 permite encaixe (e histórico atendido) no mesmo horário.
+  - ❓ Confirmar com a dona o significado das letras de status (A, O, X, C, E, M, D, P, 1, 2, 5).
 - **Usuários** (SECURITY.FDB, 72), pedido da dona em 25/11 via outra sessão: cadastrar em `profissionais` os funcionários ATIVOS do Micrologos, com `usuario` no formato nome.sobrenome (como `sugerirUsuario` em app/src/lib/util.ts). Ela depois cria a senha na tela Equipe. **Conferir a lista com ela antes de gravar.** O Dr. Antonio Carlos continua na Agenda e no Faturamento (médico sem login).
 - **Próximos:** convênios e planos direto do banco (CONVENIOS_MESTRE/CONVENIOS/PRECOS_PRODUTOS…), profissionais, agenda,
   atendimentos (PEP) e contas.
