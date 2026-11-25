@@ -12,6 +12,25 @@
 | Sistema (app) e migrações 0005–0008 | branch `claude/trusting-tesla-e5u50x` (sessão "Desenvolvimento do sistema", `session_01RxZddnY3mA77HY8MtevrQ7`) |
 | Banco | Supabase "secreto" `ogflxjolbwrzayjtxvhj` (sa-east-1) |
 
+## 🧪 Ensaio local da migração (a partir de 25/11/2026)
+- **Ensaio local:** Postgres 16 + Supabase simulado (`migracao/local/`) com todas as migrações do repositório.
+- **Cópia do Firebird:** `migracao/firebird/copiar_para_postgres.py` leva as 171 tabelas com dados do MLMASTER para
+  `legacy_micrologos.bruto_*`, com as contagens conferidas. Ficou de fora PACIENTES_LOG (2,5 milhões de linhas de auditoria).
+- **Pacientes** (`migracao/transformacoes/01_pacientes.sql`), testado no ensaio:
+  - 117.240 migrados (excluídos os testes 69489 e 108477 e o registro 0);
+  - 74.529 com CPF, 114.836 com telefone, 111.263 com nascimento;
+  - nº do prontuário = ID_PACIENTE;
+  - **153 CPFs repetidos:** o CPF ficou no cadastro mais recente; os outros têm observação e uma ocorrência `cpf_repetido`.
+- **A confirmar com a dona:**
+  - telefones sem DDD recebem o DDD 21;
+  - o nº do prontuário usado no dia a dia é o "código" (ID) do Micrologos;
+  - o que fazer com os 153 CPFs repetidos.
+- **Próximos:** convênios e planos direto do banco (CONVENIOS_MESTRE/CONVENIOS/PRECOS_PRODUTOS…), profissionais, agenda,
+  atendimentos (PEP) e contas.
+- **Canal para a carga no Supabase:** ainda falta. A dona não conseguiu criar a chave secreta; os links assinados servem
+  para baixar, não para gravar. Opções: tentar a chave de novo com ajuda do Claude do computador, ou carregar por lotes
+  via conector MCP (lento para milhões de linhas).
+
 ## 🗄️ Cópia completa do banco do Micrologos RECEBIDA (25/11/2026)
 - O técnico (Marcio) copiou o banco **Firebird 5** para `\\192.168.10.114\BdGelson`. A dona enviou os arquivos direto para
   o Storage `migracao-micrologos/banco-2026-11-25/`: MLMASTER.FDB 2,4 GB (principal), SECURITY.FDB 1 GB (usuários e log de acesso)
