@@ -125,7 +125,9 @@ function Lancamentos({ base }: { base: Awaited<ReturnType<typeof carregarBase>> 
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
   const contaParam = params.get("conta");
-  const [f, setF] = useState({ status: "aberto", medico: "todos", de: isoDia(new Date(new Date().getFullYear(), new Date().getMonth() - 2, 1)), ate: isoDia(new Date()) });
+  const [f, setF] = useState({ status: "aberto", medico: "todos", de: isoDia(new Date(new Date().getFullYear(), new Date().getMonth() - 2, 1)),
+    // inclui cirurgias futuras: o pagamento costuma vir antes da cirurgia (venda da Orientação)
+    ate: isoDia(new Date(new Date().getFullYear() + 1, new Date().getMonth(), new Date().getDate())) });
   const [nova, setNova] = useState(!!contaParam);
 
   const { dados, erro, carregando } = useCarregar(async () => {
