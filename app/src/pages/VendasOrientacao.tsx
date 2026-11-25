@@ -56,8 +56,8 @@ export default function VendasOrientacao() {
       </div>
       <Aviso>{erro || base.erro}</Aviso>
       {!caixa.carregando && (caixa.dados
-        ? <Aviso tipo="info">💵 Caixa da Orientação aberto ({fmtData(caixa.dados.data)}): cada venda registrada entra nele automaticamente. <Link to={`/caixa/${caixa.dados.id}`}>Ver o caixa →</Link></Aviso>
-        : <Aviso tipo="alerta">💵 O caixa da Orientação está fechado. Abra o caixa antes de registrar vendas: <Link to="/caixa">ir para o Caixa →</Link></Aviso>)}
+        ? <Aviso tipo="info">💵 Caixa da Orientação aberto ({fmtData(caixa.dados.data)}): as vendas em <b>dinheiro</b> entram nele automaticamente (cartão e PIX não entram no caixa). <Link to={`/caixa/${caixa.dados.id}`}>Ver o caixa →</Link></Aviso>
+        : <Aviso tipo="info">💵 O caixa da Orientação está fechado. Só é preciso abri-lo para registrar venda paga em <b>dinheiro</b>: <Link to="/caixa">ir para o Caixa →</Link></Aviso>)}
       {devolvidas > 0 && <Aviso tipo="alerta">{devolvidas} venda(s) devolvida(s) pelo Luciano: abra, corrija e reenvie.</Aviso>}
       <div className="painel grade">
         <div className="linha">
@@ -217,7 +217,7 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
           <Campo rotulo="Forma de pagamento">
             <select value={f.forma} onChange={set("forma")}>{Object.entries(FORMAS_REPASSE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
           </Campo>
-          {f.forma === "credito" ? (
+          {f.forma === "dinheiro" ? <span className="muted pequeno" style={{ alignSelf: "end" }}>💵 Em dinheiro: entra no caixa da Orientação.</span> : f.forma === "credito" ? (
             <Campo rotulo="Parcelas"><select value={f.parcelas} onChange={set("parcelas")}>
               {Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1 === 1 ? "1x (à vista)" : `${i + 1}x`}</option>)}</select></Campo>
           ) : <span />}
