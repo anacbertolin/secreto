@@ -76,6 +76,7 @@
 | Data | Decisão |
 |---|---|
 | 14/11/2026 | Manter o **mesmo número de prontuário** do Micrologos (opção B). |
+| 25/11/2026 | **Cópias do banco:** a cópia de 24/11 é só para os testes. No dia da virada, o técnico faz uma **cópia final completa** com o Micrologos parado, e a carga definitiva usa essa cópia inteira (não só os últimos dias). Depois da virada, apagar as cópias de teste (avisando a dona) e **guardar a cópia final para sempre** no Storage privado (prontuário: 20 anos, Lei 13.787/2018). Os arquivos baixados na sessão são apagados ao fim dos testes. |
 | 22/11/2026 | **Empresa atual:** Consumed Consultórios Médicos Ltda, CNPJ 05.894.660/0001-87, CNES 3176479. Esse é o prestador em todos os XML e guias. "Hospital de Olhos da Baixada" é só uma ideia de nome fantasia para o futuro (previsto para 2027); não usar como prestador. |
 
 ## ⏳ Aguardando a dona
