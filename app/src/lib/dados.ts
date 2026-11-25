@@ -53,10 +53,12 @@ export async function listaAgendas(): Promise<AgendaColuna[]> {
   const orient = todos.filter((p) => ehAgendaOrientacao(p));
   const comHorario = new Set((hs ?? []).map((h: { profissional_id: string }) => h.profissional_id));
   const dona = orient.find((p) => comHorario.has(p.id)) ?? orient[0];
-  return [
-    ...todos.filter((p) => p.funcao === "medico"),
+  // Como no Micrologos: médicos, setores (agenda_recurso) e a Orientação Cirúrgica, tudo em ordem alfabética
+  const colunas: AgendaColuna[] = [
+    ...todos.filter((p) => p.funcao === "medico" || p.agenda_recurso),
     ...(dona ? [{ ...dona, membros: orient.map((p) => p.id) }] : []),
   ];
+  return colunas.sort((a, b) => nomeAgenda(a).localeCompare(nomeAgenda(b), "pt-BR", { sensitivity: "base" }));
 }
 
 /** Id da coluna onde o agendamento aparece (agendamentos de qualquer pessoa da orientação vão para a coluna dela) */

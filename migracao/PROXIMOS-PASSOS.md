@@ -30,6 +30,10 @@
   - os particulares ficam de fora (particular = sem convênio);
   - **conferência com a tela do Bradesco: 113 de 113 iguais**, só a Epilação no plano Empresa diverge (pergunta à dona em aberto);
   - a cópia do Firebird nunca leva senhas, tokens nem dados bancários (lista no script).
+- **Profissionais** (`03_profissionais.sql`), testado no ensaio:
+  - os 8 médicos atuais e o Luciano foram LIGADOS aos cadastros do sistema novo (pelo CRM ou pelo nome); o Pedro tem 2 códigos no Micrologos;
+  - 9 médicos antigos entram como inativos, sem login;
+  - ❓ **Agendas de recurso:** Centro Cirúrgico, Ortóptica, Orientação Cirúrgica, Contatólogo, Eveline/Campo Visual e Sem Médico aguardam a decisão da dona.
 - **Próximos:** convênios e planos direto do banco (CONVENIOS_MESTRE/CONVENIOS/PRECOS_PRODUTOS…), profissionais, agenda,
   atendimentos (PEP) e contas.
 - **Canal para a carga no Supabase:** ainda falta. A dona não conseguiu criar a chave secreta; os links assinados servem
