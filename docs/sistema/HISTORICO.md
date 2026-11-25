@@ -1685,3 +1685,5 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
 - (25/11) **Atendimentos encerrados: busca em todos os dias.** Encerrar só arquiva (`arquivada = true`); nada é apagado.
   Na visão 📋 Atendimentos, escrevendo nome ou telefone na busca, a lista procura em todos os encerrados (não só no dia).
   Para o conteúdo, continua 🧰 Ferramentas → 🔎 Pesquisar mensagens (texto e transcrição dos áudios).
+- (25/11) Menu "📋 Atendimentos" da Central/Orientação virou **"📋 Encerradas"**; cartões com "✅ Encerrada · quem
+  atendeu"; cabeçalho da conversa encerrada diz quem encerrou e que ela fica guardada em "Encerradas".

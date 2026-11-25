@@ -183,7 +183,7 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
             {tipo === "fila" && <span className="ct-tag espera">⏳ {fmtEsperando(c.fila_desde)}</span>}
             {tipo === "meu" && (naoRespondida(c) ? <span className="ct-tag nao-resp">Não respondido</span> : <span className="ct-tag atendendo">Atendendo</span>)}
             {tipo === "equipe" && <span className="ct-tag atendendo">{nomeDe(c.responsavel_id) ?? "Atendendo"}</span>}
-            {tipo === "historico" && <span className="ct-tag cinza">{c.responsavel_id ? nomeDe(c.responsavel_id) ?? "Encerrada" : "Encerrada"}</span>}
+            {tipo === "historico" && <span className="ct-tag cinza">✅ Encerrada{c.responsavel_id && nomeDe(c.responsavel_id) ? ` · ${nomeDe(c.responsavel_id)}` : ""}</span>}
             {c.nao_lidas > 0 && tipo !== "historico" && <span className="wa-badge">{c.nao_lidas}</span>}
           </span>
         </span>
@@ -200,8 +200,8 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
           <span className="ct-icone">💬{fila.length > 0 && <span className="ct-bolha">{fila.length}</span>}</span>Conversas
         </button>
         {veCanais && (
-          <button className={visao === "atendimentos" ? "ativo" : ""} onClick={() => setVisao("atendimentos")} title="Atendimentos encerrados">
-            <span className="ct-icone">📋</span>Atendimentos
+          <button className={visao === "atendimentos" ? "ativo" : ""} onClick={() => setVisao("atendimentos")} title="Conversas encerradas (ficam guardadas para sempre)">
+            <span className="ct-icone">📋</span>Encerradas
           </button>
         )}
         {veCanais && podeResponder && (
@@ -306,7 +306,11 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
           </div>
         ) : (
           <div className="ct-rolagem">
-            <h3 className="ct-secao">Atendimentos encerrados</h3>
+            <h3 className="ct-secao">Conversas encerradas</h3>
+            <div className="pequeno muted" style={{ margin: "0 0 8px" }}>
+              Encerrar não apaga nada: a conversa sai da lista de atendimento e fica guardada aqui. Se o paciente escrever de
+              novo, ela volta para a fila.
+            </div>
             {buscaTodos ? (
               <div className="ct-aviso-tel">🔍 Procurando “{busca.trim()}” em <b>todos os dias</b> (nome ou telefone). Apague a busca para ver por dia.</div>
             ) : (
