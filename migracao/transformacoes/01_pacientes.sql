@@ -179,8 +179,9 @@ left join public.convenio_planos pl on pl.micrologos_codigo::text = btrim(p.id_c
 on conflict (id) do nothing;
 
 -- 6) Próximo paciente novo continua depois do maior nº do Micrologos
+--    (os nºs provisórios 200.001+ do sistema novo antes da troca — migração 0181 — não contam)
 select setval(pg_get_serial_sequence('public.pacientes', 'numero_prontuario'),
-              greatest((select max(numero_prontuario) from public.pacientes), 1));
+              greatest((select max(numero_prontuario) from public.pacientes where numero_prontuario < 200000), 1));
 
 -- 7) Conferência
 analyze public.pacientes;
