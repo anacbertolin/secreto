@@ -47,6 +47,9 @@ Ordem = prioridade da dona (Parte 1 do mapeamento, §0).
 - Importar o demonstrativo TISS (`demonstrativoAnaliseConta`/`demonstrativoPagamento`) ou lançar à mão.
 - Glosa com a **tabela ANS de motivos** (527); recurso de glosa em XML TISS (`recursoGlosa`).
 - Painel por convênio: enviado × recebido × glosado, % de glosa por motivo.
+- **Pedido da dona (25/11/2026):** depois de enviada a cobrança, ela precisa **tirar um paciente da cobrança para fazer
+  recurso e depois recolocar** (hoje o sistema só deixa tirar enquanto o lote está "Montando") e **gerar o XML de novo**
+  de uma cobrança antiga (inclusive das que vieram do Micrologos).
 
 ## 5. PEP (Parte 1 §8; Partes 10 e 11 = E, E2)
 - O PEP alimenta a guia: indicação clínica, CID, olho, tipo de atendimento, tempo e tipo de doença.
