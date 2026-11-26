@@ -9,6 +9,7 @@ import { FORMAS_REPASSE, varianteProcedimento, nomesProcedimentos } from "../lib
 import { SEL_VENDA, type VendaOrientacao } from "./Repasse";
 import { GuiaVendas } from "../components/GuiaVendas";
 import { AvisoCaixaOrientacao } from "../components/AvisoCaixaOrientacao";
+import { OutrasFormas, montarPagamento, separarPagamentos, descreverForma, type LinhaPagamento } from "../components/OutrasFormas";
 
 interface ProcOrientacao { id: string; nome: string; profissional_id: string | null; valor_sugerido: number | null; tem_lente: boolean }
 interface LenteOrientacao { id: string; descricao: string; fabricante: string; premium: boolean; preco_venda: number }
@@ -81,7 +82,7 @@ export default function VendasOrientacao() {
                     <td>{fmtData(v.data_pagamento)}</td>
                     <td>{v.pacientes ? nomeExibicao(v.pacientes) : "—"}<div className="muted pequeno">Pront. {v.pacientes?.numero_prontuario}</div></td>
                     <td><b>{v.profissionais?.nome}</b><div className="muted pequeno">{v.procedimento}</div></td>
-                    <td>{FORMAS_REPASSE[v.forma_pagamento]}{v.parcelas > 1 && ` ${v.parcelas}x`}</td>
+                    <td>{descreverForma(v.forma_pagamento, v.parcelas, v.pagamentos)}</td>
                     <td style={{ textAlign: "right" }}>{fmtMoeda(v.valor_total)}</td>
                     <td onClick={(e) => e.stopPropagation()}>
                       {v.realizada_em ? <Etiqueta cor="verde">✔ {fmtData(v.data_cirurgia)}</Etiqueta>
@@ -108,11 +109,14 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
 }) {
   const editavel = !venda || venda.status === "aguardando" || venda.status === "devolvida";
   const [pac, setPac] = useState<Pac | null>(venda?.pacientes ?? null);
+  // mais de uma forma de pagamento (0187): a 1ª forma fica nos campos de sempre; as outras em "extras"
+  const inicioPag = separarPagamentos(venda?.forma_pagamento ?? "pix", venda?.parcelas ?? 1, venda?.valor_total ?? 0, venda?.pagamentos);
+  const [extras, setExtras] = useState<LinhaPagamento[]>(inicioPag.extras);
   const [f, setF] = useState({
     tipo: venda?.tipo ?? "cirurgia", profissional_id: venda?.profissional_id ?? "",
     proc_nome: base.procs.find((p) => p.id === venda?.procedimento_id)?.nome ?? "",
-    procedimento: venda?.procedimento ?? "", lente_id: venda?.lente_id ?? "", valor: venda ? String(venda.valor_total).replace(".", ",") : "",
-    forma: venda?.forma_pagamento ?? "pix", parcelas: String(venda?.parcelas ?? 1), data_pagamento: venda?.data_pagamento ?? isoDia(new Date()),
+    procedimento: venda?.procedimento ?? "", lente_id: venda?.lente_id ?? "", valor: venda ? inicioPag.principal.valor : "",
+    forma: inicioPag.principal.forma, parcelas: inicioPag.principal.parcelas, data_pagamento: venda?.data_pagamento ?? isoDia(new Date()),
     data_cirurgia: venda?.data_cirurgia ?? "", observacoes: venda?.observacoes ?? "", fora: !!venda?.fora_clinica,
     anest: venda?.anestesista_direto ? String(venda.anestesista_direto).replace(".", ",") : "",
   });
@@ -145,7 +149,9 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
 
   async function salvar() {
     setErro("");
-    const valor = numOuNulo(f.valor);
+    const pag = montarPagamento({ forma: f.forma, parcelas: f.parcelas, valor: f.valor }, extras);
+    if ("erro" in pag) return setErro(pag.erro);
+    const valor = pag.valor_total;
     if (!pac) return setErro("Escolha o paciente.");
     if (!f.profissional_id) return setErro("Escolha o médico.");
     if (f.tipo === "cirurgia" && !procId && !f.procedimento.trim()) return setErro("Escolha o procedimento.");
@@ -153,8 +159,8 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
     if (!valor || valor <= 0) return setErro("Informe o valor que o paciente pagou.");
     const dados = {
       tipo: f.tipo, paciente_id: pac.id, profissional_id: f.profissional_id, procedimento_id: f.tipo === "lente" ? null : procId || null,
-      procedimento: descricao() || f.procedimento.trim(), lente_id: f.lente_id || null, valor_total: valor, forma_pagamento: f.forma,
-      parcelas: f.forma === "credito" ? Number(f.parcelas) : 1, data_pagamento: f.data_pagamento, data_cirurgia: f.data_cirurgia || null, fora_clinica: f.fora,
+      procedimento: descricao() || f.procedimento.trim(), lente_id: f.lente_id || null, valor_total: valor, forma_pagamento: pag.forma_pagamento,
+      parcelas: pag.parcelas, pagamentos: pag.pagamentos, data_pagamento: f.data_pagamento, data_cirurgia: f.data_cirurgia || null, fora_clinica: f.fora,
       observacoes: f.observacoes.trim() || null,
       anestesista_direto: f.tipo === "cirurgia" && (numOuNulo(f.anest) ?? 0) > 0 ? numOuNulo(f.anest) : null,
     };
@@ -222,7 +228,7 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
           )}
         </div>
         <div className="grade g3">
-          <Campo rotulo="Valor que o paciente pagou (R$)"><input inputMode="decimal" value={f.valor} onChange={set("valor")} /></Campo>
+          <Campo rotulo={extras.length ? "Valor da 1ª forma (R$)" : "Valor que o paciente pagou (R$)"}><input inputMode="decimal" value={f.valor} onChange={set("valor")} /></Campo>
           <Campo rotulo="Forma de pagamento">
             <select value={f.forma} onChange={set("forma")}>{Object.entries(FORMAS_REPASSE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
           </Campo>
@@ -231,6 +237,7 @@ function FormVenda({ venda, base, aoFechar, aoSalvar }: {
               {Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1 === 1 ? "1x (à vista)" : `${i + 1}x`}</option>)}</select></Campo>
           ) : <span />}
         </div>
+        <OutrasFormas extras={extras} setExtras={setExtras} valorPrincipal={f.valor} />
         <div className="grade g3">
           <Campo rotulo="Data do pagamento"><input type="date" value={f.data_pagamento} onChange={set("data_pagamento")} /></Campo>
           <Campo rotulo="Data da cirurgia (se já souber)"><input type="date" value={f.data_cirurgia} onChange={set("data_cirurgia")} />
