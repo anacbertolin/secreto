@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase, msgErro } from "../lib/supabase";
 import { useAuth } from "../lib/auth";
@@ -22,12 +22,14 @@ export interface Conta {
   profissional_id: string | null; solicitante_id: string | null; indicacao_clinica: string | null; cid10: string | null;
   status: string; lote_id: string | null; valor_total: number; valor_glosado: number; valor_pago: number | null;
   forma_pagamento: string | null; parcelas: number | null; recebido_em: string | null; motivo_cancelamento: string | null; observacoes: string | null;
+  arquivada?: boolean; legado?: Record<string, unknown> | null;
   pacientes?: { nome: string; nome_social: string | null; numero_prontuario: number };
   conta_itens?: { valor_unitario: number | null }[];
 }
 interface Lote {
   id: string; numero: number; convenio_id: string; competencia: string; status: string; enviado_em: string | null; protocolo: string | null;
   previsao_pagamento: string | null; pago_em: string | null; valor_pago: number | null; observacoes: string | null; criado_em: string;
+  arquivado?: boolean;
 }
 
 const SEL_CONTA = "*, pacientes(nome, nome_social, numero_prontuario), conta_itens(valor_unitario)";
@@ -263,9 +265,10 @@ export function ContaDetalhe() {
   const { c, itens, lote, repasse } = dados;
   const { convenios, planos, procs, profs } = base.dados;
   const conv = convenios.find((x) => x.id === c.convenio_id);
-  const editavel = ["aberta", "pronta"].includes(c.status) && !c.lote_id;
+  const arquivada = !!c.arquivada;
+  const editavel = ["aberta", "pronta"].includes(c.status) && !c.lote_id && !arquivada;
   // particular já paga também pode ser cancelada (estorno/erro de lançamento), desde que não tenha repasse ativo
-  const pagaParticular = c.status === "paga" && !c.convenio_id && !c.lote_id;
+  const pagaParticular = c.status === "paga" && !c.convenio_id && !c.lote_id && !arquivada;
   const podeCancelar = editavel || pagaParticular;
   const pend = pendencias({ ...c, conta_itens: itens }, conv);
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setCab({ ...cab, [k]: e.target.value });
@@ -300,6 +303,14 @@ export function ContaDetalhe() {
   const medicos = profs.filter((p) => p.funcao === "medico");
   const planosConv = planos.filter((p) => p.convenio_id === cab.convenio_id);
   const comGlosa = ["faturada", "paga", "glosada"].includes(c.status);
+  async function desarquivar() {
+    if (!confirm("Desarquivar esta conta antiga do Micrologos para poder alterá-la?")) return;
+    setErro(""); setOkMsg("");
+    const { error } = await supabase.from("contas").update({ arquivada: false }).eq("id", c.id);
+    if (error) return setErro(msgErro(error));
+    setOkMsg("Conta desarquivada."); recarregar();
+  }
+  const leg = (c.legado ?? {}) as Record<string, unknown>;
 
   return (
     <div>
@@ -329,6 +340,19 @@ export function ContaDetalhe() {
       </div>
       <Aviso>{erro || e1}</Aviso>
       <Aviso tipo="ok">{okMsg}</Aviso>
+      {arquivada && (
+        <Aviso tipo="info">
+          Conta arquivada: histórico do Micrologos (antes de 2021), só para consulta e relatórios.
+          {fat && <> <button className="mini" onClick={desarquivar}>Desarquivar para alterar</button></>}
+        </Aviso>
+      )}
+      {leg.origem === "Micrologos" && (
+        <p className="muted pequeno" style={{ margin: "0 0 10px" }}>
+          Veio do Micrologos: conta nº {String(leg.id_conta)}{leg.id_cobranca ? ` · cobrança nº ${String(leg.id_cobranca)}` : " · sem cobrança"}
+          {leg.guia_micrologos ? ` · guia no Micrologos ${String(leg.guia_micrologos)}` : ""}
+          {leg.pagamento === "presumido" ? " · pagamento presumido (o Micrologos não registra quando o convênio pagou)" : ""}
+        </p>
+      )}
       {c.status === "aberta" && pend.length > 0 && <Aviso tipo="alerta">Falta para liberar: {pend.join(", ")}.</Aviso>}
       {c.status === "cancelada" && <Aviso tipo="alerta">Conta cancelada: {c.motivo_cancelamento}</Aviso>}
       {pagaParticular && repasse && <Aviso tipo="info">Para cancelar esta conta, cancele antes o repasse nº {repasse.numero} ao médico.</Aviso>}
@@ -347,7 +371,7 @@ export function ContaDetalhe() {
             <thead><tr><th>Código</th><th>Descrição</th><th>Data</th><th>Qtd.</th><th style={{ textAlign: "right" }}>Valor unit.</th><th style={{ textAlign: "right" }}>Total</th>{comGlosa && <th>Glosa</th>}<th></th></tr></thead>
             <tbody>
               {itens.map((i) => (
-                <LinhaItem key={i.id} i={i} editavel={editavel} mostrarGlosa={comGlosa} glosa={comGlosa && fat} aoSalvar={(campos) => salvarItem(i, campos)} aoRemover={() => removerItem(i)} />
+                <LinhaItem key={i.id} i={i} editavel={editavel} mostrarGlosa={comGlosa} glosa={comGlosa && fat && !arquivada} aoSalvar={(campos) => salvarItem(i, campos)} aoRemover={() => removerItem(i)} />
               ))}
             </tbody>
           </table>
@@ -663,11 +687,13 @@ export function LoteDetalhe() {
           <Link className="botao" to={`/imprimir/lote/${l.id}`} target="_blank">🖨️ Relação de guias</Link>
           <button onClick={exportarCSV}>⬇️ Planilha (CSV)</button>
           {l.status === "aberto" && <button className="primario" disabled={cs.length === 0} onClick={() => setModal("enviar")}>📤 Marcar como enviado</button>}
-          {l.status === "enviado" && <button className="primario" onClick={() => setModal("pagar")}>💰 Registrar pagamento</button>}
+          {l.status === "enviado" && !l.arquivado && <button className="primario" onClick={() => setModal("pagar")}>💰 Registrar pagamento</button>}
           {l.status === "aberto" && <button className="perigo" onClick={cancelarLote}>Desfazer lote</button>}
         </div>
       </div>
       <Aviso>{erro || e1}</Aviso>
+      {l.arquivado && <Aviso tipo="info">Cobrança antiga do Micrologos (antes de 2021): só para consulta.</Aviso>}
+      {l.observacoes && <p className="muted pequeno" style={{ whiteSpace: "pre-line", margin: "0 0 10px" }}>{l.observacoes}</p>}
       {!conv?.codigo_prestador && <Aviso tipo="alerta">O código da clínica neste convênio não está cadastrado (Cadastros → Convênios). Ele aparece nas guias.</Aviso>}
       <div className="painel rolagem">
         <table className="tabela">
@@ -793,51 +819,194 @@ function ListaGlosas({ convenios }: { convenios: Convenio[] }) {
 }
 
 // ------------------------------------------------------------------ produção
+// Relatório de produção (substitui "Atendimentos por Médico", "Faturamento por Médico" e "Valores resumidos por plano"
+// do Micrologos). Soma os itens das contas, inclusive o histórico arquivado do Micrologos, e compara com outro período.
+interface LinhaRel {
+  profissional_id: string | null; profissional: string; convenio_id: string | null; convenio: string; tipo: string;
+  codigo: string | null; procedimento: string; quantidade: number; itens: number; contas: number; pacientes: number; valor: number; glosado: number;
+}
+const TIPOS_PROD: Record<string, string> = {
+  consulta: "Consulta", exame: "Exame", cirurgia: "Cirurgia", procedimento: "Procedimento", medicamento: "Medicamento",
+  material: "Material", taxa: "Taxa", honorario: "Honorários de equipe", outro: "Outro",
+};
+const DIMENSOES: Record<string, { rotulo: string; chave: (l: LinhaRel) => string; nome: (l: LinhaRel) => string }> = {
+  medico: { rotulo: "Médico", chave: (l) => l.profissional_id ?? "-", nome: (l) => l.profissional },
+  convenio: { rotulo: "Convênio", chave: (l) => l.convenio_id ?? "-", nome: (l) => l.convenio },
+  tipo: { rotulo: "Tipo", chave: (l) => l.tipo, nome: (l) => TIPOS_PROD[l.tipo] ?? l.tipo },
+  procedimento: { rotulo: "Procedimento", chave: (l) => `${l.codigo ?? ""}|${l.procedimento}`, nome: (l) => (l.codigo ? `${l.codigo} · ` : "") + l.procedimento },
+};
+function deslocar(iso: string, meses: number, anos = 0) {
+  const d = new Date(iso + "T12:00:00");
+  const alvo = new Date(d.getFullYear() + anos, d.getMonth() + meses, 1);
+  const ultimo = new Date(alvo.getFullYear(), alvo.getMonth() + 1, 0).getDate();
+  return isoDia(new Date(alvo.getFullYear(), alvo.getMonth(), Math.min(d.getDate(), ultimo)));
+}
+function fimDoMes(iso: string) { const d = new Date(iso + "T12:00:00"); return isoDia(new Date(d.getFullYear(), d.getMonth() + 1, 0)); }
+
 function Producao({ convenios, profs }: { convenios: Convenio[]; profs: { id: string; nome: string }[] }) {
   const [de, setDe] = useState(primeiroDiaMes());
   const [ate, setAte] = useState(isoDia(new Date()));
-  const { dados, erro, carregando } = useCarregar(async () => ok(
-    await supabase.from("contas").select("convenio_id, profissional_id, valor_total, valor_glosado, valor_pago, status")
-      .gte("data_atendimento", de).lte("data_atendimento", ate).neq("status", "cancelada").limit(10000),
-  ) as { convenio_id: string | null; profissional_id: string | null; valor_total: number; valor_glosado: number; valor_pago: number | null; status: string }[], [de, ate]);
+  const [comparar, setComparar] = useState<"nada" | "mes" | "ano">("ano");
+  const [nivel1, setNivel1] = useState("medico");
+  const [nivel2, setNivel2] = useState("convenio");
+  const [fMed, setFMed] = useState("");
+  const [fConv, setFConv] = useState("");
+  const [fTipo, setFTipo] = useState("");
+  const [aberto, setAberto] = useState<string[]>([]);
 
-  function agrupar(chave: "convenio_id" | "profissional_id", nome: (id: string | null) => string) {
-    const m = new Map<string, { nome: string; n: number; total: number; glosa: number; recebido: number }>();
-    for (const c of dados ?? []) {
-      const k = c[chave] ?? "—";
-      const g = m.get(k) ?? { nome: nome(c[chave]), n: 0, total: 0, glosa: 0, recebido: 0 };
-      g.n++; g.total += Number(c.valor_total); g.glosa += Number(c.valor_glosado); g.recebido += Number(c.valor_pago ?? 0);
-      m.set(k, g);
-    }
-    return [...m.values()].sort((a, b) => b.total - a.total);
+  const cmp = comparar === "mes" ? { de: deslocar(de, -1), ate: ate === fimDoMes(ate) ? fimDoMes(deslocar(ate, -1)) : deslocar(ate, -1) }
+    : comparar === "ano" ? { de: deslocar(de, 0, -1), ate: ate === fimDoMes(ate) ? fimDoMes(deslocar(ate, 0, -1)) : deslocar(ate, 0, -1) } : null;
+
+  const { dados, erro, carregando } = useCarregar(async () => {
+    const [atual, antes] = await Promise.all([
+      supabase.rpc("rel_faturamento", { p_de: de, p_ate: ate }).then((r) => ok(r) as LinhaRel[]),
+      cmp ? supabase.rpc("rel_faturamento", { p_de: cmp.de, p_ate: cmp.ate }).then((r) => ok(r) as LinhaRel[]) : Promise.resolve([] as LinhaRel[]),
+    ]);
+    return { atual, antes };
+  }, [de, ate, comparar]);
+
+  const filtrar = (ls: LinhaRel[]) => ls.filter((l) => (!fMed || (l.profissional_id ?? "-") === fMed) && (!fConv || (l.convenio_id ?? "-") === fConv) && (!fTipo || l.tipo === fTipo));
+  type Grupo = { k: string; nome: string; qtd: number; contas: number; valor: number; glosado: number; valorCmp: number; qtdCmp: number; filhos?: Grupo[] };
+  function agrupar(atual: LinhaRel[], antes: LinhaRel[], dim: string, sub?: string): Grupo[] {
+    const D = DIMENSOES[dim];
+    const m = new Map<string, Grupo & { la: LinhaRel[]; lb: LinhaRel[] }>();
+    const pega = (l: LinhaRel) => {
+      const k = D.chave(l);
+      const g = m.get(k) ?? { k, nome: D.nome(l), qtd: 0, contas: 0, valor: 0, glosado: 0, valorCmp: 0, qtdCmp: 0, la: [], lb: [] };
+      m.set(k, g); return g;
+    };
+    for (const l of atual) { const g = pega(l); g.qtd += Number(l.quantidade); g.contas += Number(l.contas); g.valor += Number(l.valor); g.glosado += Number(l.glosado); g.la.push(l); }
+    for (const l of antes) { const g = pega(l); g.qtdCmp += Number(l.quantidade); g.valorCmp += Number(l.valor); g.lb.push(l); }
+    return [...m.values()].map(({ la, lb, ...g }) => ({ ...g, filhos: sub ? agrupar(la, lb, sub) : undefined })).sort((a, b) => b.valor - a.valor || b.valorCmp - a.valorCmp);
   }
-  const Tab = ({ titulo, linhas }: { titulo: string; linhas: ReturnType<typeof agrupar> }) => (
-    <div className="painel rolagem">
-      <h2>{titulo}</h2>
-      <table className="tabela">
-        <thead><tr><th></th><th>Guias</th><th style={{ textAlign: "right" }}>Faturado</th><th style={{ textAlign: "right" }}>Glosado</th><th style={{ textAlign: "right" }}>Recebido</th></tr></thead>
-        <tbody>
-          {linhas.map((l) => (
-            <tr key={l.nome}><td><b>{l.nome}</b></td><td>{l.n}</td><td style={{ textAlign: "right" }}>{fmtMoeda(l.total)}</td>
-              <td style={{ textAlign: "right", color: l.glosa > 0 ? "var(--perigo)" : undefined }}>{fmtMoeda(l.glosa)}</td><td style={{ textAlign: "right" }}>{fmtMoeda(l.recebido)}</td></tr>
-          ))}
-        </tbody>
-      </table>
-      {linhas.length === 0 && <div className="vazio">Sem movimento no período.</div>}
-    </div>
+  const atual = filtrar(dados?.atual ?? []);
+  const antes = filtrar(dados?.antes ?? []);
+  const grupos = agrupar(atual, antes, nivel1, nivel2 && nivel2 !== nivel1 ? nivel2 : undefined);
+  const tot = grupos.reduce((t, g) => ({ qtd: t.qtd + g.qtd, contas: t.contas + g.contas, valor: t.valor + g.valor, glosado: t.glosado + g.glosado, valorCmp: t.valorCmp + g.valorCmp, qtdCmp: t.qtdCmp + g.qtdCmp }),
+    { qtd: 0, contas: 0, valor: 0, glosado: 0, valorCmp: 0, qtdCmp: 0 });
+  const varPct = (a: number, b: number) => (b ? `${a >= b ? "+" : ""}${(((a - b) / b) * 100).toFixed(1).replace(".", ",")}%` : a ? "novo" : "—");
+  const num = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+  const periodo = (a: string, b: string) => `${fmtData(a)} a ${fmtData(b)}`;
+  const N1 = DIMENSOES[nivel1].rotulo;
+  const N2 = nivel2 && nivel2 !== nivel1 ? DIMENSOES[nivel2].rotulo : "";
+
+  function atalho(tipo: "mes" | "passado" | "ano") {
+    const h = new Date();
+    if (tipo === "mes") { setDe(primeiroDiaMes(h)); setAte(isoDia(h)); }
+    if (tipo === "passado") { const p = new Date(h.getFullYear(), h.getMonth() - 1, 1); setDe(isoDia(p)); setAte(fimDoMes(isoDia(p))); }
+    if (tipo === "ano") { setDe(`${h.getFullYear()}-01-01`); setAte(isoDia(h)); }
+  }
+  function planilha() {
+    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const dec = (v: number) => v.toFixed(2).replace(".", ",");
+    const cab = [N1, N2, "Quantidade", "Contas", "Faturado", "Glosado", ...(cmp ? ["Quantidade (comparação)", "Faturado (comparação)", "Variação"] : [])].filter((x) => x !== "");
+    const linhas: string[] = [cab.map(esc).join(";")];
+    for (const g of grupos) for (const f of g.filhos ?? [g]) {
+      const col = [g.nome, ...(N2 ? [f.nome] : []), num(f.qtd), f.contas, dec(f.valor), dec(f.glosado), ...(cmp ? [num(f.qtdCmp), dec(f.valorCmp), varPct(f.valor, f.valorCmp)] : [])];
+      linhas.push(col.map(esc).join(";"));
+    }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["\ufeff" + linhas.join("\n")], { type: "text/csv;charset=utf-8" }));
+    a.download = `producao-${de}-a-${ate}.csv`;
+    a.click();
+  }
+
+  const Linha = ({ g, filho }: { g: Grupo; filho?: boolean }) => (
+    <tr style={filho ? { background: "var(--fundo-suave, transparent)" } : undefined}>
+      <td style={filho ? { paddingLeft: 28 } : undefined}>
+        {!filho && g.filhos && g.filhos.length > 0 && (
+          <button className="mini" style={{ marginRight: 6 }} onClick={() => setAberto(aberto.includes(g.k) ? aberto.filter((x) => x !== g.k) : [...aberto, g.k])}>{aberto.includes(g.k) ? "−" : "+"}</button>
+        )}
+        {filho ? g.nome : <b>{g.nome}</b>}
+      </td>
+      <td style={{ textAlign: "right" }}>{num(g.qtd)}</td>
+      <td style={{ textAlign: "right" }}>{g.contas}</td>
+      <td style={{ textAlign: "right" }}>{fmtMoeda(g.valor)}</td>
+      <td style={{ textAlign: "right", color: g.glosado > 0 ? "var(--perigo)" : undefined }}>{g.glosado ? fmtMoeda(g.glosado) : "—"}</td>
+      {cmp && <><td style={{ textAlign: "right" }} className="muted">{num(g.qtdCmp)}</td><td style={{ textAlign: "right" }} className="muted">{fmtMoeda(g.valorCmp)}</td>
+        <td style={{ textAlign: "right", color: g.valor < g.valorCmp ? "var(--perigo)" : undefined }}>{varPct(g.valor, g.valorCmp)}</td></>}
+    </tr>
   );
+
   return (
     <div>
-      <div className="linha" style={{ marginBottom: 14 }}>
-        <label className="linha pequeno muted">de <input type="date" style={{ width: 150 }} value={de} onChange={(e) => setDe(e.target.value)} /></label>
-        <label className="linha pequeno muted">até <input type="date" style={{ width: 150 }} value={ate} onChange={(e) => setAte(e.target.value)} /></label>
+      <div className="painel">
+        <div className="linha" style={{ flexWrap: "wrap", gap: 10 }}>
+          <label className="linha pequeno muted">de <input type="date" style={{ width: 150 }} value={de} onChange={(e) => setDe(e.target.value)} /></label>
+          <label className="linha pequeno muted">até <input type="date" style={{ width: 150 }} value={ate} onChange={(e) => setAte(e.target.value)} /></label>
+          <button className="mini" onClick={() => atalho("mes")}>Este mês</button>
+          <button className="mini" onClick={() => atalho("passado")}>Mês passado</button>
+          <button className="mini" onClick={() => atalho("ano")}>Este ano</button>
+          <label className="linha pequeno muted">comparar com
+            <select style={{ width: 210 }} value={comparar} onChange={(e) => setComparar(e.target.value as typeof comparar)}>
+              <option value="ano">mesmo período do ano anterior</option>
+              <option value="mes">período do mês anterior</option>
+              <option value="nada">não comparar</option>
+            </select>
+          </label>
+        </div>
+        <div className="linha" style={{ flexWrap: "wrap", gap: 10, marginTop: 10 }}>
+          <label className="linha pequeno muted">agrupar por
+            <select style={{ width: 150 }} value={nivel1} onChange={(e) => { setNivel1(e.target.value); setAberto([]); }}>
+              {Object.entries(DIMENSOES).map(([k, d]) => <option key={k} value={k}>{d.rotulo}</option>)}
+            </select>
+          </label>
+          <label className="linha pequeno muted">e depois por
+            <select style={{ width: 150 }} value={nivel2} onChange={(e) => setNivel2(e.target.value)}>
+              <option value="">—</option>
+              {Object.entries(DIMENSOES).filter(([k]) => k !== nivel1).map(([k, d]) => <option key={k} value={k}>{d.rotulo}</option>)}
+            </select>
+          </label>
+          <select style={{ width: 200 }} value={fMed} onChange={(e) => setFMed(e.target.value)}>
+            <option value="">Todos os médicos</option>
+            {profs.slice().sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </select>
+          <select style={{ width: 200 }} value={fConv} onChange={(e) => setFConv(e.target.value)}>
+            <option value="">Todos os convênios</option>
+            <option value="-">Particular</option>
+            {convenios.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </select>
+          <select style={{ width: 170 }} value={fTipo} onChange={(e) => setFTipo(e.target.value)}>
+            <option value="">Todos os tipos</option>
+            {Object.entries(TIPOS_PROD).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+          {grupos.length > 0 && <button className="mini nao-imprimir" style={{ marginLeft: "auto" }} onClick={planilha}>⬇️ Planilha</button>}
+          <button className="mini nao-imprimir" onClick={() => window.print()}>🖨️ Imprimir</button>
+        </div>
       </div>
       <Aviso>{erro}</Aviso>
       {carregando ? <Carregando /> : (
-        <>
-          <Tab titulo="Por convênio" linhas={agrupar("convenio_id", (id) => (id ? nomePor(convenios, id) : "Particular"))} />
-          <Tab titulo="Por médico" linhas={agrupar("profissional_id", (id) => (id ? nomePor(profs, id) : "Sem médico"))} />
-        </>
+        <div className="painel rolagem">
+          <h2 style={{ marginTop: 0 }}>Produção {periodo(de, ate)}{cmp && <span className="muted pequeno"> · comparando com {periodo(cmp.de, cmp.ate)}</span>}</h2>
+          <p className="muted pequeno" style={{ margin: "0 0 8px" }}>
+            Soma dos itens das contas pela data do atendimento (contas canceladas ficam de fora). Inclui o histórico do Micrologos.
+            {N2 && " Clique em + para ver o detalhe."}
+          </p>
+          <table className="tabela">
+            <thead><tr>
+              <th>{N1}{N2 && ` / ${N2}`}</th><th style={{ textAlign: "right" }}>Qtd.</th><th style={{ textAlign: "right" }}>Contas</th>
+              <th style={{ textAlign: "right" }}>Faturado</th><th style={{ textAlign: "right" }}>Glosado</th>
+              {cmp && <><th style={{ textAlign: "right" }}>Qtd. antes</th><th style={{ textAlign: "right" }}>Faturado antes</th><th style={{ textAlign: "right" }}>Variação</th></>}
+            </tr></thead>
+            <tbody>
+              {grupos.map((g) => (
+                <Fragment key={g.k}>
+                  <Linha g={g} />
+                  {aberto.includes(g.k) && g.filhos?.map((f) => <Linha key={g.k + f.k} g={f} filho />)}
+                </Fragment>
+              ))}
+            </tbody>
+            {grupos.length > 1 && (
+              <tfoot><tr>
+                <th>Total</th><th style={{ textAlign: "right" }}>{num(tot.qtd)}</th><th style={{ textAlign: "right" }}>{tot.contas}</th>
+                <th style={{ textAlign: "right" }}>{fmtMoeda(tot.valor)}</th><th style={{ textAlign: "right" }}>{fmtMoeda(tot.glosado)}</th>
+                {cmp && <><th style={{ textAlign: "right" }}>{num(tot.qtdCmp)}</th><th style={{ textAlign: "right" }}>{fmtMoeda(tot.valorCmp)}</th><th style={{ textAlign: "right" }}>{varPct(tot.valor, tot.valorCmp)}</th></>}
+              </tr></tfoot>
+            )}
+          </table>
+          {grupos.length === 0 && <div className="vazio">Sem movimento no período.</div>}
+          <p className="muted pequeno" style={{ marginTop: 8 }}>“Contas” conta cada conta uma vez por linha; no total pode somar a mesma conta em mais de uma linha (ex.: consulta e exame na mesma conta).</p>
+        </div>
       )}
     </div>
   );

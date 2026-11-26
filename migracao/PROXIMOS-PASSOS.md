@@ -155,13 +155,26 @@
 - Não criados (já existiam): Ana Bertolin, Andrea, Gelson, Gisele, Ingrid, Isabelle, Luana, Luciano, Luiza, Matheus, Max,
   Pedro, Renato, Soraline. Dr. Marcos (saiu). Contas genéricas (Mlmaster, Mlsuporte, Sam Call Center).
 
-## Contas de faturamento — ⛔ NÃO transformar sem a dona autorizar (pedido dela, 25/11/2026)
-- A dona precisa mexer em contas já fechadas (convênio paga 3–5 meses depois: abrir a cobrança, tirar/recolocar paciente
-  para recurso, gerar XML de novo) e o Dr. Gelson compara faturamento com anos anteriores (relatórios por convênio/médico).
-- Volume no Micrologos (desde 2016): 333 mil contas, 411 mil itens, 321 mil pagamentos, 10,9 mil cobranças (lotes).
-  Por ano: 2016 10 mil · 2017 20 mil · 2018 28 mil · 2019 30 mil · 2020 29 mil · 2021 34 mil · 2022 40 mil ·
-  2023 35 mil · 2024 36 mil · 2025 36 mil · 2026 34 mil.
-- Tamanho bruto ≈ 460 MB; no sistema novo estimado 0,3–0,6 GB. Ensaio completo (pacientes+agenda+prontuário) ≈ 0,7 GB.
-  Plano Pro inclui 8 GB de banco: cabe o histórico inteiro sem custo extra.
-- Opções para a dona decidir: tudo desde 2016; últimos 5 anos (2021+, ~215 mil contas) com o resto só guardado no banco
-  (schema legacy_micrologos, consultável para relatórios); ou só abertas.
+## Contas de faturamento (decisão da dona, 25–26/11/2026)
+- **Decisão:** trazer TODAS as contas desde 2016. De 2021 em diante = contas normais (mexer em cobrança, recurso, XML de novo);
+  2016–2020 = **arquivadas** (só consulta e relatórios; faturamento/admin podem desarquivar). Migração 0163.
+- Transformação `migracao/transformacoes/06_faturamento.sql` (desfazer no ensaio: `06_faturamento_desfazer.sql`).
+  - PACIENTES_CONTA → contas; FATURAMENTOS → conta_itens (valor do Micrologos é UNITÁRIO; total = valor × quantidade);
+    FATURAMENTOS_STAFF_MEDICO → 1 item "Primeiro Auxiliar/Instrumentador — procedimento" no nome da pessoa;
+    COBRANCAS → lotes (nº do lote = nº da cobrança; a numeração nova continua depois da última).
+  - Nº da guia no prestador = PLANO_GUIA do Micrologos (repetidos/vazios: "ML" + nº da conta; o original fica em legado).
+    Guias novas pulam números já usados (função interno.proximo_numero_guia).
+  - O Micrologos **não registra quando o convênio pagou**. Regra (❓ confirmar com a dona): cobrança fechada há mais de
+    6 meses = paga (presumido); últimos 6 meses = "Enviada" (aguardando pagamento); sem cobrança nos últimos 6 meses =
+    "Em conferência"; particular = paga. legado.pagamento = 'presumido' marca as presumidas.
+  - Ensaio local (26/11): 333.157 contas (2 sem paciente ficaram fora), 410.631 itens, 10,4 mil lotes. Totais por ano
+    batem com o Micrologos (diferença de centavos de arredondamento). 2026: 4,3 mil em conferência, 11,5 mil aguardando pagamento.
+- Relatório novo (migração 0164 `rel_faturamento` + aba Faturamento → Produção): por médico / convênio / tipo / procedimento,
+  com comparação (mesmo período do ano anterior ou mês anterior), planilha e impressão. Substitui "Atendimentos por Médico",
+  "Faturamento por Médico" e "Valores resumidos por plano" do Micrologos.
+- ❓ Perguntas abertas para a dona:
+  - Unimed Gisele / Unimed Gelson: muitas contas sem cobrança no Micrologos (cobradas por fora?). Hoje entram como pagas (presumido).
+  - Cirurgias: no Micrologos o item da cirurgia fica na coluna "Centro Cirúrgico", sem o nome do cirurgião. Como o Luciano
+    separa a produção de cirurgia por médico? (honorários de auxiliar/instrumentador já saem no nome de cada um)
+  - Pedir ao Luciano 2 ou 3 relatórios do Micrologos (PDF) de um mês fechado para conferir o novo relatório número a número.
+  - Guia de honorário individual (tipo 06, 1.835 contas) entra como SP/SADT; o tipo original fica em legado.

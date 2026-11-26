@@ -1743,3 +1743,12 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   agendamentos `atendido`, além de cancelado/faltou como antes. Antes, o botão "Encaixar" (mesmo horário, 15 min) era
   barrado pelo banco. No Micrologos, 26% dos agendamentos ficam no mesmo horário de outro.
 - Agenda do Micrologos (ensaio local): 387.732 agendamentos migráveis, 12.950 encaixes.
+
+## 26/11/2026 — Faturamento antigo do Micrologos e relatório de produção (sessão "Dados para migração")
+- Migração 0163: `contas.arquivada`, `lotes.arquivado` e coluna `legado` (dados originais do Micrologos) em contas, itens e lotes.
+  Conta/lote arquivado não muda (trava no banco); faturamento/admin podem desarquivar. Nº de guia novo pula números já usados.
+- Migração 0164: `rel_faturamento(de, até)` — soma itens das contas por médico, convênio, tipo e procedimento.
+- Tela Faturamento → Produção refeita: agrupa em 2 níveis, filtra por médico/convênio/tipo, compara com o mesmo período do
+  ano anterior ou com o mês anterior, exporta planilha e imprime. Conta e lote mostram de onde vieram no Micrologos.
+- Carga das contas: `migracao/transformacoes/06_faturamento.sql` (ensaio local ok; detalhes em `migracao/PROXIMOS-PASSOS.md`).
+- Pedido da dona registrado em LACUNAS §4: tirar/recolocar paciente de cobrança já enviada (recurso) e gerar XML de novo.
