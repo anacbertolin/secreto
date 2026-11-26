@@ -9,7 +9,7 @@ c as (
     (select coalesce(jsonb_agg(jsonb_build_object('id', i.id, 'tabela', i.tabela, 'codigo', i.codigo, 'descricao', i.descricao,
         'data_execucao', i.data_execucao, 'quantidade', i.quantidade, 'valor_unitario', i.valor_unitario, 'olho', i.olho,
         'profissional_id', i.profissional_id, 'grau_participacao', i.grau_participacao, 'fator', i.fator, 'numero_guia', i.numero_guia, 'numero_guia_operadora', i.numero_guia_operadora, 'legado', i.legado,
-        'procedimentos', (select jsonb_build_object('tipo', pr.tipo) from public.procedimentos pr where pr.id = i.procedimento_id))
+        'procedimentos', (select jsonb_build_object('tipo', pr.tipo, 'unidade_tiss', pr.unidade_tiss, 'registro_anvisa', pr.registro_anvisa) from public.procedimentos pr where pr.id = i.procedimento_id))
         order by i.criado_em, i.id), '[]') from public.conta_itens i where i.conta_id = ct.id) as itens
   from public.contas ct where (ct.lote_id = (select id from l)
       or ct.id in (select i.conta_id from public.conta_itens i where i.legado->>'id_cobranca' = (select legado->>'id_cobranca' from l)))
