@@ -1793,3 +1793,5 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
 - (0169) Dona confirmou: consultas diferenciadas têm **preço por médico**. Incluídas também **Consulta Glaucoma — Dr. Pedro** (R$ 600)
   e **Consulta Córnea — Dr. Max** (R$ 500, valor a confirmar). Genéricos da Micrologos mantidos. Retina = só Dr. Gelson (R$ 600, item único).
   Dual: paciente paga na hora no caixa (provisório; muda se a Dual pagar depois).
+- (0170) Dona confirmou Córnea — Dr. Max = R$ 500. Os genéricos "Consulta Glaucoma"/"Consulta Córnea" confundiam a recepção:
+  o preço particular deles foi desativado (somem do caixa; o procedimento continua para migração/convênios).
