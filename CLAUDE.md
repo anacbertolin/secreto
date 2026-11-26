@@ -101,6 +101,10 @@
   - A autorização não muda as regras de "avise antes": apagar dados, ações sem volta e aumento de custo continuam
     exigindo aviso à dona antes.
 - Nunca empurrar direto no `main` nem reescrever o histórico dele (sempre via PR).
+- **Avisos de novidade (autorização do Dr. Gelson, 27/11/2026):** quando uma mudança pedida por ele (ou pela dona) mudar o jeito
+  de alguém da equipe trabalhar — principalmente quando nasceu de um erro/dúvida dessa pessoa —, Claude pode, sem pedir,
+  colocar um aviso curto para quem precisa saber: nova entrada na lista `NOVIDADES` de `app/src/components/Novidades.tsx`
+  (aparece uma vez, some no "Entendi"). Texto simples, com o nome da pessoa e o que fazer; e avisar a dona/Dr. Gelson no resumo.
 
 ## Regras para dados de saúde (LGPD)
 - Prontuário é dado pessoal sensível. Sempre:
