@@ -143,13 +143,14 @@ function papelRecepcao(eu: Profissional | null) {
 }
 
 function useNomes() {
-  const { dados } = useCarregar(async () => ok(await supabase.from("profissionais").select("id, nome, funcao, ativo").order("nome")) as { id: string; nome: string; funcao: string; ativo: boolean }[], []);
+  const { dados } = useCarregar(async () => ok(await supabase.from("profissionais").select("id, nome, funcao, ativo, atende_pacientes, agenda_recurso").order("nome")) as { id: string; nome: string; funcao: string; ativo: boolean; atende_pacientes?: boolean; agenda_recurso?: boolean }[], []);
   return useMemo(() => {
     const mapa = new Map((dados ?? []).map((p) => [p.id, p.nome]));
     return {
       nome: (id?: string | null) => (id ? mapa.get(id)?.split(" ")[0] ?? "—" : "—"),
       nomeCompleto: (id?: string | null) => (id ? mapa.get(id) ?? "—" : "—"),
-      medicos: (dados ?? []).filter((p) => p.funcao === "medico" && p.ativo),
+      // médicos + quem atende pacientes sem ser médico (ex.: tecnóloga — migração 0167); colunas de setor da agenda ficam de fora
+      medicos: (dados ?? []).filter((p) => p.ativo && !p.agenda_recurso && (p.funcao === "medico" || !!p.atende_pacientes)),
     };
   }, [dados]);
 }
@@ -415,7 +416,7 @@ export function CaixaDetalhe() {
         <h3 style={{ marginTop: 0 }}>Atendimentos do caixa</h3>
         {ats.length === 0 ? <div className="vazio">Nenhum atendimento lançado.</div> : (
           <table className="tabela">
-            <thead><tr><th>Hora</th><th>Paciente</th><th>Médico</th><th>O que foi feito</th><th style={num}>Valor</th><th>Pagamento</th><th style={num}>Falta</th><th>Lançou</th><th className="nao-imprimir"></th></tr></thead>
+            <thead><tr><th>Hora</th><th>Paciente</th><th>Médico / profissional</th><th>O que foi feito</th><th style={num}>Valor</th><th>Pagamento</th><th style={num}>Falta</th><th>Lançou</th><th className="nao-imprimir"></th></tr></thead>
             <tbody>
               {ats.map((a) => {
                 const saldo = saldoDe(a);
@@ -682,7 +683,7 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
       <Aviso>{erro}</Aviso>
       <div className="grade g2">
         <Campo rotulo="Paciente (nome)" className="inteiro"><input value={f.paciente} onChange={set("paciente")} autoFocus /></Campo>
-        <Campo rotulo="Médico">
+        <Campo rotulo="Médico / profissional">
           <select value={f.medico} onChange={set("medico")}><option value="">—</option>{medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}</select>
         </Campo>
         <Campo rotulo="O que foi feito (pode marcar mais de um)">

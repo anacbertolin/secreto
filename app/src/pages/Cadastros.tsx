@@ -51,7 +51,7 @@ function TabelaEquipe({ lista, aoEditar, aoAcesso }: { lista: Profissional[]; ao
                 {!p.agenda_recurso && p.sem_acesso && <> <Etiqueta cor="cinza">sem login</Etiqueta></>}
                 {p.especialidade && <div className="muted pequeno">{p.especialidade}</div>}</td>
               <td>{p.usuario ? <>👤 {p.usuario}</> : p.email ?? <span className="muted">— (sem login)</span>}</td>
-              <td>{p.agenda_recurso ? <span className="muted">—</span> : FUNCOES[p.funcao]}{p.orientacao_cirurgica && <div><Etiqueta cor="azul">Orientação cirúrgica</Etiqueta></div>}{p.caixa_conferir && <div><Etiqueta cor="amarelo">Confere o caixa</Etiqueta></div>}{p.caixa_aprovar && <div><Etiqueta cor="verde">Aprova o caixa</Etiqueta></div>}</td>
+              <td>{p.agenda_recurso ? <span className="muted">—</span> : FUNCOES[p.funcao]}{p.orientacao_cirurgica && <div><Etiqueta cor="azul">Orientação cirúrgica</Etiqueta></div>}{p.caixa_conferir && <div><Etiqueta cor="amarelo">Confere o caixa</Etiqueta></div>}{p.caixa_aprovar && <div><Etiqueta cor="verde">Aprova o caixa</Etiqueta></div>}{p.atende_pacientes && p.funcao !== "medico" && <div><Etiqueta cor="roxo">Atende pacientes</Etiqueta></div>}</td>
               <td>{p.conselho && `${p.conselho} ${p.numero_conselho ?? ""}/${p.uf_conselho ?? ""}`}</td>
               <td style={{ textAlign: "right" }}>
                 <div className="linha" style={{ justifyContent: "flex-end" }}>
@@ -72,7 +72,7 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
     nome: p.nome ?? "", email: p.usuario ? "" : p.email ?? "", usuario: p.usuario ?? "", funcao: p.funcao ?? "recepcao", conselho: p.conselho ?? "", numero_conselho: p.numero_conselho ?? "",
     uf_conselho: p.uf_conselho ?? "", especialidade: p.especialidade ?? "", rqe: p.rqe ?? "", cbo: (p as { cbo?: string | null }).cbo ?? "", ativo: p.ativo ?? true,
     orientacao_cirurgica: p.orientacao_cirurgica ?? false,
-    caixa_conferir: p.caixa_conferir ?? false, caixa_aprovar: p.caixa_aprovar ?? false,
+    caixa_conferir: p.caixa_conferir ?? false, caixa_aprovar: p.caixa_aprovar ?? false, atende_pacientes: p.atende_pacientes ?? false,
   });
   // Médicos e funcionários entram com usuário; a administração com e-mail (decisão da dona, 16/11)
   const [modo, setModo] = useState<"usuario" | "email">(p.usuario ? "usuario" : p.email ? "email" : p.funcao === "admin" ? "email" : "usuario");
@@ -169,6 +169,12 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
           <input type="checkbox" checked={f.orientacao_cirurgica as boolean} onChange={(e) => setF({ ...f, orientacao_cirurgica: e.target.checked })} />
           Atende a <b>&nbsp;Orientação cirúrgica&nbsp;</b> (vê e responde o WhatsApp da orientação)
         </label>
+        {f.funcao !== "medico" && (
+          <label className="check inteiro">
+            <input type="checkbox" checked={f.atende_pacientes as boolean} onChange={(e) => setF({ ...f, atende_pacientes: e.target.checked })} />
+            <b>&nbsp;Atende pacientes&nbsp;</b> sem ser médico (ex.: tecnóloga) — aparece no caixa como profissional
+          </label>
+        )}
         <label className="check inteiro">
           <input type="checkbox" checked={f.caixa_conferir as boolean} onChange={(e) => setF({ ...f, caixa_conferir: e.target.checked })} />
           <b>&nbsp;Confere o caixa&nbsp;</b> da recepção depois de fechado (telefone/WhatsApp)
