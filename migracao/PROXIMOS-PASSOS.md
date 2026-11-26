@@ -236,3 +236,26 @@
      ser ligados aos do Micrologos (micrologos_codigo) em vez de duplicados.
   4. Ferramenta de carga: copiar as tabelas finais do ensaio local para o Supabase pela API REST com a chave (sem gatilhos
      duplicando auditoria/contas: função de carga que liga `app.migracao`, só para a chave secreta).
+
+## Ferramenta de carga e ROTEIRO DO DIA DA TROCA (26/11/2026, noite)
+Pronto e testado:
+- `migracao/carga/baixar.py`: traz do Supabase o que a equipe já fez (cadastros, pacientes, agenda, contas) para o banco
+  de trabalho local "carga". `migracao/carga/enviar.py` + `enviar_tudo.sh`: envia pela API (função `carga_micrologos`,
+  migrações 0182/0183, só a chave secreta; `--atualizar` completa registros que já existem; `SIMULAR=1` não grava).
+- 01_pacientes junta os pacientes da equipe com o Micrologos (ensaio 26/11: 32 de 34 juntados pelo CPF/nome+nascimento,
+  2 sem par renumerados para 200.001+; registro em `legacy_micrologos.ajustes_equipe`, migração 0184).
+  04_agenda: agendamento marcado nos dois sistemas fica só o do sistema novo; futuros no horário de um agendamento da
+  equipe viram encaixe. 02_convenios completa os convênios Unimed provisórios (0176).
+- Teste real em 26/11: 3 pacientes antigos (+5 agendamentos, 7 registros de prontuário) gravados no Supabase chegaram
+  idênticos (mesma impressão digital md5 campo a campo) e foram apagados em seguida. Velocidade ~900 linhas/s.
+Roteiro (dia da troca, com o Marcio):
+1. Micrologos parado; Marcio faz a cópia final do banco; subir pelo Storage `migracao-micrologos` (como em 24/11).
+2. `migracao/firebird/copiar_para_postgres.py` + `converter_rtf.py` (banco local "secreto" → staging), depois copiar o
+   schema `legacy_micrologos` para o banco "carga" (ver comandos na sessão de 26/11) — ou recriar: `DB=carga
+   migracao/local/aplicar_migracoes.sh`.
+3. `python3 migracao/carga/baixar.py --pg .../carga` (estado do sistema NESSE momento).
+4. Rodar 02, 03, 01, 04, 05, 06, 07 no "carga" (cada um numa transação com `set local app.migracao='on'`, `set jit=off`).
+5. `migracao/carga/enviar_tudo.sh` (1–2 h). Conferir com `migracao/carga/conferir.sql` × banco "carga".
+6. No Supabase: `select setval('public.pacientes_numero_prontuario_seq', (select max(numero_prontuario) from
+   public.pacientes where numero_prontuario < 200000))` e `setval('public.lotes_numero_seq', max(numero))`.
+7. Avisar a equipe; Micrologos só para consulta. Depois: apagar a chave `migracao_claude` no Supabase (opcional).

@@ -26,8 +26,8 @@ def contexto_ssl():
     return ssl.create_default_context(cafile=ca) if os.path.exists(ca) else ssl.create_default_context()
 
 
-def enviar(ctx, tabela, linhas, simular, tentativas=5):
-    corpo = json.dumps({"p_tabela": tabela, "p_linhas": linhas, "p_simular": simular}, ensure_ascii=False, default=str).encode()
+def enviar(ctx, tabela, linhas, simular, atualizar=False, tentativas=5):
+    corpo = json.dumps({"p_tabela": tabela, "p_linhas": linhas, "p_simular": simular, "p_atualizar": atualizar}, ensure_ascii=False, default=str).encode()
     for t in range(tentativas):
         req = urllib.request.Request(URL, data=corpo, method="POST", headers={"Content-Type": "application/json", "Prefer": "return=representation"})
         try:
@@ -54,6 +54,7 @@ def main():
     ap.add_argument("--max-bytes", type=int, default=4_000_000)
     ap.add_argument("--limite", type=int, default=0)
     ap.add_argument("--simular", action="store_true")
+    ap.add_argument("--atualizar", action="store_true", help="se já existir (mesma chave), atualiza")
     a = ap.parse_args()
     schema, nome = a.tabela.split(".")
     ctx = contexto_ssl()
@@ -67,12 +68,12 @@ def main():
         for (linha,) in cur:
             s = len(json.dumps(linha, default=str))
             if buf and (len(buf) >= a.lote or tam + s > a.max_bytes):
-                n, b = enviar(ctx, a.tabela, buf, a.simular); enviados += n; bytes_tot += b; total += len(buf)
+                n, b = enviar(ctx, a.tabela, buf, a.simular, a.atualizar); enviados += n; bytes_tot += b; total += len(buf)
                 print(f"  {a.tabela}: {total} lidas, {enviados} gravadas{' (simulado)' if a.simular else ''}", flush=True)
                 buf, tam = [], 0
             buf.append(linha); tam += s
         if buf:
-            n, b = enviar(ctx, a.tabela, buf, a.simular); enviados += n; bytes_tot += b; total += len(buf)
+            n, b = enviar(ctx, a.tabela, buf, a.simular, a.atualizar); enviados += n; bytes_tot += b; total += len(buf)
     dt = time.time() - t0
     print(f"{a.tabela}: {total} lidas, {enviados} {'entrariam (simulado)' if a.simular else 'gravadas'} "
           f"em {dt:.0f}s ({bytes_tot/1e6:.1f} MB)", flush=True)
