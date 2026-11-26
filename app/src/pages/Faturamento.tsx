@@ -12,6 +12,7 @@ import {
 interface Item {
   id: string; conta_id: string; procedimento_id: string | null; exame_realizado_id: string | null; tabela: string; codigo: string | null;
   descricao: string; data_execucao: string; quantidade: number; valor_unitario: number | null; valor_total: number; olho: string | null;
+  grau_participacao?: string | null; profissional_id?: string | null;
   glosa_valor: number; glosa_codigo: string | null; glosa_motivo: string | null; recurso_texto: string | null;
   recurso_enviado_em: string | null; recurso_valor_recuperado: number | null;
 }
@@ -22,7 +23,7 @@ export interface Conta {
   profissional_id: string | null; solicitante_id: string | null; indicacao_clinica: string | null; cid10: string | null;
   status: string; lote_id: string | null; valor_total: number; valor_glosado: number; valor_pago: number | null;
   forma_pagamento: string | null; parcelas: number | null; recebido_em: string | null; motivo_cancelamento: string | null; observacoes: string | null;
-  arquivada?: boolean; legado?: Record<string, unknown> | null;
+  arquivada?: boolean; legado?: Record<string, unknown> | null; hospital_id?: string | null; guia_solicitacao?: string | null;
   pacientes?: { nome: string; nome_social: string | null; numero_prontuario: number };
   conta_itens?: { valor_unitario: number | null }[];
 }
@@ -236,11 +237,12 @@ export function ContaDetalhe() {
   const [cab, setCab] = useState<Record<string, string>>({});
 
   const base = useCarregar(async () => {
-    const [convenios, planos, procs, profs] = await Promise.all([
+    const [convenios, planos, procs, profs, hospitais] = await Promise.all([
       listaConvenios(), listaPlanos(), listaProcedimentos(),
       supabase.from("profissionais").select("id, nome, funcao, ativo").then((r) => ok(r) as { id: string; nome: string; funcao: string; ativo: boolean }[]),
+      supabase.from("hospitais").select("id, nome, ativo").order("nome").then((r) => ok(r) as { id: string; nome: string; ativo: boolean }[]),
     ]);
-    return { convenios, planos, procs, profs };
+    return { convenios, planos, procs, profs, hospitais };
   }, []);
   const { dados, erro: e1, carregando, recarregar } = useCarregar(async () => {
     const c = ok(await supabase.from("contas").select(SEL_CONTA).eq("id", id!).single()) as Conta;
@@ -254,7 +256,8 @@ export function ContaDetalhe() {
   }, [id]);
 
   const CAMPOS_CAB = ["convenio_id", "plano_id", "tipo_guia", "data_atendimento", "carteirinha", "validade_carteirinha", "senha_autorizacao",
-    "data_autorizacao", "validade_senha", "numero_guia_operadora", "profissional_id", "solicitante_id", "indicacao_clinica", "cid10", "observacoes"] as const;
+    "data_autorizacao", "validade_senha", "numero_guia_operadora", "profissional_id", "solicitante_id", "indicacao_clinica", "cid10", "observacoes",
+    "hospital_id", "guia_solicitacao"] as const;
   useEffect(() => {
     if (dados) setCab(Object.fromEntries(CAMPOS_CAB.map((k) => [k, (dados.c[k] as string | null) ?? ""])));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -263,7 +266,7 @@ export function ContaDetalhe() {
   if (carregando && !dados) return <Carregando />;
   if (!dados || !base.dados) return <Aviso>{e1 || base.erro}</Aviso>;
   const { c, itens, lote, repasse } = dados;
-  const { convenios, planos, procs, profs } = base.dados;
+  const { convenios, planos, procs, profs, hospitais } = base.dados;
   const conv = convenios.find((x) => x.id === c.convenio_id);
   const arquivada = !!c.arquivada;
   const editavel = ["aberta", "pronta"].includes(c.status) && !c.lote_id && !arquivada;
@@ -371,7 +374,7 @@ export function ContaDetalhe() {
             <thead><tr><th>Código</th><th>Descrição</th><th>Data</th><th>Qtd.</th><th style={{ textAlign: "right" }}>Valor unit.</th><th style={{ textAlign: "right" }}>Total</th>{comGlosa && <th>Glosa</th>}<th></th></tr></thead>
             <tbody>
               {itens.map((i) => (
-                <LinhaItem key={i.id} i={i} editavel={editavel} mostrarGlosa={comGlosa} glosa={comGlosa && fat && !arquivada} aoSalvar={(campos) => salvarItem(i, campos)} aoRemover={() => removerItem(i)} />
+                <LinhaItem key={i.id} i={i} honorarios={c.tipo_guia === "honorarios"} medicos={medicos} editavel={editavel} mostrarGlosa={comGlosa} glosa={comGlosa && fat && !arquivada} aoSalvar={(campos) => salvarItem(i, campos)} aoRemover={() => removerItem(i)} />
               ))}
             </tbody>
           </table>
@@ -404,7 +407,7 @@ export function ContaDetalhe() {
             )}
             {cab.convenio_id && (
               <Campo rotulo="Tipo de guia">
-                <select value={cab.tipo_guia} onChange={set("tipo_guia")}><option value="consulta">Consulta</option><option value="sadt">SP/SADT</option></select>
+                <select value={cab.tipo_guia} onChange={set("tipo_guia")}><option value="consulta">Consulta</option><option value="sadt">SP/SADT</option><option value="honorarios">Honorários (cirurgia)</option></select>
               </Campo>
             )}
             <Campo rotulo="Data do atendimento"><input type="date" value={cab.data_atendimento ?? ""} onChange={set("data_atendimento")} /></Campo>
@@ -421,7 +424,15 @@ export function ContaDetalhe() {
             <Campo rotulo="Médico executante">
               <select value={cab.profissional_id ?? ""} onChange={set("profissional_id")}><option value="">—</option>{medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}{!m.ativo && " (inativo)"}</option>)}</select>
             </Campo>
-            {cab.tipo_guia === "sadt" && (
+            {cab.tipo_guia === "honorarios" && (
+              <>
+                <Campo rotulo="Hospital / centro cirúrgico">
+                  <select value={cab.hospital_id ?? ""} onChange={set("hospital_id")}><option value="">—</option>{hospitais.filter((h) => h.ativo || h.id === cab.hospital_id).map((h) => <option key={h.id} value={h.id}>{h.nome}</option>)}</select>
+                </Campo>
+                <Campo rotulo="Nº da guia de solicitação/internação"><input value={cab.guia_solicitacao ?? ""} onChange={set("guia_solicitacao")} /></Campo>
+              </>
+            )}
+            {(cab.tipo_guia === "sadt" || cab.tipo_guia === "honorarios") && (
               <>
                 <Campo rotulo="Médico solicitante">
                   <select value={cab.solicitante_id ?? ""} onChange={set("solicitante_id")}><option value="">—</option>{medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}</select>
@@ -464,7 +475,8 @@ function CancelarForm({ aoConfirmar }: { aoConfirmar: (motivo: string) => void }
   );
 }
 
-function LinhaItem({ i, editavel, mostrarGlosa, glosa, aoSalvar, aoRemover }: { i: Item; editavel: boolean; mostrarGlosa: boolean; glosa: boolean; aoSalvar: (c: Record<string, unknown>) => void; aoRemover: () => void }) {
+const GRAUS: Record<string, string> = { "00": "Cirurgião", "01": "1º auxiliar", "02": "2º auxiliar", "03": "3º auxiliar", "04": "4º auxiliar", "05": "Instrumentador", "06": "Anestesista", "12": "Clínico" };
+function LinhaItem({ i, editavel, mostrarGlosa, glosa, aoSalvar, aoRemover, honorarios, medicos }: { i: Item; editavel: boolean; mostrarGlosa: boolean; glosa: boolean; aoSalvar: (c: Record<string, unknown>) => void; aoRemover: () => void; honorarios?: boolean; medicos?: { id: string; nome: string }[] }) {
   const [q, setQ] = useState(String(i.quantidade));
   const [v, setV] = useState(i.valor_unitario === null ? "" : String(i.valor_unitario).replace(".", ","));
   const [g, setG] = useState(false);
@@ -473,7 +485,20 @@ function LinhaItem({ i, editavel, mostrarGlosa, glosa, aoSalvar, aoRemover }: { 
     <>
       <tr>
         <td className="pequeno">{i.codigo ?? "—"}</td>
-        <td>{i.descricao}{i.olho && <span className="muted"> · {i.olho}</span>}{i.exame_realizado_id && <div className="muted pequeno">exame realizado</div>}</td>
+        <td>{i.descricao}{i.olho && <span className="muted"> · {i.olho}</span>}{i.exame_realizado_id && <div className="muted pequeno">exame realizado</div>}
+          {honorarios && (editavel ? (
+            <div className="linha" style={{ gap: 6, marginTop: 4 }}>
+              <select className="mini" style={{ width: 140 }} value={i.grau_participacao ?? ""} onChange={(e) => aoSalvar({ grau_participacao: e.target.value || null })}>
+                <option value="">participação…</option>{Object.entries(GRAUS).map(([k, r]) => <option key={k} value={k}>{k} {r}</option>)}
+              </select>
+              <select className="mini" style={{ width: 200 }} value={i.profissional_id ?? ""} onChange={(e) => aoSalvar({ profissional_id: e.target.value || null })}>
+                <option value="">médico…</option>{(medicos ?? []).map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+              </select>
+            </div>
+          ) : (i.grau_participacao || i.profissional_id) && (
+            <div className="muted pequeno">{i.grau_participacao ? GRAUS[i.grau_participacao] ?? i.grau_participacao : ""}{i.profissional_id ? ` · ${(medicos ?? []).find((m) => m.id === i.profissional_id)?.nome ?? ""}` : ""}</div>
+          ))}
+        </td>
         <td>{fmtData(i.data_execucao)}</td>
         <td style={{ width: 80 }}>{editavel ? <input value={q} onChange={(e) => setQ(e.target.value)} /> : Number(i.quantidade)}</td>
         <td style={{ width: 130, textAlign: "right" }}>

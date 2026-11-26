@@ -190,3 +190,11 @@
 3. Nas telas, "lote" passou a se chamar **cobrança** (como no Micrologos). Para criar: Faturamento → Contas →
    filtro "Pronta p/ cobrança" → marcar as guias de um convênio → "Iniciar cobrança". Em produção ainda não há contas
    (elas entram na troca), por isso a dona não conseguiu criar.
+- 26/11: Guia de Honorários pronta (0168) e códigos dos médicos por convênio (0167 + `07_codigos_medicos.sql`, rodar
+  depois do 03). Contas antigas tipo 06 viram "honorarios" com hospital, guia de solicitação e grau (00/01/05).
+- **Testes de XML (próximo passo):** as cobranças antigas já estão no ensaio local. Para comparar com o Micrologos:
+  `psql -v cob=<nº da cobrança> -At -f migracao/xml/dados_cobranca.sql > /tmp/c.json` e
+  `cd app && npx -y tsx@4.19.2 scripts/tiss/gerar_de_json.ts /tmp/c.json <nº do lote no XML> /tmp/xml` (os arquivos têm
+  dados de pacientes: só na máquina de ensaio). A dona baixa no Micrologos o XML da MESMA cobrança e Claude compara.
+  Já testado (sem conferir com o Micrologos ainda): Bradesco cobranças 11378 (honorários), 11379 (consultas),
+  11380 (SP/SADT) → XSD e hash ok; honorários com Pro Oftalmo 193216 / CNES 5325722, como no XML real (D2).

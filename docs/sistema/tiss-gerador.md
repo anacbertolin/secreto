@@ -94,5 +94,13 @@ cd app && npx -y tsx@4.19.2 scripts/tiss/testar.ts /tmp/tiss && scripts/tiss/val
     código na operadora = `profissional_convenio_codigos` ou, se não houver, o código da clínica (arquivo J);
   - item "ambos os olhos" com quantidade 2 → quantidade 1 e fator 2,00 (mesmo total), se `mostra_fator`;
   - data de autorização vazia → data da conta, se `data_autorizacao_vazia_usa_data_conta`.
-- ❌ Ainda não: **Guia de Honorários (cirurgia)** — o sistema avisa e não gera. ⚠️ Conferir o primeiro XML real do
-  Bradesco no portal (nº do CRM com ou sem 52, tipoConsulta, fator) antes de usar nos outros convênios.
+- ✅ **Guia de Honorários (cirurgia)** (26/11, migração 0168): conta com tipo "Honorários" (ou com cirurgia, se
+  `honorarios_se_cirurgia`); hospital da conta (`contas.hospital_id` → `hospital_convenio_codigos` = localContratado),
+  nº da guia de solicitação (`contas.guia_solicitacao`), um item por participação com `conta_itens.grau_participacao`
+  (00 cirurgião, 01 auxiliar, 05 instrumentador…) e o médico do item. Com `honorarios_somente_cirurgicos`, itens que não
+  são cirurgia (ex.: lente) ficam fora da guia (aviso). Teste fictício passa no XSD 4.03.00.
+- Códigos dos médicos (migração 0167 + `migracao/transformacoes/07_codigos_medicos.sql`): código executante/solicitante por
+  convênio/plano/hospital e "executa como"/"solicita como" (médico que sai na guia no lugar de outro). Códigos que são CPF
+  não são copiados (ocorrência registrada).
+- ⚠️ Calibrar com XML reais do Micrologos, convênio por convênio (plano combinado com a dona em 26/11): nº do CRM com ou sem
+  52, tipoConsulta, fator 2,00, guia de solicitação, ordem dos itens.

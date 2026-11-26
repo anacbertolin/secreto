@@ -1,10 +1,9 @@
 // Monta o XML TISS de um lote do sistema a partir das contas, usando o cadastro TISS do convênio (convenios.tiss,
-// copiado do Micrologos). Primeira versão (26/11/2026): Guia de Consulta e SP/SADT (consultas e exames).
-// Honorários (cirurgia) ainda não: a cirurgia precisa do hospital e da equipe (ver docs/sistema/tiss-gerador.md).
+// copiado do Micrologos): Guia de Consulta, SP/SADT e Honorários (cirurgia). Regras em docs/sistema/tiss-gerador.md.
 import { supabase } from "./supabase";
 import { ok } from "../components/ui";
 import { gerarLote, zipar } from "./tiss";
-import { montarLoteTISS, type ContaDb, type ProfDb, type TissConv } from "./tissMontar";
+import { montarLoteTISS, type CodigoDb, type ContaDb, type HospitalDb, type ProfDb, type TissConv } from "./tissMontar";
 
 export interface ResultadoXML { nomeArquivo: string; bytes: Uint8Array; guias: number; avisos: string[] }
 
@@ -15,13 +14,20 @@ export async function gerarXmlDoLote(loteId: string): Promise<ResultadoXML> {
   const conv = ok(await supabase.from("convenios").select("nome, registro_ans, codigo_prestador, versao_tiss, tiss").eq("id", lote.convenio_id).single()) as
     { nome: string; registro_ans: string | null; codigo_prestador: string | null; versao_tiss: string | null; tiss: TissConv | null };
   const contas = ok(await supabase.from("contas")
-    .select("id, tipo_guia, numero_guia_prestador, numero_guia_operadora, senha_autorizacao, data_autorizacao, validade_senha, carteirinha, data_atendimento, profissional_id, solicitante_id, indicacao_clinica, observacoes, plano_id, agendamentos(primeira_vez, tipo), pacientes(nome), conta_itens(id, tabela, codigo, descricao, data_execucao, quantidade, valor_unitario, olho, profissional_id, procedimentos(tipo))")
+    .select("id, tipo_guia, numero_guia_prestador, numero_guia_operadora, senha_autorizacao, data_autorizacao, validade_senha, carteirinha, data_atendimento, profissional_id, solicitante_id, indicacao_clinica, observacoes, plano_id, hospital_id, guia_solicitacao, agendamentos(primeira_vez, tipo), pacientes(nome), conta_itens(id, tabela, codigo, descricao, data_execucao, quantidade, valor_unitario, olho, profissional_id, grau_participacao, procedimentos(tipo))")
     .eq("lote_id", loteId).neq("status", "cancelada").order("data_atendimento")) as unknown as ContaDb[];
   const profs = ok(await supabase.from("profissionais").select("id, nome, conselho, numero_conselho, uf_conselho, cbo")) as ProfDb[];
-  const codigos = ok(await supabase.from("profissional_convenio_codigos").select("profissional_id, plano_id, codigo_executante, codigo_solicitante")
-    .eq("convenio_id", lote.convenio_id)) as { profissional_id: string; plano_id: string | null; codigo_executante: string | null; codigo_solicitante: string | null }[];
+  const codigos = ok(await supabase.from("profissional_convenio_codigos")
+    .select("profissional_id, plano_id, hospital_id, codigo_executante, codigo_solicitante, executa_como_id, solicita_como_id")
+    .eq("convenio_id", lote.convenio_id)) as CodigoDb[];
+  const hs = ok(await supabase.from("hospitais").select("id, nome, cnpj, cnes, hospital_convenio_codigos(convenio_id, codigo_operadora, cnes)")) as
+    { id: string; nome: string; cnpj: string | null; cnes: string | null; hospital_convenio_codigos: { convenio_id: string; codigo_operadora: string | null; cnes: string | null }[] }[];
+  const hospitais: HospitalDb[] = hs.map((h) => {
+    const k = h.hospital_convenio_codigos.find((x) => x.convenio_id === lote.convenio_id);
+    return { id: h.id, nome: h.nome, cnpj: h.cnpj, cnes: h.cnes, codigo_operadora: k?.codigo_operadora ?? null, cnes_convenio: k?.cnes ?? null };
+  });
 
-  const m = montarLoteTISS({ lote, conv, contas, profs, codigos });
+  const m = montarLoteTISS({ lote, conv, contas, profs, codigos, hospitais });
   if (m.erros.length) throw new Error([...new Set(m.erros)].join("\n"));
   const numeroLote = ok(await supabase.rpc("lote_numero_tiss", { p_lote: loteId })) as number;
   const arq = gerarLote({ config: m.config, numeroLote, competencia: m.competencia, dataHora: new Date(), guias: m.guias });
