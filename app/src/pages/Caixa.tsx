@@ -73,7 +73,9 @@ const DETALHES: Record<TipoRecebimento, string[]> = {
 };
 /** Tipo do procedimento (cadastro) → botão do caixa */
 const GRUPO_CAIXA: Record<string, TipoRecebimento> = {
-  consulta: "Consulta", exame: "Exame", procedimento: "Procedimento", cirurgia: "Procedimento", terapia: "Procedimento",
+  consulta: "Consulta", exame: "Exame", procedimento: "Procedimento", cirurgia: "Procedimento",
+  // exercício ortóptico fica junto do teste ortóptico, onde a recepção procura (dona, 26/11)
+  terapia: "Exame",
 };
 interface ItemTabela { nome: string; grupo: TipoRecebimento; valor: number }
 const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -630,7 +632,14 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
       mudaValor(soma ? soma.toFixed(2).replace(".", ",") : "");
     }
   }
-  const alternaItem = (i: string) => trocaItens(itens.includes(i) ? itens.filter((x) => x !== i) : [...itens, i]);
+  const alternaItem = (i: string) => {
+    // achado pela busca em outro grupo: marca o grupo também
+    const grupo = TIPOS_RECEBIMENTO.find((t) => detalhes(t).includes(i));
+    if (grupo && !tipos.includes(grupo) && !itens.includes(i)) setTipos([...tipos, grupo]);
+    trocaItens(itens.includes(i) ? itens.filter((x) => x !== i) : [...itens, i]);
+  };
+  // com algo digitado na busca, procura em TODOS os grupos (não só nos marcados)
+  const casaBusca = (d: string) => !!filtro.trim() && semAcento(d).includes(semAcento(filtro.trim()));
   const [linhas, setLinhas] = useState<LinhaPag[]>([linhaVazia()]);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -699,7 +708,7 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
           {tabela.length > 0 && (
             <input placeholder="🔎 Procurar na tabela (ex.: oct, blefaro, consulta cartão)" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
           )}
-          {TIPOS_RECEBIMENTO.filter((t) => tipos.includes(t)).map((t) => (
+          {TIPOS_RECEBIMENTO.filter((t) => tipos.includes(t) || detalhes(t).some(casaBusca)).map((t) => (
             <div key={t}>
               <div className="muted pequeno" style={{ marginBottom: 4 }}>
                 {t === "Consulta" ? "Qual consulta?" : t === "Exame" ? "Quais exames? (marque todos que o paciente fez)" : "Quais procedimentos?"}
