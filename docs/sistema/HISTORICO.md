@@ -1869,3 +1869,8 @@ quem confere, abrir normalmente no dia seguinte). Quem confere vem do cadastro (
   crédito (fechamento 20/pagamento 25); imposto, custos e clínica proporcionais; `repasse_parcelas.forma` (credito/avista)
   usado nas datas de pagamento e em "Cirurgias do dia". Telas: botão "➕ Pagou com mais de uma forma" na venda e no repasse
   (`app/src/components/OutrasFormas.tsx`); listas mostram "Dinheiro R$ 1.300 + PIX R$ 900".
+
+## 27/11/2026 — Aviso de novidade (uma vez)
+`app/src/components/Novidades.tsx` (no topo de todas as telas): aviso azul mostrado UMA vez a quem interessa, some no
+"Entendi" (conta em guia_leituras). Primeiro aviso: "agora dá para registrar mais de uma forma de pagamento" — para quem
+atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). Novidade nova = nova entrada na lista NOVIDADES.
