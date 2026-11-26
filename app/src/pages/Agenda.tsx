@@ -388,7 +388,7 @@ export default function Agenda() {
                             {a.tipo === "orientacao" ? "Orientação" : TIPOS_AGENDA[a.tipo]}{a.primeira_vez && " · 1ª vez"}{a.encaixe && " · encaixe"} · Pront. {a.pacientes!.numero_prontuario}
                           </div>
                         </td>
-                        {colunas.length > 1 && <td>{nomeCol(l.col)}</td>}
+                        {colunas.length > 1 && <td>{nomeCol(l.col)}{a.cirurgiao_id && <div className="pequeno">🩺 {nomeDe(a.cirurgiao_id)}</div>}</td>}
                         <td>{nomeConv(a.convenio_id) || "Particular"}</td>
                         <td><span className={"etiqueta " + st.cor}>{st.rotulo}</span>{a.chegada_em && <div className="pequeno muted">chegou {fmtHora(a.chegada_em)}</div>}</td>
                         <td className="nota-lista">{a.observacoes ? `📝 ${a.observacoes}` : ""}</td>
@@ -442,6 +442,7 @@ export default function Agenda() {
                             <button key={a.id} className={"ag-item " + st.cor + (sel?.id === a.id ? " sel" : "")}
                               onClick={() => setSelecionado(a)} onDoubleClick={() => abrir(a)}>
                               <b>{fmtHora(a.inicio)}</b> {nomeExibicao(a.pacientes!)}
+                              {a.cirurgiao_id && <div className="ag-cirurgiao">🩺 {nomeDe(a.cirurgiao_id)}</div>}
                               <div className="pequeno muted">
                                 {a.tipo === "orientacao"
                                   ? <>{st.rotulo}</>
@@ -478,7 +479,7 @@ export default function Agenda() {
           convenios={base.dados.convenios}
           locais={base.dados.locais}
           modoInicial={modoAbrir}
-          aoFechar={() => setAberto(null)}
+          aoFechar={() => { setAberto(null); doDia.recarregar(); }}
           aoAlterar={() => { setAberto(null); recarregar(); }}
         />
       )}

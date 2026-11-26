@@ -73,7 +73,9 @@ const DETALHES: Record<TipoRecebimento, string[]> = {
 };
 /** Tipo do procedimento (cadastro) → botão do caixa */
 const GRUPO_CAIXA: Record<string, TipoRecebimento> = {
-  consulta: "Consulta", exame: "Exame", procedimento: "Procedimento", cirurgia: "Procedimento", terapia: "Procedimento",
+  consulta: "Consulta", exame: "Exame", procedimento: "Procedimento", cirurgia: "Procedimento",
+  // exercício ortóptico fica junto do teste ortóptico, onde a recepção procura (dona, 26/11)
+  terapia: "Exame",
 };
 interface ItemTabela { nome: string; grupo: TipoRecebimento; valor: number }
 const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -143,13 +145,14 @@ function papelRecepcao(eu: Profissional | null) {
 }
 
 function useNomes() {
-  const { dados } = useCarregar(async () => ok(await supabase.from("profissionais").select("id, nome, funcao, ativo").order("nome")) as { id: string; nome: string; funcao: string; ativo: boolean }[], []);
+  const { dados } = useCarregar(async () => ok(await supabase.from("profissionais").select("id, nome, funcao, ativo, atende_pacientes, agenda_recurso").order("nome")) as { id: string; nome: string; funcao: string; ativo: boolean; atende_pacientes?: boolean; agenda_recurso?: boolean }[], []);
   return useMemo(() => {
     const mapa = new Map((dados ?? []).map((p) => [p.id, p.nome]));
     return {
       nome: (id?: string | null) => (id ? mapa.get(id)?.split(" ")[0] ?? "—" : "—"),
       nomeCompleto: (id?: string | null) => (id ? mapa.get(id) ?? "—" : "—"),
-      medicos: (dados ?? []).filter((p) => p.funcao === "medico" && p.ativo),
+      // médicos + quem atende pacientes sem ser médico (ex.: tecnóloga — migração 0167); colunas de setor da agenda ficam de fora
+      medicos: (dados ?? []).filter((p) => p.ativo && !p.agenda_recurso && (p.funcao === "medico" || !!p.atende_pacientes)),
     };
   }, [dados]);
 }
@@ -299,6 +302,9 @@ export function CaixaDetalhe() {
   const [modal, setModal] = useState<"" | "receber" | "cortesia" | "saida" | "fechar" | "dinheiro" | "conferir" | "aprovar" | "devolver">("");
   const [pagarAt, setPagarAt] = useState<Atendimento | null>(null);
   const [incluirAt, setIncluirAt] = useState<Atendimento | null>(null);
+  // lista de atendimentos: ordem (hora ou nome) e busca pelo nome do paciente (pedido da recepção, 26/11)
+  const [ordem, setOrdem] = useState<"hora" | "nome">("hora");
+  const [busca, setBusca] = useState("");
   const [erroAcao, setErroAcao] = useState("");
 
   if (carregando && !dados) return <Carregando />;
@@ -318,6 +324,9 @@ export function CaixaDetalhe() {
   const atsValidos = ats.filter((a) => !a.cancelado);
   const cortesias = atsValidos.filter((a) => a.cortesia).length;
   const faltaReceber = n2(atsValidos.reduce((s, a) => s + saldoDe(a), 0));
+  const atsVisiveis = ats
+    .filter((a) => !busca.trim() || semAcento(a.paciente_nome).includes(semAcento(busca.trim())))
+    .sort((x, y) => (ordem === "nome" ? semAcento(x.paciente_nome).localeCompare(semAcento(y.paciente_nome)) : x.criado_em.localeCompare(y.criado_em)));
   const pagsSaldoAnterior = pags.filter((p) => p.caixa_atendimentos && p.caixa_atendimentos.caixa_id !== cx.id);
 
   async function cancelar(tabela: "caixa_atendimentos" | "caixa_pagamentos" | "caixa_saidas", linha: string, oque: string) {
@@ -412,12 +421,21 @@ export function CaixaDetalhe() {
 
       {/* ---------- Atendimentos ---------- */}
       <div className="painel rolagem" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Atendimentos do caixa</h3>
-        {ats.length === 0 ? <div className="vazio">Nenhum atendimento lançado.</div> : (
+        <div className="linha entre" style={{ flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+          <h3 style={{ margin: 0 }}>Atendimentos do caixa</h3>
+          {ats.length > 0 && (
+            <div className="linha nao-imprimir" style={{ flexWrap: "wrap", gap: 6 }}>
+              <input placeholder="🔎 Procurar paciente" value={busca} onChange={(e) => setBusca(e.target.value)} style={{ minWidth: 200 }} />
+              <button className={ordem === "hora" ? "primario" : ""} onClick={() => setOrdem("hora")}>🕒 Por horário</button>
+              <button className={ordem === "nome" ? "primario" : ""} onClick={() => setOrdem("nome")}>🔤 De A a Z</button>
+            </div>
+          )}
+        </div>
+        {ats.length === 0 ? <div className="vazio">Nenhum atendimento lançado.</div> : atsVisiveis.length === 0 ? <div className="vazio">Nenhum paciente com “{busca}” neste caixa.</div> : (
           <table className="tabela">
-            <thead><tr><th>Hora</th><th>Paciente</th><th>Médico</th><th>O que foi feito</th><th style={num}>Valor</th><th>Pagamento</th><th style={num}>Falta</th><th>Lançou</th><th className="nao-imprimir"></th></tr></thead>
+            <thead><tr><th>Hora</th><th>Paciente</th><th>Médico / profissional</th><th>O que foi feito</th><th style={num}>Valor</th><th>Pagamento</th><th style={num}>Falta</th><th>Lançou</th><th className="nao-imprimir"></th></tr></thead>
             <tbody>
-              {ats.map((a) => {
+              {atsVisiveis.map((a) => {
                 const saldo = saldoDe(a);
                 return (
                   <tr key={a.id} style={{ opacity: a.cancelado ? 0.5 : 1 }}>
@@ -629,7 +647,14 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
       mudaValor(soma ? soma.toFixed(2).replace(".", ",") : "");
     }
   }
-  const alternaItem = (i: string) => trocaItens(itens.includes(i) ? itens.filter((x) => x !== i) : [...itens, i]);
+  const alternaItem = (i: string) => {
+    // achado pela busca em outro grupo: marca o grupo também
+    const grupo = TIPOS_RECEBIMENTO.find((t) => detalhes(t).includes(i));
+    if (grupo && !tipos.includes(grupo) && !itens.includes(i)) setTipos([...tipos, grupo]);
+    trocaItens(itens.includes(i) ? itens.filter((x) => x !== i) : [...itens, i]);
+  };
+  // com algo digitado na busca, procura em TODOS os grupos (não só nos marcados)
+  const casaBusca = (d: string) => !!filtro.trim() && semAcento(d).includes(semAcento(filtro.trim()));
   const [linhas, setLinhas] = useState<LinhaPag[]>([linhaVazia()]);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -682,7 +707,7 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
       <Aviso>{erro}</Aviso>
       <div className="grade g2">
         <Campo rotulo="Paciente (nome)" className="inteiro"><input value={f.paciente} onChange={set("paciente")} autoFocus /></Campo>
-        <Campo rotulo="Médico">
+        <Campo rotulo="Médico / profissional">
           <select value={f.medico} onChange={set("medico")}><option value="">—</option>{medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}</select>
         </Campo>
         <Campo rotulo="O que foi feito (pode marcar mais de um)">
@@ -698,7 +723,7 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
           {tabela.length > 0 && (
             <input placeholder="🔎 Procurar na tabela (ex.: oct, blefaro, consulta cartão)" value={filtro} onChange={(e) => setFiltro(e.target.value)} />
           )}
-          {TIPOS_RECEBIMENTO.filter((t) => tipos.includes(t)).map((t) => (
+          {TIPOS_RECEBIMENTO.filter((t) => tipos.includes(t) || detalhes(t).some(casaBusca)).map((t) => (
             <div key={t}>
               <div className="muted pequeno" style={{ marginBottom: 4 }}>
                 {t === "Consulta" ? "Qual consulta?" : t === "Exame" ? "Quais exames? (marque todos que o paciente fez)" : "Quais procedimentos?"}

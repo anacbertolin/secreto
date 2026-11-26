@@ -1752,3 +1752,63 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   ano anterior ou com o mês anterior, exporta planilha e imprime. Conta e lote mostram de onde vieram no Micrologos.
 - Carga das contas: `migracao/transformacoes/06_faturamento.sql` (ensaio local ok; detalhes em `migracao/PROXIMOS-PASSOS.md`).
 - Pedido da dona registrado em LACUNAS §4: tirar/recolocar paciente de cobrança já enviada (recurso) e gerar XML de novo.
+
+## 25–26/11/2026 — E-mail da clínica: decisões da dona (sessão "E-mail da clínica")
+- **Provedor:** Google Workspace **Business Starter**, pagamento flexível (mensal) no começo; passar para anual quando
+  estiver tudo funcionando. Escolhido pelo antispam/antigolpe e pela facilidade de ligar ao sistema (API do Gmail).
+- **Domínio só para e-mail: `cmdolhos.com.br`** (registrado pela dona no Registro.br em 25–26/11, titular a clínica,
+  contatos na conta dela). DNS na **edição de zona do próprio Registro.br** — nada de Hostinger nem agência.
+  "CMD" porque a clínica pensa em virar Hospital de Olhos da Baixada; no futuro o domínio novo entra como domínio extra
+  no Google e os dois endereços chegam na mesma caixa.
+- `consumedolhos.com.br` (site) **não é usado para e-mail** e não deve ser mexido por esta frente. O DNS dele fica na
+  Hostinger (ns1/ns2.dns-parking.com); há uma caixa de e-mail na Hostinger que ninguém usa. O contato técnico no
+  Registro.br é de terceiro (agência): trocar para a dona junto com a troca do site.
+- **Contas pagas (2):** `diretoria@` (só a dona, administradora do Google) e `clinica@` (conta da equipe). Todos os outros
+  endereços são **apelidos grátis** da `clinica@` (até 30): `faturamento@`, `financeiro@`, `contato@`, `cirurgia@`,
+  `recepcao@` e um por médico sócio. Nenhum médico vai usar e-mail no celular/fora do sistema.
+- **Médicos sócios (5):** Gelson, Luiza, Gisele, Max e Pedro → `dr.gelson@`, `dr.luiza@`, `dr.gisele@`, `dr.max@`,
+  `dr.pedro@` (a dona pediu "dr." para todos).
+- **Quem vê o quê (aba E-mail do sistema):** cada setor vê só a caixa do seu setor; cada médico vê só a sua caixa;
+  a **admin vê todas**. Equipe usa tudo pelo sistema (sem abrir Gmail).
+- Próximos passos: dona conclui a contratação e a configuração do DNS (MX `smtp.google.com`, SPF, DMARC `p=none`,
+  DKIM) pelo Claude do computador dela; depois criar `clinica@` e os apelidos; depois a aba E-mail (v1: ler, responder,
+  encaminhar, enviar com anexos, guardado no banco no Brasil, registro de quem leu/respondeu), no padrão do WhatsApp.
+
+### 26/11 — Caixa: Eveline (tecnóloga) na lista de profissionais (migração 0167, pedido da dona)
+- A lista "Médico" do caixa só mostrava médicos. Novo campo `profissionais.atende_pacientes` ("Atende pacientes", tela Equipe):
+  quem não é médico mas atende (ex.: tecnóloga) aparece no caixa em "Médico / profissional". Colunas de setor da agenda ficam de fora.
+- Marcado para **Eveline Isabel Alves dos Santos** (tecnóloga: campo visual e ortóptica), especialidade preenchida.
+- A agenda continua com as colunas "Eveline (Campo Visual)" e "Ortóptica" (migração 0152, sessão de migração) — não mexido.
+- Função da Eveline trocada de "Recepção" para **"Enfermagem / Técnico(a)"** (dona, 26/11: ela acessa laudos e prontuário e escreve,
+  principalmente na ortóptica). Com isso ela deixa de lançar no caixa; continua aparecendo no caixa como profissional.
+- O caixa já tem os exames com preço particular: Campo Visual Particular (R$ 180), Teste Ortóptico (R$ 100),
+  Exercício Ortóptico (R$ 50) e 10 sessões (R$ 400) — dá para lançar pelo exame e escolher a Eveline como profissional.
+- Para a migração: descobrir no Micrologos onde ficam os registros da Eveline (ortóptica/campo visual — prontuário ou aba própria).
+
+### 26/11 — Caixa: itens que faltavam (migração 0168, pedido da dona/recepção)
+- Incluídos na tabela particular: **Consulta Glaucoma — Dr. Max** (R$ 500), **Consulta Córnea — Dr. Pedro** (R$ 600) e
+  **Campo Visual — Dual (parceria)** (R$ 140). A Dual é clínica parceira que manda pacientes para campo visual.
+- Em aberto: os itens antigos da Micrologos "Consulta Glaucoma" (R$ 600) e "Consulta Córnea" (R$ 500) têm valores trocados em relação
+  ao que a recepção informou — perguntar à dona se desativa. Regras da Dual (exames, valores, descontos, quem paga) a levantar no Micrologos.
+- (0169) Dona confirmou: consultas diferenciadas têm **preço por médico**. Incluídas também **Consulta Glaucoma — Dr. Pedro** (R$ 600)
+  e **Consulta Córnea — Dr. Max** (R$ 500, valor a confirmar). Genéricos da Micrologos mantidos. Retina = só Dr. Gelson (R$ 600, item único).
+  Dual: paciente paga na hora no caixa (provisório; muda se a Dual pagar depois).
+- (0170) Dona confirmou Córnea — Dr. Max = R$ 500. Os genéricos "Consulta Glaucoma"/"Consulta Córnea" confundiam a recepção:
+  o preço particular deles foi desativado (somem do caixa; o procedimento continua para migração/convênios).
+- (26/11, só tela) "Exercício Ortóptico" (R$ 50) e "10 sessões" (R$ 400) já existiam, mas apareciam em "Procedimento" (tipo terapia)
+  e a recepção não achava: no caixa, terapia agora aparece em **Exame** (junto do Teste Ortóptico). A busca do recebimento passou a
+  procurar em **todos os grupos** (marca o grupo sozinho ao escolher o item).
+- (26/11, só tela, pedido da recepção) Lista "Atendimentos do caixa": busca 🔎 pelo nome do paciente (sem acento) e botões
+  "🕒 Por horário" / "🔤 De A a Z".
+
+## 26/11/2026 — Agenda: campo "Cirurgião" na coluna do Centro Cirúrgico (migração 0175)
+- Pergunta da dona: a Alessandra marca cirurgias e injeções na coluna "Centro Cirúrgico". Se ela escolhesse o médico
+  em "Profissional", o paciente ia para a coluna do médico. O certo é ficar no Centro Cirúrgico, com o nome do médico.
+- Migração `0175_agenda_cirurgiao`: `agendamentos.cirurgiao_id` (opcional, → profissionais). **Só informativo, para
+  aparecer na agenda: NÃO entra no faturamento, na conta, no repasse nem no XML (decisão da dona).** RLS existente cobre.
+  Advisors sem novidade. (Número 0175 para não repetir 0171–0174 de sessões em paralelo.)
+- Tela: `ehCentroCirurgico` (`lib/dados.ts`: coluna de setor com "cirúrg" no nome). Em Novo agendamento/Encaixe, com a
+  coluna Centro Cirúrgico aparece "Cirurgião (só aparece na agenda)" (lista de médicos). No agendamento aberto dá para
+  trocar o cirurgião na hora (corrigir as cirurgias já lançadas). O nome aparece em azul (🩺) no quadradinho da grade,
+  na lista e no quadro de resumo.
+- A opção "Cirurgia" já existia em **Tipo** (injeção = "Procedimento"). Convênios: só Particular e Bradesco até a migração.

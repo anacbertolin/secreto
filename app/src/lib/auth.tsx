@@ -22,6 +22,8 @@ export interface Profissional {
   caixa_aprovar?: boolean;
   /** Pode cancelar caixa aberto por engano e reabrir caixa para correção (migração 0110 — só a dona) */
   caixa_corrigir?: boolean;
+  /** Atende pacientes sem ser médico: aparece no caixa como profissional (migração 0167) */
+  atende_pacientes?: boolean;
   /** Coluna de setor da agenda, não é uma pessoa (migração 0152) */
   agenda_recurso?: boolean;
   /** Cadastro ativo sem login: colunas de setor e médico de fora (migração 0152) */
