@@ -22,9 +22,10 @@ e --tabela public.precos --lote 5000
 e --tabela public.hospitais
 e --tabela public.hospital_convenio_codigos
 e --tabela public.profissional_convenio_codigos
-# 2) pacientes: novos + os da equipe que foram juntados (nº do Micrologos)
-e --tabela public.pacientes --onde "t.id not in (select paciente_id from legacy_micrologos.ajustes_equipe)" --lote 2000
+# 2) pacientes: PRIMEIRO os da equipe que foram juntados (assumem o nº do Micrologos e liberam o nº antigo), depois os novos
+#    (na ordem inversa, 33 pacientes do Micrologos com nº 3–43 batiam no nº antigo da equipe; 26/11)
 e --tabela public.pacientes --onde "t.id in (select paciente_id from legacy_micrologos.ajustes_equipe)" --atualizar
+e --tabela public.pacientes --onde "t.id not in (select paciente_id from legacy_micrologos.ajustes_equipe)" --lote 2000
 # 3) movimento
 e --tabela public.agendamentos --onde "$M" --lote 3000
 e --tabela public.prontuario_legado --onde "$M" --lote 1000 --max-bytes 3000000
