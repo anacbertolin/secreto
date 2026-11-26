@@ -10,6 +10,8 @@ export interface Conversa {
   setor: SetorWA;
   telefone: string;
   nome_contato: string | null;
+  nome_salvo?: string | null;     // nome dado pela equipe ("salvar contato", migração 0180)
+  contato_obs?: string | null;    // ex.: "telefone da vizinha — paciente Maria"
   paciente_id: string | null;
   responsavel_id: string | null;
   fila_desde?: string | null;
