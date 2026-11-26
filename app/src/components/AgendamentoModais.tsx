@@ -5,7 +5,7 @@ import { Modal, Campo, Aviso, BuscaPaciente, Etiqueta, type PacienteResumo } fro
 import { EscolhaConsultaParticular } from "./ConsultaParticular";
 import type { Profissional } from "../lib/auth";
 import type { Agendamento, Convenio, Local } from "../lib/dados";
-import { nomePor, nomeAgenda, ehAgendaOrientacao } from "../lib/dados";
+import { nomePor, nomeAgenda, ehAgendaOrientacao, ehCentroCirurgico } from "../lib/dados";
 import { useAuth } from "../lib/auth";
 import {
   STATUS_AGENDA, TIPOS_AGENDA, fmtData, fmtHora, fmtTelefone, idade, isoDia, nomeExibicao, soNumeros, cpfValido,
@@ -85,11 +85,14 @@ export function NovoAgendamento(props: {
     primeira_vez: false,
     encaixe: !!ini.encaixe,
     observacoes: "",
+    cirurgiao_id: "",
   });
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   // Agenda da Orientação Cirúrgica: só registro (sem tipo, sala, 1ª consulta; Notas em destaque)
   const orientacao = ehAgendaOrientacao(props.medicos.find((m) => m.id === f.profissional_id));
+  // Centro Cirúrgico: o paciente fica na coluna do centro e o médico que opera vai em "Cirurgião" (só na agenda)
+  const centro = ehCentroCirurgico(props.medicos.find((m) => m.id === f.profissional_id));
   const { eu } = useAuth();
 
   useEffect(() => {
@@ -116,6 +119,7 @@ export function NovoAgendamento(props: {
       primeira_vez: f.primeira_vez,
       encaixe: f.encaixe,
       observacoes: f.observacoes || null,
+      cirurgiao_id: centro ? f.cirurgiao_id || null : null,
     });
     setSalvando(false);
     if (error) return setErro(msgErro(error));
@@ -193,6 +197,11 @@ export function NovoAgendamento(props: {
               </div>
             </>
           )}
+          {centro && (
+            <Campo rotulo="Cirurgião (só aparece na agenda)" className="inteiro">
+              <SelectCirurgiao medicos={props.medicos} valor={f.cirurgiao_id} aoMudar={(v) => setF({ ...f, cirurgiao_id: v })} />
+            </Campo>
+          )}
           {orientacao ? (
             <div className="inteiro">
               <NotasOrientacao valor={f.observacoes} aoMudar={(v) => setF({ ...f, observacoes: v })} />
@@ -206,6 +215,16 @@ export function NovoAgendamento(props: {
         </div>
       </div>
     </Modal>
+  );
+}
+
+/** Médicos que podem ser escolhidos como cirurgião (Centro Cirúrgico) */
+function SelectCirurgiao(props: { medicos: Profissional[]; valor: string; aoMudar: (v: string) => void }) {
+  return (
+    <select value={props.valor} onChange={(e) => props.aoMudar(e.target.value)}>
+      <option value="">— escolha o médico que vai operar —</option>
+      {props.medicos.filter((m) => m.funcao === "medico").map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+    </select>
   );
 }
 
@@ -257,6 +276,14 @@ export function DetalheAgendamento(props: {
   const ativo = !["cancelado", "faltou", "atendido"].includes(a.status);
   const orientacao = a.tipo === "orientacao";
   const [notas, setNotas] = useState(a.observacoes ?? "");
+  // Centro Cirúrgico: cirurgião editável na hora (sem fechar a janela)
+  const centro = ehCentroCirurgico(props.medicos.find((m) => m.id === a.profissional_id));
+  const [cirurgiao, setCirurgiao] = useState(a.cirurgiao_id ?? "");
+  async function atualizarCirurgiao(v: string) {
+    setErro("");
+    const { error } = await supabase.from("agendamentos").update({ cirurgiao_id: v || null }).eq("id", a.id);
+    if (error) setErro(msgErro(error));
+  }
   // consulta particular: na chegada pergunta cartão ou dinheiro/Pix (migração 0087)
   const consultaParticular = !a.convenio_id && a.tipo === "consulta" && !orientacao;
   const [consultaEscolhida, setConsultaEscolhida] = useState("");
@@ -281,6 +308,15 @@ export function DetalheAgendamento(props: {
       <dl className="grade g2" style={{ margin: "16px 0" }}>
         <div><dt className="muted pequeno">Quando</dt><dd style={{ margin: 0 }}>{fmtData(a.inicio)} às {fmtHora(a.inicio)} ({dur} min)</dd></div>
         <div><dt className="muted pequeno">{orientacao ? "Agenda" : "Profissional"}</dt><dd style={{ margin: 0 }}>{orientacao ? "Orientação Cirúrgica" : nomePor(props.medicos, a.profissional_id)}</dd></div>
+        {centro && (
+          <div>
+            <dt className="muted pequeno">Cirurgião (só na agenda)</dt>
+            <dd style={{ margin: 0 }}>
+              <SelectCirurgiao medicos={props.medicos} valor={cirurgiao}
+                aoMudar={(v) => { setCirurgiao(v); atualizarCirurgiao(v); }} />
+            </dd>
+          </div>
+        )}
         <div><dt className="muted pequeno">Tipo</dt><dd style={{ margin: 0 }}>{TIPOS_AGENDA[a.tipo]}{a.primeira_vez && " · 1ª vez"}{a.encaixe && " · encaixe"}</dd></div>
         <div><dt className="muted pequeno">Convênio</dt><dd style={{ margin: 0 }}>{nomePor(props.convenios, a.convenio_id) || "Particular"}</dd></div>
         {a.local_id && <div><dt className="muted pequeno">Sala</dt><dd style={{ margin: 0 }}>{nomePor(props.locais, a.local_id)}</dd></div>}

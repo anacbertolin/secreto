@@ -1800,3 +1800,15 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   procurar em **todos os grupos** (marca o grupo sozinho ao escolher o item).
 - (26/11, só tela, pedido da recepção) Lista "Atendimentos do caixa": busca 🔎 pelo nome do paciente (sem acento) e botões
   "🕒 Por horário" / "🔤 De A a Z".
+
+## 26/11/2026 — Agenda: campo "Cirurgião" na coluna do Centro Cirúrgico (migração 0175)
+- Pergunta da dona: a Alessandra marca cirurgias e injeções na coluna "Centro Cirúrgico". Se ela escolhesse o médico
+  em "Profissional", o paciente ia para a coluna do médico. O certo é ficar no Centro Cirúrgico, com o nome do médico.
+- Migração `0175_agenda_cirurgiao`: `agendamentos.cirurgiao_id` (opcional, → profissionais). **Só informativo, para
+  aparecer na agenda: NÃO entra no faturamento, na conta, no repasse nem no XML (decisão da dona).** RLS existente cobre.
+  Advisors sem novidade. (Número 0175 para não repetir 0171–0174 de sessões em paralelo.)
+- Tela: `ehCentroCirurgico` (`lib/dados.ts`: coluna de setor com "cirúrg" no nome). Em Novo agendamento/Encaixe, com a
+  coluna Centro Cirúrgico aparece "Cirurgião (só aparece na agenda)" (lista de médicos). No agendamento aberto dá para
+  trocar o cirurgião na hora (corrigir as cirurgias já lançadas). O nome aparece em azul (🩺) no quadradinho da grade,
+  na lista e no quadro de resumo.
+- A opção "Cirurgia" já existia em **Tipo** (injeção = "Procedimento"). Convênios: só Particular e Bradesco até a migração.

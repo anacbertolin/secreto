@@ -160,6 +160,7 @@ export function ResumoAgendamento(props: {
         <dd>{[p.telefone, p.telefone_secundario].filter(Boolean).map((t) => fmtTelefone(t)).join(" · ") || "—"}</dd>
         <dt>Nascimento</dt>
         <dd>{p.data_nascimento ? `${fmtData(p.data_nascimento)} (${idade(p.data_nascimento)})` : "—"}</dd>
+        {a.cirurgiao_id && (<><dt>Cirurgião</dt><dd>{props.nomeDe(a.cirurgiao_id)}</dd></>)}
         <dt>Convênio</dt>
         <dd>{props.convenio(a.convenio_id) || "Particular"}{a.tipo !== "orientacao" && ` · ${TIPOS_AGENDA[a.tipo] ?? a.tipo}`}</dd>
         <dt>Notas</dt>

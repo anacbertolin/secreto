@@ -23,6 +23,8 @@ export interface Agendamento {
   pacientes?: { id: string; nome: string; nome_social: string | null; numero_prontuario: number; data_nascimento: string | null; telefone: string | null; telefone_secundario?: string | null; convenio_id: string | null };
   // quem incluiu / quem alterou por último (quadro de resumo da agenda; migração 0095)
   criado_por?: string | null; criado_em?: string; atualizado_por?: string | null; atualizado_em?: string;
+  // médico que vai operar, na coluna do Centro Cirúrgico (migração 0175; só aparece na agenda, não entra no XML)
+  cirurgiao_id?: string | null;
 }
 
 export const SELECT_AGENDA =
@@ -69,6 +71,11 @@ export function colunaDoAgendamento(colunas: AgendaColuna[], profissionalId: str
 /** Esta "agenda" é a da Orientação Cirúrgica? (só registro: não fatura, não entra na recepção nem na fila do médico) */
 export function ehAgendaOrientacao(p: Pick<Profissional, "funcao" | "orientacao_cirurgica"> | null | undefined): boolean {
   return !!p && p.funcao !== "medico" && p.orientacao_cirurgica === true;
+}
+
+/** Coluna de setor "Centro Cirúrgico": o paciente fica nela e o médico que opera vai no campo Cirurgião (0175) */
+export function ehCentroCirurgico(p: Pick<Profissional, "nome" | "agenda_recurso"> | null | undefined): boolean {
+  return !!p?.agenda_recurso && /cir[uú]rg/i.test(p.nome);
 }
 
 /** Nome da coluna na agenda */
