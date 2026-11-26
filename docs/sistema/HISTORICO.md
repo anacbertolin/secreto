@@ -1854,3 +1854,10 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   verde "💬 WhatsApp" abre a conversa numa janela lateral por cima da Agenda (`components/WhatsAppRapido.tsx`, reusa o
   `Chat`). Acha a conversa pelo prontuário ou pelo telefone do cadastro; sem conversa, abre a "Nova conversa" já com o
   paciente (modelo aprovado). Só aparece para quem responde algum número; só mostra números ligados à API.
+
+## 26/11/2026 — Avisos do caixa da Orientação (pedido do Dr. Gelson)
+`app/src/components/AvisoCaixaOrientacao.tsx`, para quem atende a Orientação (Vendas, Caixa e Agenda): a partir das 17h com o
+caixa de hoje aberto → faixa amarela "não esqueça de fechar" (explica que o Luciano pode não estar e quem mais confere);
+caixa de dia anterior aberto → faixa vermelha "feche primeiro" (passo a passo); ao fechar → mensagem verde (o que acontece,
+quem confere, abrir normalmente no dia seguinte). Quem confere vem do cadastro (caixa_conferir). Guia "Como funciona" ganhou
+2 itens no "E se…?" (sem mudar a versão, a contagem de leituras não recomeça).

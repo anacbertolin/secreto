@@ -42,6 +42,8 @@ const E_SE: { p: string; r: ReactNode }[] = [
   { p: "A cirurgia foi remarcada?", r: <>Troque a data pela agenda da Orientação (ou em Vendas → coluna Cirurgia). Tudo acompanha, inclusive as datas de pagamento.</> },
   { p: "A cirurgia é fora da clínica?", r: <>Marque <b>☐ Fora da clínica</b> junto com a data. Ela aparece no mapa do dia com a etiqueta roxa e recebe o check igual.</> },
   { p: "O caixa do dia já estava fechado?", r: <>Para mudar valor, forma de pagamento ou cancelar uma venda em dinheiro, peça para quem confere o caixa clicar em <b>Devolver para correção</b>.</> },
+  { p: "Quem confere o caixa (Luciano) não está na clínica?", r: <>Feche o caixa normalmente no fim do dia. Ele fica <b>“aguardando conferência”</b> até o Luciano voltar — ou outra pessoa marcada para conferir (Andrea, Soraline, Luana) confere. No dia seguinte é só abrir um caixa novo.</> },
+  { p: "Esqueci de fechar o caixa ontem?", r: <>Aparece uma faixa vermelha avisando. Feche primeiro o caixa de ontem (contando a gaveta) e depois abra o de hoje — senão as vendas em dinheiro de hoje entram no caixa de ontem.</> },
   { p: "Esqueci de marcar a data ou o check?", r: <>Em <b>Cirurgias do dia → Faltam data ou check</b> aparecem as vendas sem data e as cirurgias de dias passados sem check.</> },
 ];
 

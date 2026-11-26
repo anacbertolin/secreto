@@ -8,6 +8,7 @@ import { fmtData, fmtMoeda, isoDia, nomeExibicao, numOuNulo } from "../lib/util"
 import { FORMAS_REPASSE, varianteProcedimento, nomesProcedimentos } from "../lib/repasse";
 import { SEL_VENDA, type VendaOrientacao } from "./Repasse";
 import { GuiaVendas } from "../components/GuiaVendas";
+import { AvisoCaixaOrientacao } from "../components/AvisoCaixaOrientacao";
 
 interface ProcOrientacao { id: string; nome: string; profissional_id: string | null; valor_sugerido: number | null; tem_lente: boolean }
 interface LenteOrientacao { id: string; descricao: string; fabricante: string; premium: boolean; preco_venda: number }
@@ -56,6 +57,7 @@ export default function VendasOrientacao() {
           <button className="primario" onClick={() => setEdit("nova")}>➕ Registrar venda</button>
         </div>
       </div>
+      <AvisoCaixaOrientacao />
       <Aviso>{erro || base.erro}</Aviso>
       {!caixa.carregando && (caixa.dados
         ? <Aviso tipo="info">💵 Caixa da Orientação aberto ({fmtData(caixa.dados.data)}): as vendas em <b>dinheiro</b> entram nele automaticamente (cartão e PIX não entram no caixa). <Link to={`/caixa/${caixa.dados.id}`}>Ver o caixa →</Link></Aviso>

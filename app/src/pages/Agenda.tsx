@@ -17,6 +17,7 @@ import {
 } from "../lib/dados";
 import { STATUS_AGENDA, TIPOS_AGENDA, fmtData, fmtDataLonga, fmtHora, inicioDoDia, isoDia, somaDias, nomeExibicao } from "../lib/util";
 import { msgErro } from "../lib/supabase";
+import { AvisoCaixaOrientacao } from "../components/AvisoCaixaOrientacao";
 
 // minutos por linha da grade: 15 (médicos); 10 quando só a agenda da Orientação Cirúrgica está na tela
 const PASSO_PADRAO = 15;
@@ -344,6 +345,7 @@ export default function Agenda() {
           <button disabled={!sel} onClick={() => sel && abrir(sel)}>Abrir…</button>
         </div>
       )}
+      <AvisoCaixaOrientacao />
       {sel?.tipo === "orientacao" && sel.paciente_id && <CirurgiaVendidaAgenda pacienteId={sel.paciente_id} />}
       {aviso && <Aviso tipo={aviso.tipo === "ok" ? "ok" : undefined}>{aviso.texto}</Aviso>}
       {base.carregando || (doDia.carregando && !doDia.dados) ? <Carregando /> : medicos.length === 0 ? (
