@@ -302,6 +302,9 @@ export function CaixaDetalhe() {
   const [modal, setModal] = useState<"" | "receber" | "cortesia" | "saida" | "fechar" | "dinheiro" | "conferir" | "aprovar" | "devolver">("");
   const [pagarAt, setPagarAt] = useState<Atendimento | null>(null);
   const [incluirAt, setIncluirAt] = useState<Atendimento | null>(null);
+  // lista de atendimentos: ordem (hora ou nome) e busca pelo nome do paciente (pedido da recepção, 26/11)
+  const [ordem, setOrdem] = useState<"hora" | "nome">("hora");
+  const [busca, setBusca] = useState("");
   const [erroAcao, setErroAcao] = useState("");
 
   if (carregando && !dados) return <Carregando />;
@@ -321,6 +324,9 @@ export function CaixaDetalhe() {
   const atsValidos = ats.filter((a) => !a.cancelado);
   const cortesias = atsValidos.filter((a) => a.cortesia).length;
   const faltaReceber = n2(atsValidos.reduce((s, a) => s + saldoDe(a), 0));
+  const atsVisiveis = ats
+    .filter((a) => !busca.trim() || semAcento(a.paciente_nome).includes(semAcento(busca.trim())))
+    .sort((x, y) => (ordem === "nome" ? semAcento(x.paciente_nome).localeCompare(semAcento(y.paciente_nome)) : x.criado_em.localeCompare(y.criado_em)));
   const pagsSaldoAnterior = pags.filter((p) => p.caixa_atendimentos && p.caixa_atendimentos.caixa_id !== cx.id);
 
   async function cancelar(tabela: "caixa_atendimentos" | "caixa_pagamentos" | "caixa_saidas", linha: string, oque: string) {
@@ -415,12 +421,21 @@ export function CaixaDetalhe() {
 
       {/* ---------- Atendimentos ---------- */}
       <div className="painel rolagem" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Atendimentos do caixa</h3>
-        {ats.length === 0 ? <div className="vazio">Nenhum atendimento lançado.</div> : (
+        <div className="linha entre" style={{ flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+          <h3 style={{ margin: 0 }}>Atendimentos do caixa</h3>
+          {ats.length > 0 && (
+            <div className="linha nao-imprimir" style={{ flexWrap: "wrap", gap: 6 }}>
+              <input placeholder="🔎 Procurar paciente" value={busca} onChange={(e) => setBusca(e.target.value)} style={{ minWidth: 200 }} />
+              <button className={ordem === "hora" ? "primario" : ""} onClick={() => setOrdem("hora")}>🕒 Por horário</button>
+              <button className={ordem === "nome" ? "primario" : ""} onClick={() => setOrdem("nome")}>🔤 De A a Z</button>
+            </div>
+          )}
+        </div>
+        {ats.length === 0 ? <div className="vazio">Nenhum atendimento lançado.</div> : atsVisiveis.length === 0 ? <div className="vazio">Nenhum paciente com “{busca}” neste caixa.</div> : (
           <table className="tabela">
             <thead><tr><th>Hora</th><th>Paciente</th><th>Médico / profissional</th><th>O que foi feito</th><th style={num}>Valor</th><th>Pagamento</th><th style={num}>Falta</th><th>Lançou</th><th className="nao-imprimir"></th></tr></thead>
             <tbody>
-              {ats.map((a) => {
+              {atsVisiveis.map((a) => {
                 const saldo = saldoDe(a);
                 return (
                   <tr key={a.id} style={{ opacity: a.cancelado ? 0.5 : 1 }}>

@@ -1798,3 +1798,5 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
 - (26/11, só tela) "Exercício Ortóptico" (R$ 50) e "10 sessões" (R$ 400) já existiam, mas apareciam em "Procedimento" (tipo terapia)
   e a recepção não achava: no caixa, terapia agora aparece em **Exame** (junto do Teste Ortóptico). A busca do recebimento passou a
   procurar em **todos os grupos** (marca o grupo sozinho ao escolher o item).
+- (26/11, só tela, pedido da recepção) Lista "Atendimentos do caixa": busca 🔎 pelo nome do paciente (sem acento) e botões
+  "🕒 Por horário" / "🔤 De A a Z".
