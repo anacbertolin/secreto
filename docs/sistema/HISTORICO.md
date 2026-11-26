@@ -1832,3 +1832,12 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   (menos na Orientação Cirúrgica). Sugere "Seguimento" sozinho se o paciente já tem atendimento (agendamento atendido
   ou prontuário do Micrologos) e no tipo Retorno. Grava em `agendamentos.primeira_vez` (sem mudança de banco).
 - No agendamento aberto dá para trocar Primeira vez/Seguimento e Encaixe (corrigir o que já foi lançado).
+
+### 26/11 — Caixa: "Entregar dinheiro ao administrativo" com check (migração 0171, pedido da dona)
+- Quando junta muito dinheiro na gaveta (ex.: R$ 2.000 de laser), a recepção sobe com o dinheiro antes de fechar o caixa.
+- O botão "Saída / sangria" virou dois: **💼 Entregar dinheiro ao administrativo** (`caixa_saidas.tipo = 'entrega_adm'`) e
+  **🧾 Despesa (dinheiro do caixa)** (`'despesa'`). Os dois descontam do dinheiro esperado na gaveta.
+- A entrega fica "⏳ aguardando check" até quem tem `profissionais.caixa_recebe_entrega` (Luciano, Soraline, Andrea — decisão da dona)
+  ou a administração clicar **✔️ Recebi** (`caixa_entrega_receber`; vale mesmo com o caixa já fechado). Entrega recebida não pode ser cancelada.
+  Tela inicial do Caixa mostra para eles as entregas esperando check. Fechar o caixa com entrega sem check: só avisa, não trava.
+- Marcação "Recebe o dinheiro" na tela Equipe. Teste no banco (desfeito) OK. Build OK.
