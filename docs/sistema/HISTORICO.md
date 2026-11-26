@@ -1790,3 +1790,6 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   **Campo Visual — Dual (parceria)** (R$ 140). A Dual é clínica parceira que manda pacientes para campo visual.
 - Em aberto: os itens antigos da Micrologos "Consulta Glaucoma" (R$ 600) e "Consulta Córnea" (R$ 500) têm valores trocados em relação
   ao que a recepção informou — perguntar à dona se desativa. Regras da Dual (exames, valores, descontos, quem paga) a levantar no Micrologos.
+- (0169) Dona confirmou: consultas diferenciadas têm **preço por médico**. Incluídas também **Consulta Glaucoma — Dr. Pedro** (R$ 600)
+  e **Consulta Córnea — Dr. Max** (R$ 500, valor a confirmar). Genéricos da Micrologos mantidos. Retina = só Dr. Gelson (R$ 600, item único).
+  Dual: paciente paga na hora no caixa (provisório; muda se a Dual pagar depois).
