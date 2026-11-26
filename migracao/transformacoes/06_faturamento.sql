@@ -34,7 +34,8 @@ select btrim(pr.id_produto), '00', legacy_micrologos.txt(pr.descricao),
     else 'procedimento' end,
   'Código interno do Micrologos (usado em contas antigas).'
 from legacy_micrologos.bruto_produtos pr
-where btrim(pr.id_produto) in (select distinct btrim(id_produto) from legacy_micrologos.bruto_faturamentos)
+where btrim(pr.id_produto) in (select distinct btrim(id_produto) from legacy_micrologos.bruto_faturamentos
+                                union select distinct btrim(id_produto) from legacy_micrologos.bruto_produtos_movimentacao)
   and legacy_micrologos.txt(pr.descricao) is not null
   and not exists (select 1 from public.procedimentos x where x.tabela = '00' and x.codigo = btrim(pr.id_produto));
 
@@ -56,6 +57,7 @@ select f.id_faturamento, f.id_paciente_conta, f.id_produto,
   legacy_micrologos.txt(f.matricula_convenio) as matricula, legacy_micrologos.data(f.data_validade_convenio) as validade,
   f.status, legacy_micrologos.txt(f.plano_autorizado) as autorizado, legacy_micrologos.txt(f.observacao) as obs,
   legacy_micrologos.valor(f.valor_original) as valor_original,
+  legacy_micrologos.valor(f.valor_unitario_primeiro) as v1, legacy_micrologos.valor(f.valor_unitario_segundo) as v2,
   row_number() over (partition by f.id_paciente_conta order by f.id_faturamento::numeric) as ordem
 from legacy_micrologos.bruto_faturamentos f;
 create index on _it (id_paciente_conta);
@@ -72,12 +74,37 @@ where fat_ou_staf = 'F' and nullif(btrim(id_faturamento), '') is not null
 group by 1;
 create index on _pg (id_faturamento);
 
+-- Produtos lançados na conta (PRODUTOS_MOVIMENTACAO): pacotes da Unimed (Eylia, Ozurdex, facectomia), lentes,
+-- medicamentos e materiais. Valor × quantidade financeira (assim o total bate com a cobrança do Micrologos).
+create temp table _mov as
+select m.id_produto_movimentacao as id_mov, m.id_paciente_conta, m.id_produto,
+  -- quantidade financeira zerada (2 casos): entra como 1 × R$ 0,00, para não mudar o total
+  case when legacy_micrologos.valor(m.quantidade_financeira) > 0 then legacy_micrologos.valor(m.valor) else 0 end as valor,
+  case when legacy_micrologos.valor(m.quantidade_financeira) > 0 then round(legacy_micrologos.valor(m.quantidade_financeira), 2) else 1 end as qtd,
+  legacy_micrologos.novo_id('medico', m.id_medico) as prof,
+  coalesce(legacy_micrologos.data(m.data), legacy_micrologos.data(m.data_inclusao)) as data,
+  m.procedimento_principal in ('1', 'S') as principal,
+  legacy_micrologos.valor(m.valor_original) as valor_original,
+  legacy_micrologos.valor(m.valor_unitario_primeiro) as v1, legacy_micrologos.valor(m.valor_unitario_segundo) as v2,
+  legacy_micrologos.txt(m.observacao) as obs, legacy_micrologos.txt(m.lote) as lote_produto,
+  nullif(btrim(m.id_faturamento), '0') as id_faturamento_ligado,
+  row_number() over (partition by m.id_paciente_conta order by m.id_produto_movimentacao::numeric) as ordem
+from legacy_micrologos.bruto_produtos_movimentacao m
+where nullif(btrim(m.id_paciente_conta), '') is not null and btrim(m.id_paciente_conta) <> '0'
+  and legacy_micrologos.valor(m.valor) is not null;
+create index on _mov (id_paciente_conta);
+analyze _mov;
+
 create temp table _soma as
-select id_paciente_conta, round(sum(round(valor * qtd, 2) + staff), 2) as total, count(*) as n,
-  (array_agg(prof order by principal desc, id_faturamento::numeric) filter (where prof is not null))[1] as prof,
-  (array_agg(matricula order by principal desc, id_faturamento::numeric) filter (where matricula is not null))[1] as matricula,
-  (array_agg(validade order by principal desc, id_faturamento::numeric) filter (where validade is not null))[1] as validade
-from _it group by 1;
+select id_paciente_conta, round(sum(total), 2) as total, count(*) as n,
+  (array_agg(prof order by principal desc, ordem) filter (where prof is not null))[1] as prof,
+  (array_agg(matricula order by principal desc, ordem) filter (where matricula is not null))[1] as matricula,
+  (array_agg(validade order by principal desc, ordem) filter (where validade is not null))[1] as validade
+from (
+  select id_paciente_conta, round(valor * qtd, 2) + staff as total, prof, principal, ordem, matricula, validade from _it
+  union all
+  select id_paciente_conta, round(valor * qtd, 2), prof, principal, 1000 + ordem, null, null from _mov
+) u group by 1;
 create index on _soma (id_paciente_conta);
 analyze _soma;
 
@@ -175,7 +202,7 @@ select m.novo_id, c.pac, legacy_micrologos.novo_id('agenda', c.id_agenda), c.dt,
        when c.tiss_tipo_guia = '06' then 'honorarios' else 'sadt' end,
   c.guia, legacy_micrologos.txt(c.plano_guia_operadora), legacy_micrologos.txt(c.tiss_senha_autorizacao),
   legacy_micrologos.data(c.tiss_senha_data_autorizacao), legacy_micrologos.data(c.tiss_senha_data_validade),
-  c.matricula, c.validade, c.prof, legacy_micrologos.txt(c.tiss_indicacao_clinica), c.cid_cod,
+  coalesce(c.matricula, (select pp.convenio_carteirinha from public.pacientes pp where pp.id = c.pac)), c.validade, c.prof, legacy_micrologos.txt(c.tiss_indicacao_clinica), c.cid_cod,
   c.st::public.status_conta, lt.id,
   coalesce(c.total, 0), 0,
   case when c.st = 'paga' then coalesce(c.total, 0) end,
@@ -189,7 +216,9 @@ select m.novo_id, c.pac, legacy_micrologos.novo_id('agenda', c.id_agenda), c.dt,
     'pagamento', case when c.presumido then 'presumido' end,
     'sem_cobranca', case when c.conv is not null and not c.em_cob then true end,
     'solicitante', legacy_micrologos.txt(c.tiss_solic_prof_nome),
-    'tipo_consulta', nullif(btrim(c.tiss_tipo_consulta), ''))),
+    'tipo_consulta', nullif(btrim(c.tiss_tipo_consulta), ''),
+    'tipo_atendimento', nullif(btrim(c.tiss_tipo_atendimento), ''),
+    'data_solicitacao', legacy_micrologos.data(c.tiss_solic_prof_data))),
   coalesce(legacy_micrologos.data_hora(c.data_inclusao), c.dt::timestamptz),
   hs.id,
   case when c.conv is not null and c.tiss_tipo_guia in ('03', '06') then
@@ -230,7 +259,7 @@ select mi.novo_id, mc.novo_id, p.id,
     'status_micrologos', nullif(btrim(i.status), ''), 'principal', case when i.principal then true end,
     'valor_original', case when i.valor_original is distinct from i.valor then i.valor_original end,
     'recebido_micrologos', pg.recebido, 'glosa_micrologos', nullif(pg.glosa, 0), 'pago_em', pg.pago_em,
-    'recurso', pg.recurso, 'autorizado', i.autorizado, 'observacao', i.obs)),
+    'recurso', pg.recurso, 'autorizado', i.autorizado, 'observacao', i.obs, 'v1', i.v1, 'v2', i.v2)),
   coalesce(i.data, ct.data_atendimento)::timestamptz + i.ordem * interval '1 second',  -- mantém a ordem do Micrologos
   case when ct.tipo_guia = 'honorarios' then '00' end,
   -- fator de redução/acréscimo informado na guia: valor cobrado ÷ valor de tabela (ex.: facectomia Bradesco = 2,00)
@@ -293,6 +322,37 @@ join legacy_micrologos.mapa_ids mc on mc.entidade = 'conta' and mc.legacy_id = b
 join public.contas ct on ct.id = mc.novo_id
 left join _proc p on p.id_produto = btrim(i.id_produto)
 left join public.procedimentos pr on pr.id = p.id
+on conflict (id) do nothing;
+
+-- Produtos da conta (pacotes, lentes, medicamentos, materiais)
+insert into legacy_micrologos.mapa_ids (entidade, legacy_id, novo_id, tabela_nova)
+select 'item_produto', btrim(m.id_mov), gen_random_uuid(), 'public.conta_itens'
+from _mov m join legacy_micrologos.mapa_ids mc on mc.entidade = 'conta' and mc.legacy_id = btrim(m.id_paciente_conta)
+on conflict (entidade, legacy_id) do nothing;
+
+insert into public.conta_itens (id, conta_id, procedimento_id, tabela, codigo, descricao, data_execucao, quantidade,
+  valor_unitario, profissional_id, glosa_valor, legado, criado_em, fator)
+select mm.novo_id, mc.novo_id, p.id,
+  coalesce(pc.tabela_guia, case when p.tuss is not null then '22' else '00' end),
+  coalesce(pc.codigo_guia, p.tuss, btrim(m.id_produto)),
+  coalesce(pr.descricao, 'Produto ' || btrim(m.id_produto) || ' do Micrologos'),
+  coalesce(m.data, ct.data_atendimento), m.qtd, coalesce(m.valor, 0),
+  coalesce(m.prof, ct.profissional_id), 0,
+  jsonb_strip_nulls(jsonb_build_object('origem', 'Micrologos', 'id_produto_movimentacao', btrim(m.id_mov), 'produto', true,
+    'principal', case when m.principal then true end, 'id_faturamento', m.id_faturamento_ligado,
+    'valor_original', case when m.valor_original is distinct from m.valor then m.valor_original end,
+    'lote', m.lote_produto, 'observacao', m.obs, 'v1', m.v1, 'v2', m.v2)),
+  coalesce(m.data, ct.data_atendimento)::timestamptz + (500 + m.ordem) * interval '1 second',
+  coalesce(case when m.valor_original > 0 and round(m.valor / m.valor_original, 2) between 0.1 and 10
+                then round(m.valor / m.valor_original, 2) end, 1)
+from _mov m
+join legacy_micrologos.mapa_ids mm on mm.entidade = 'item_produto' and mm.legacy_id = btrim(m.id_mov)
+join legacy_micrologos.mapa_ids mc on mc.entidade = 'conta' and mc.legacy_id = btrim(m.id_paciente_conta)
+join public.contas ct on ct.id = mc.novo_id
+left join _proc p on p.id_produto = btrim(m.id_produto)
+left join public.procedimentos pr on pr.id = p.id
+left join lateral (select x.codigo_guia, x.tabela_guia from public.precos x
+                   where x.procedimento_id = p.id and x.plano_id = ct.plano_id limit 1) pc on true
 on conflict (id) do nothing;
 
 -- honorário da equipe sai na guia com o MESMO código/tabela do procedimento de origem (como no XML do Micrologos)

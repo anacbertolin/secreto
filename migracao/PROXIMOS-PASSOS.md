@@ -202,3 +202,7 @@
   `docs/sistema/tiss-gerador.md` ("Comparação com XML reais"). Migração 0169: `profissional_dados_tiss` (nome na guia e
   CPF do médico, preenchidos pelo 03), `conta_itens.fator` e `conta_itens.numero_guia` (guia própria do auxiliar).
   ❓ Falta tela para cadastrar nome-na-guia/CPF de médico NOVO (hoje só vem do Micrologos) e para editar o fator do item.
+- 26/11 (noite): 2ª rodada de XML (Amil, Unimed Consumed Cirurgia, Geap, Hapvida) — as 9 cobranças testadas ficaram
+  iguais ao Micrologos (ver `docs/sistema/tiss-gerador.md`). A carga 06 passou a trazer também os produtos da conta
+  (PRODUTOS_MOVIMENTACAO). Migração 0172 (ordem dos itens do Bradesco). Próximos convênios a testar: Assim, Klini,
+  Golden Cross, Mediservice, Porto Seguro, Unimed Gisele/Gelson, Fundação Itaú, Notre Dame, Assist, Bradesco Operadora.
