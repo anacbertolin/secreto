@@ -8,6 +8,7 @@ import { supabase, msgErro } from "../lib/supabase";
 import { useAuth, type Profissional } from "../lib/auth";
 import { useCarregar, ok, Aviso, Carregando, Etiqueta, Modal, Campo } from "../components/ui";
 import { fmtData, fmtDataHora, fmtMoeda } from "../lib/util";
+import { AvisoCaixaOrientacao, MensagemCaixaFechado } from "../components/AvisoCaixaOrientacao";
 
 // ------------------------------------------------------------------ tipos e utilidades
 type Setor = "recepcao" | "orientacao";
@@ -200,6 +201,7 @@ export default function Caixa() {
           : "Recebimentos do dia, saídas e fechamento (substitui a folha de papel)"}</p></div>
         {papel.lancar && !aberto && !carregando && <button className="primario" onClick={() => setAbrir(true)}>🔓 Abrir caixa</button>}
       </div>
+      <AvisoCaixaOrientacao />
       {setores.length > 1 && (
         <div className="linha" style={{ marginBottom: 14 }}>
           {setores.map((s) => <button key={s} className={s === setor ? "primario" : ""} onClick={() => trocar(s)}>{s === "recepcao" ? "🏥 Recepção" : "🩺 Orientação Cirúrgica"}</button>)}
@@ -318,6 +320,7 @@ export function CaixaDetalhe() {
     }
     return { cx, ats, pags, sais, pendentes };
   }, [id]);
+  const [fechouAgora, setFechouAgora] = useState(false);
   const [modal, setModal] = useState<"" | "receber" | "cortesia" | "saida" | "entrega" | "fechar" | "dinheiro" | "conferir" | "aprovar" | "devolver">("");
   const [pagarAt, setPagarAt] = useState<Atendimento | null>(null);
   const [incluirAt, setIncluirAt] = useState<Atendimento | null>(null);
@@ -393,6 +396,7 @@ export function CaixaDetalhe() {
         </div>
       </div>
       <Aviso>{erroAcao}</Aviso>
+      {fechouAgora && cx.setor === "orientacao" && cx.status !== "aberto" && <MensagemCaixaFechado data={cx.data} />}
       {cx.status === "cancelado" && (
         <Aviso tipo="info">Caixa cancelado por {nomes.nomeCompleto(cx.cancelado_por)} em {fmtDataHora(cx.cancelado_em)}: <b>{cx.motivo_cancelamento}</b>.</Aviso>
       )}
@@ -594,7 +598,7 @@ export function CaixaDetalhe() {
       {modal === "cortesia" && <NovoAtendimento cortesia caixaId={cx.id} medicos={nomes.medicos} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
       {modal === "saida" && <NovaSaida caixaId={cx.id} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
       {modal === "entrega" && <NovaSaida entrega caixaId={cx.id} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
-      {modal === "fechar" && <FecharCaixa cx={cx} esperado={esperadoDinheiro} porForma={porForma} faltaReceber={faltaReceber} entregasPendentes={n2(entregasPendentes.reduce((t, x) => t + Number(x.valor), 0))} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
+      {modal === "fechar" && <FecharCaixa cx={cx} esperado={esperadoDinheiro} porForma={porForma} faltaReceber={faltaReceber} entregasPendentes={n2(entregasPendentes.reduce((t, x) => t + Number(x.valor), 0))} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); setFechouAgora(true); recarregar(); }} />}
       {modal === "dinheiro" && <ConferirDinheiro cx={cx} souQuemFechou={!!eu && cx.fechado_por === eu.id} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
       {(modal === "conferir" || modal === "aprovar" || modal === "devolver") && (
         <Decisao tipo={modal} cx={cx} souQuemFechou={!!eu && cx.fechado_por === eu.id} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />
