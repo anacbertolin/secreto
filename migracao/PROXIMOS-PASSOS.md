@@ -259,3 +259,5 @@ Roteiro (dia da troca, com o Marcio):
 6. No Supabase: `select setval('public.pacientes_numero_prontuario_seq', (select max(numero_prontuario) from
    public.pacientes where numero_prontuario < 200000))` e `setval('public.lotes_numero_seq', max(numero))`.
 7. Avisar a equipe; Micrologos só para consulta. Depois: apagar a chave `migracao_claude` no Supabase (opcional).
+- 26/11: dona respondeu — os 14 hospitais ficam todos (já estavam ativos); Epilação Bradesco Empresa = R$ 54,57; Bradesco
+  Individual unificado no Empresa (plano inativo, pacientes passam para o Empresa; migração 0185 e 01_pacientes).

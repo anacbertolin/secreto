@@ -255,7 +255,8 @@ join legacy_micrologos.mapa_ids m on m.entidade = 'paciente' and m.legacy_id = p
 left join _cpf_dono d on d.cpf_ok = p.cpf_ok
 left join _cpf_dono d2 on d2.cpf_ok = p.cpf_ok and d2.num <> p.num
 left join _tel t on t.num = p.num
-left join public.convenio_planos pl on pl.micrologos_codigo::text = btrim(p.id_convenio)
+-- Bradesco Individual (plano 5) foi unificado no Bradesco Empresa (plano 4) — dona, 26/11/2026 (migração 0185)
+left join public.convenio_planos pl on pl.micrologos_codigo::text = case btrim(p.id_convenio) when '5' then '4' else btrim(p.id_convenio) end
 on conflict (id) do nothing;
 
 -- 6) Próximo paciente novo continua depois do maior nº do Micrologos
