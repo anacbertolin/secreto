@@ -156,3 +156,25 @@ SP/SADT, 373), 11399 (Hapvida consultas, 1923), 11400 (Hapvida SP/SADT, 1924) + 
 - **Carga das contas:** os produtos lançados na conta (PRODUTOS_MOVIMENTACAO: pacotes Unimed, lentes, medicamentos —
   4,5 mil itens, R$ 6,3 milhões) agora entram como itens. Com isso 9.921 de 10.904 cobranças batem centavo a centavo
   com o total do Micrologos (antes 9.212).
+
+## 3ª rodada — Bradesco Operadora, Mediservice, Porto Seguro, Fundação Itaú, Saúde Caixa, Unimed Max/Gelson/Gisele, Select (26/11/2026, noite)
+16 cobranças (11050, 11348, 11349, 11361, 11359, 11367, 11371, 11363, 11362, 11357, 11358, 11393, 11253, 11394, 11043,
+11044) + as 9 anteriores de novo: **as 25 ficaram iguais ao Micrologos, com os mesmos totais.** Regras novas:
+- **Uma conta pode ter itens em cobranças diferentes** (Unimed por médico: o honorário do auxiliar vai na "Unimed Max",
+  o do cirurgião na Unimed dele). A carga grava a cobrança de cada item (`conta_itens.legado->>'id_cobranca'`, de
+  FATURAMENTOS_PAGAMENTOS; índice na migração 0173) e o XML de uma cobrança antiga leva só os itens dela, inclusive de
+  contas de outra cobrança. O convênio do lote é o da própria cobrança (`id_convenio_mestre`).
+  Na cobrança do auxiliar a guia sai com o nº de guia próprio da participação dele.
+- Unimed por médico (prestador = o próprio médico): contratado solicitante = o médico solicitante, com o código de
+  cooperado dele (de qualquer convênio em `profissional_convenio_codigos`).
+- Honorários com quantidade 2 (cirurgia nos 2 olhos): via 3 e fator 2,00. Visita hospitalar (10102019) e convênios com
+  `tiss_xmlcom_horario_produto`: hora inicial/final do item; visita sem via de acesso.
+- `tiss_sem_via_acesso` (Unimed Gelson, Fundação Itaú): sem via de acesso. `tiss_cid_na_obs` (Porto, Fundação): observação
+  = observação da conta + "Conta nº". Hospital pelo CNPJ (`cnpjLocalExecutante`) só quando o convênio identifica por CNPJ
+  (`tiss_cpfcnpj_codoper = C`, Mediservice).
+- Nome do contratado solicitante = "nome do prestador" do convênio (Mediservice "... LTDA ME"; Unimed Gisele "GISELE MOURA
+  BRASIL"); "Consumed Olhos" (Unimed Cirurgia) vira a razão social.
+- Grau de participação do item (01 auxiliar) também na SP/SADT.
+- Carga 03: quem já estava na Equipe sem conselho recebe o do Micrologos (ex.: Luciano, COREN, instrumentador).
+- Não testados (sem XML): Bradesco Operadora 11381/11382 e Klini 11402 (sem lote no Micrologos), Assist 11135 (arquivo
+  do lote 561 não achado em C:\Assist).

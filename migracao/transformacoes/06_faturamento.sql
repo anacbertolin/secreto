@@ -57,6 +57,7 @@ select f.id_faturamento, f.id_paciente_conta, f.id_produto,
   legacy_micrologos.txt(f.matricula_convenio) as matricula, legacy_micrologos.data(f.data_validade_convenio) as validade,
   f.status, legacy_micrologos.txt(f.plano_autorizado) as autorizado, legacy_micrologos.txt(f.observacao) as obs,
   legacy_micrologos.valor(f.valor_original) as valor_original,
+  legacy_micrologos.txt(f.hora) as hora_ini, legacy_micrologos.txt(f.hora_fim) as hora_fim,
   legacy_micrologos.valor(f.valor_unitario_primeiro) as v1, legacy_micrologos.valor(f.valor_unitario_segundo) as v2,
   row_number() over (partition by f.id_paciente_conta order by f.id_faturamento::numeric) as ordem
 from legacy_micrologos.bruto_faturamentos f;
@@ -73,6 +74,20 @@ from legacy_micrologos.bruto_faturamentos_pagamentos
 where fat_ou_staf = 'F' and nullif(btrim(id_faturamento), '') is not null
 group by 1;
 create index on _pg (id_faturamento);
+
+-- Em qual cobrança cada item foi enviado (FATURAMENTOS_PAGAMENTOS). Uma mesma conta pode ter itens em cobranças
+-- diferentes: na Unimed por médico, o honorário do auxiliar vai na "Unimed Max" e o do cirurgião na Unimed dele.
+create temp table _cob_item as
+select case when fat_ou_staf = 'S' then 'S' when nullif(btrim(id_produto_movimentacao), '') is not null then 'M' else 'F' end as tipo,
+  case when fat_ou_staf = 'S' then btrim(id_faturamento_staff_medico)
+       when nullif(btrim(id_produto_movimentacao), '') is not null then btrim(id_produto_movimentacao)
+       else btrim(id_faturamento) end as id_origem,
+  max(btrim(id_cobranca)) as id_cobranca
+from legacy_micrologos.bruto_faturamentos_pagamentos
+where nullif(btrim(id_cobranca), '') is not null and btrim(id_cobranca) <> '0'
+group by 1, 2;
+create index on _cob_item (tipo, id_origem);
+analyze _cob_item;
 
 -- Produtos lançados na conta (PRODUTOS_MOVIMENTACAO): pacotes da Unimed (Eylia, Ozurdex, facectomia), lentes,
 -- medicamentos e materiais. Valor × quantidade financeira (assim o total bate com a cobrança do Micrologos).
@@ -172,7 +187,9 @@ join _cobagg g on g.cob_id = btrim(b.id_cobranca) and g.conv is not null
 on conflict (entidade, legacy_id) do nothing;
 
 insert into public.lotes (id, numero, convenio_id, competencia, status, enviado_em, protocolo, observacoes, arquivado, legado, criado_em)
-select m.novo_id, btrim(b.id_cobranca)::bigint, cv.conv,
+select m.novo_id, btrim(b.id_cobranca)::bigint,
+  -- convênio da própria cobrança (Unimed Max ≠ Unimed Gelson, mesmo quando a conta é de outro)
+  coalesce((select x.id from public.convenios x where x.micrologos_codigo::text = btrim(b.id_convenio_mestre)), cv.conv),
   date_trunc('month', coalesce(legacy_micrologos.data(b.data_inicio), legacy_micrologos.data(b.data_inclusao)))::date,
   (case when cv.abertas = 0 then 'pago' else 'enviado' end)::public.status_lote,
   coalesce(legacy_micrologos.data(b.data_entrega), legacy_micrologos.data(b.data_fim)),
@@ -259,7 +276,9 @@ select mi.novo_id, mc.novo_id, p.id,
     'status_micrologos', nullif(btrim(i.status), ''), 'principal', case when i.principal then true end,
     'valor_original', case when i.valor_original is distinct from i.valor then i.valor_original end,
     'recebido_micrologos', pg.recebido, 'glosa_micrologos', nullif(pg.glosa, 0), 'pago_em', pg.pago_em,
-    'recurso', pg.recurso, 'autorizado', i.autorizado, 'observacao', i.obs, 'v1', i.v1, 'v2', i.v2)),
+    'recurso', pg.recurso, 'autorizado', i.autorizado, 'observacao', i.obs, 'v1', i.v1, 'v2', i.v2,
+    'hora_ini', i.hora_ini, 'hora_fim', i.hora_fim,
+    'id_cobranca', (select x.id_cobranca from _cob_item x where x.tipo = 'F' and x.id_origem = btrim(i.id_faturamento)))),
   coalesce(i.data, ct.data_atendimento)::timestamptz + i.ordem * interval '1 second',  -- mantém a ordem do Micrologos
   case when ct.tipo_guia = 'honorarios' then '00' end,
   -- fator de redução/acréscimo informado na guia: valor cobrado ÷ valor de tabela (ex.: facectomia Bradesco = 2,00)
@@ -306,7 +325,8 @@ select ms.novo_id, mc.novo_id, null, '00', 'HONOR',
   coalesce(pr.descricao, 'Produto ' || btrim(i.id_produto) || ' do Micrologos'),
   coalesce(i.data, ct.data_atendimento), 1, st.valor, coalesce(st.prof, i.prof, ct.profissional_id), 0,
   jsonb_strip_nulls(jsonb_build_object('origem', 'Micrologos', 'id_faturamento', btrim(i.id_faturamento),
-    'id_staff', btrim(st.id_staff), 'staff', true, 'categoria', st.categoria)),
+    'id_staff', btrim(st.id_staff), 'staff', true, 'categoria', st.categoria,
+    'id_cobranca', (select x.id_cobranca from _cob_item x where x.tipo = 'S' and x.id_origem = btrim(st.id_staff)))),
   coalesce(i.data, ct.data_atendimento)::timestamptz + (1000 + i.ordem) * interval '1 second',
   case when st.categoria ilike 'primeiro aux%' then '01' when st.categoria ilike 'segundo aux%' then '02'
        when st.categoria ilike 'instrument%' then '05' when st.categoria ilike 'anest%' then '06' else '00' end,
@@ -341,7 +361,8 @@ select mm.novo_id, mc.novo_id, p.id,
   jsonb_strip_nulls(jsonb_build_object('origem', 'Micrologos', 'id_produto_movimentacao', btrim(m.id_mov), 'produto', true,
     'principal', case when m.principal then true end, 'id_faturamento', m.id_faturamento_ligado,
     'valor_original', case when m.valor_original is distinct from m.valor then m.valor_original end,
-    'lote', m.lote_produto, 'observacao', m.obs, 'v1', m.v1, 'v2', m.v2)),
+    'lote', m.lote_produto, 'observacao', m.obs, 'v1', m.v1, 'v2', m.v2,
+    'id_cobranca', (select x.id_cobranca from _cob_item x where x.tipo = 'M' and x.id_origem = btrim(m.id_mov)))),
   coalesce(m.data, ct.data_atendimento)::timestamptz + (500 + m.ordem) * interval '1 second',
   coalesce(case when m.valor_original > 0 and round(m.valor / m.valor_original, 2) between 0.1 and 10
                 then round(m.valor / m.valor_original, 2) end, 1)

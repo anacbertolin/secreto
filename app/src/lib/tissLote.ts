@@ -9,18 +9,33 @@ export interface ResultadoXML { nomeArquivo: string; bytes: Uint8Array; guias: n
 
 /** Gera o XML (e o .zip, se o convênio exigir) de um lote. Lança erro com a lista do que falta corrigir. */
 export async function gerarXmlDoLote(loteId: string): Promise<ResultadoXML> {
-  const lote = ok(await supabase.from("lotes").select("id, numero, competencia, convenio_id").eq("id", loteId).single()) as
-    { id: string; numero: number; competencia: string; convenio_id: string };
+  const lote = ok(await supabase.from("lotes").select("id, numero, competencia, convenio_id, legado").eq("id", loteId).single()) as
+    { id: string; numero: number; competencia: string; convenio_id: string; legado: { id_cobranca?: string } | null };
   const conv = ok(await supabase.from("convenios").select("nome, registro_ans, codigo_prestador, versao_tiss, tiss").eq("id", lote.convenio_id).single()) as
     { nome: string; registro_ans: string | null; codigo_prestador: string | null; versao_tiss: string | null; tiss: TissConv | null };
-  const contas = ok(await supabase.from("contas")
-    .select("id, tipo_guia, numero_guia_prestador, numero_guia_operadora, senha_autorizacao, data_autorizacao, validade_senha, carteirinha, data_atendimento, profissional_id, solicitante_id, indicacao_clinica, observacoes, plano_id, hospital_id, guia_solicitacao, legado, agendamentos(primeira_vez, tipo), pacientes(nome), conta_itens(id, tabela, codigo, descricao, data_execucao, quantidade, valor_unitario, olho, profissional_id, grau_participacao, fator, numero_guia, numero_guia_operadora, legado, criado_em, procedimentos(tipo))")
+  const SEL = "id, tipo_guia, numero_guia_prestador, numero_guia_operadora, senha_autorizacao, data_autorizacao, validade_senha, carteirinha, data_atendimento, profissional_id, solicitante_id, indicacao_clinica, observacoes, plano_id, hospital_id, guia_solicitacao, legado, agendamentos(primeira_vez, tipo), pacientes(nome), conta_itens(id, tabela, codigo, descricao, data_execucao, quantidade, valor_unitario, olho, profissional_id, grau_participacao, fator, numero_guia, numero_guia_operadora, legado, criado_em, procedimentos(tipo))";
+  const contas = ok(await supabase.from("contas").select(SEL)
     .eq("lote_id", loteId).neq("status", "cancelada").order("data_atendimento")
     .order("criado_em", { referencedTable: "conta_itens" })) as unknown as ContaDb[];
+  // Cobrança vinda do Micrologos: também as contas de OUTRA cobrança que têm itens enviados nesta
+  // (Unimed por médico: o honorário do auxiliar vai na cobrança da Unimed dele)
+  const cob = lote.legado?.id_cobranca;
+  if (cob) {
+    const ids = (ok(await supabase.from("conta_itens").select("conta_id").eq("legado->>id_cobranca", cob)) as { conta_id: string }[])
+      .map((x) => x.conta_id).filter((id, k, a) => a.indexOf(id) === k && !contas.some((c) => c.id === id));
+    if (ids.length) {
+      const extra = ok(await supabase.from("contas").select(SEL).in("id", ids).neq("status", "cancelada")
+        .order("criado_em", { referencedTable: "conta_itens" })) as unknown as ContaDb[];
+      contas.push(...extra);
+      contas.sort((a, b) => a.data_atendimento.localeCompare(b.data_atendimento));
+    }
+  }
   const profs = ok(await supabase.from("profissionais").select("id, nome, conselho, numero_conselho, uf_conselho, cbo")) as ProfDb[];
   const codigos = ok(await supabase.from("profissional_convenio_codigos")
     .select("profissional_id, plano_id, hospital_id, codigo_executante, codigo_solicitante, executa_como_id, solicita_como_id, grau_participacao")
     .eq("convenio_id", lote.convenio_id)) as CodigoDb[];
+  const codigosTodos = ok(await supabase.from("profissional_convenio_codigos")
+    .select("profissional_id, plano_id, hospital_id, codigo_executante, codigo_solicitante, executa_como_id, solicita_como_id, grau_participacao")) as CodigoDb[];
   const hs = ok(await supabase.from("hospitais").select("id, nome, cnpj, cnes, hospital_convenio_codigos(convenio_id, codigo_operadora, cnes)")) as
     { id: string; nome: string; cnpj: string | null; cnes: string | null; hospital_convenio_codigos: { convenio_id: string; codigo_operadora: string | null; cnes: string | null }[] }[];
   const hospitais: HospitalDb[] = hs.map((h) => {
@@ -32,7 +47,7 @@ export async function gerarXmlDoLote(loteId: string): Promise<ResultadoXML> {
   const dadosTiss = ok(await supabase.rpc("tiss_dados_medicos")) as
     { profissional_id: string; nome_guia: string | null; cpf: string | null }[];
 
-  const m = montarLoteTISS({ lote, conv, contas, profs, codigos, hospitais, dadosTiss });
+  const m = montarLoteTISS({ lote, conv, contas, profs, codigos, hospitais, dadosTiss, codigosTodos });
   if (m.erros.length) throw new Error([...new Set(m.erros)].join("\n"));
   const numeroLote = ok(await supabase.rpc("lote_numero_tiss", { p_lote: loteId })) as number;
   const arq = gerarLote({ config: m.config, numeroLote, competencia: m.competencia, dataHora: new Date(), guias: m.guias });
