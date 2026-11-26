@@ -13,6 +13,8 @@
 --   com a tabela de preços particular (migração 0086).
 -- - Inativos pela dona (não atendidos mais): Dort Prev, Medprev, Appai, Assist, Golden Cross, Golden, Assim, Notre Dame
 --   e Unimed Pedro, além do que já estiver inativo no Micrologos. Entram como inativos (histórico de contas).
+-- - Unimed (cód. 8, 10, 15, 22, 26, 29) foi criada PROVISÓRIA só com o nome (migração 0176, para a agenda): aqui ela é
+--   completada (TISS, planos, preços) pelo código, sem duplicar. Atenção: agendamentos já feitos com ela não têm plano.
 -- - Bradesco Saúde (cód. 2) já foi cadastrado à mão (migração 0151, a partir da tela). Aqui nada dele é sobrescrito;
 --   só entram as linhas que faltarem. Serve de conferência entre a tela e o banco.
 -- - convenios.tiss guarda os campos principais e, em "micrologos", a configuração TISS completa do Micrologos
@@ -79,7 +81,13 @@ select
     'unidade', 'percentual do valor usado no cálculo do preço')
 from _mestre m
 where legacy_micrologos.txt(m.descricao) is not null
-on conflict do nothing;
+-- Convênios PROVISÓRIOS (migração 0176: Unimed criada só com o nome, para a agenda, em 26/11/2026) são COMPLETADOS
+-- aqui pelo código do Micrologos (o nome fica o que a equipe já usa). Os demais já existentes ficam como estão.
+on conflict (micrologos_codigo) do update set
+  registro_ans = excluded.registro_ans, codigo_prestador = excluded.codigo_prestador, versao_tiss = excluded.versao_tiss,
+  ativo = excluded.ativo, observacoes_faturamento = excluded.observacoes_faturamento, tiss = excluded.tiss,
+  descontos = excluded.descontos
+where public.convenios.tiss ? 'provisorio';
 
 -- No convênio cadastrado à mão (Bradesco), guarda a configuração bruta do Micrologos para conferência
 update public.convenios c set tiss = c.tiss || jsonb_build_object('micrologos', m.bruto)
