@@ -205,7 +205,7 @@ export const STATUS_LOTE: Record<string, { rotulo: string; cor: string }> = {
   cancelado: { rotulo: "Cancelado", cor: "cinza" },
 };
 
-export const TIPO_GUIA: Record<string, string> = { consulta: "Guia de Consulta", sadt: "Guia SP/SADT", particular: "Particular" };
+export const TIPO_GUIA: Record<string, string> = { consulta: "Guia de Consulta", sadt: "Guia SP/SADT", honorarios: "Guia de Honorários", particular: "Particular" };
 
 export const FORMAS_PAGAMENTO: Record<string, string> = {
   dinheiro: "Dinheiro", pix: "PIX", debito: "Cartão de débito", credito: "Cartão de crédito",

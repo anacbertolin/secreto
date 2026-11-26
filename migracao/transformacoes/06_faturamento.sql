@@ -167,9 +167,11 @@ select setval('public.lotes_numero_seq', greatest((select coalesce(max(numero), 
 insert into public.contas (id, paciente_id, agendamento_id, data_atendimento, convenio_id, plano_id, tipo_guia,
   numero_guia_prestador, numero_guia_operadora, senha_autorizacao, data_autorizacao, validade_senha,
   carteirinha, validade_carteirinha, profissional_id, indicacao_clinica, cid10, status, lote_id,
-  valor_total, valor_glosado, valor_pago, recebido_em, observacoes, arquivada, legado, criado_em)
+  valor_total, valor_glosado, valor_pago, recebido_em, observacoes, arquivada, legado, criado_em,
+  hospital_id, guia_solicitacao)
 select m.novo_id, c.pac, legacy_micrologos.novo_id('agenda', c.id_agenda), c.dt, c.conv, c.plano,
-  case when c.conv is null then 'particular' when c.tiss_tipo_guia = '01' then 'consulta' else 'sadt' end,
+  case when c.conv is null then 'particular' when c.tiss_tipo_guia = '01' then 'consulta'
+       when c.tiss_tipo_guia = '06' then 'honorarios' else 'sadt' end,
   c.guia, legacy_micrologos.txt(c.plano_guia_operadora), legacy_micrologos.txt(c.tiss_senha_autorizacao),
   legacy_micrologos.data(c.tiss_senha_data_autorizacao), legacy_micrologos.data(c.tiss_senha_data_validade),
   c.matricula, c.validade, c.prof, legacy_micrologos.txt(c.tiss_indicacao_clinica), c.cid_cod,
@@ -186,8 +188,12 @@ select m.novo_id, c.pac, legacy_micrologos.novo_id('agenda', c.id_agenda), c.dt,
     'pagamento', case when c.presumido then 'presumido' end,
     'sem_cobranca', case when c.conv is not null and not c.em_cob then true end,
     'solicitante', legacy_micrologos.txt(c.tiss_solic_prof_nome))),
-  coalesce(legacy_micrologos.data_hora(c.data_inclusao), c.dt::timestamptz)
+  coalesce(legacy_micrologos.data_hora(c.data_inclusao), c.dt::timestamptz),
+  hs.id,
+  case when c.conv is not null and c.tiss_tipo_guia in ('03', '06') then
+    coalesce(legacy_micrologos.txt(c.guia_solicitacao_sadt), legacy_micrologos.txt(c.plano_guia_solicitacao)) end
 from _ct2 c
+left join public.hospitais hs on nullif(btrim(c.id_unidade), '') is not null and hs.micrologos_codigo::text = btrim(c.id_unidade)
 join legacy_micrologos.mapa_ids m on m.entidade = 'conta' and m.legacy_id = btrim(c.id_paciente_conta)
 left join legacy_micrologos.mapa_ids lm on lm.entidade = 'cobranca' and lm.legacy_id = c.cob_id
 left join public.lotes lt on lt.id = lm.novo_id
@@ -207,7 +213,7 @@ alter table public.conta_itens disable trigger trava;
 alter table public.conta_itens disable trigger totais;
 
 insert into public.conta_itens (id, conta_id, procedimento_id, tabela, codigo, descricao, data_execucao, quantidade,
-  valor_unitario, profissional_id, glosa_valor, legado, criado_em)
+  valor_unitario, profissional_id, glosa_valor, legado, criado_em, grau_participacao)
 select mi.novo_id, mc.novo_id, p.id,
   coalesce(pc.tabela_guia, case when p.tuss is not null then '22' else '00' end),
   coalesce(pc.codigo_guia, p.tuss, btrim(i.id_produto)),
@@ -219,7 +225,8 @@ select mi.novo_id, mc.novo_id, p.id,
     'valor_original', case when i.valor_original is distinct from i.valor then i.valor_original end,
     'recebido_micrologos', pg.recebido, 'glosa_micrologos', nullif(pg.glosa, 0), 'pago_em', pg.pago_em,
     'recurso', pg.recurso, 'autorizado', i.autorizado, 'observacao', i.obs)),
-  coalesce(i.data, ct.data_atendimento)::timestamptz
+  coalesce(i.data, ct.data_atendimento)::timestamptz,
+  case when ct.tipo_guia = 'honorarios' then '00' end
 from _it i
 join legacy_micrologos.mapa_ids mi on mi.entidade = 'item' and mi.legacy_id = btrim(i.id_faturamento)
 join legacy_micrologos.mapa_ids mc on mc.entidade = 'conta' and mc.legacy_id = btrim(i.id_paciente_conta)
@@ -247,13 +254,15 @@ join legacy_micrologos.mapa_ids mc on mc.entidade = 'conta' and mc.legacy_id = b
 on conflict (entidade, legacy_id) do nothing;
 
 insert into public.conta_itens (id, conta_id, procedimento_id, tabela, codigo, descricao, data_execucao, quantidade,
-  valor_unitario, profissional_id, glosa_valor, legado, criado_em)
+  valor_unitario, profissional_id, glosa_valor, legado, criado_em, grau_participacao)
 select ms.novo_id, mc.novo_id, null, '00', 'HONOR',
   coalesce(st.categoria, 'Honorários da equipe') || ' — ' || coalesce(pr.descricao, 'produto ' || btrim(i.id_produto)),
   coalesce(i.data, ct.data_atendimento), 1, st.valor, coalesce(st.prof, i.prof, ct.profissional_id), 0,
   jsonb_strip_nulls(jsonb_build_object('origem', 'Micrologos', 'id_faturamento', btrim(i.id_faturamento),
     'id_staff', btrim(st.id_staff), 'staff', true, 'categoria', st.categoria)),
-  coalesce(i.data, ct.data_atendimento)::timestamptz
+  coalesce(i.data, ct.data_atendimento)::timestamptz,
+  case when st.categoria ilike 'primeiro aux%' then '01' when st.categoria ilike 'segundo aux%' then '02'
+       when st.categoria ilike 'instrument%' then '05' when st.categoria ilike 'anest%' then '06' else '00' end
 from _staff st
 join _it i on i.id_faturamento = st.id_faturamento and i.staff > 0  -- só o que o Micrologos soma na conta
 join legacy_micrologos.mapa_ids ms on ms.entidade = 'item_staff' and ms.legacy_id = btrim(st.id_staff)
@@ -262,6 +271,13 @@ join public.contas ct on ct.id = mc.novo_id
 left join _proc p on p.id_produto = btrim(i.id_produto)
 left join public.procedimentos pr on pr.id = p.id
 on conflict (id) do nothing;
+
+-- honorário da equipe sai na guia com o MESMO código/tabela do procedimento de origem (como no XML do Micrologos)
+update public.conta_itens s set codigo = o.codigo, tabela = o.tabela
+from legacy_micrologos.mapa_ids mi
+join public.conta_itens o on o.id = mi.novo_id
+where mi.entidade = 'item' and s.codigo = 'HONOR' and s.legado->>'id_faturamento' = mi.legacy_id
+  and s.legado ? 'staff' and o.codigo is not null;
 
 -- total da conta = soma dos itens gravados (diferença de centavos de arredondamento do Micrologos)
 update public.contas c set valor_total = s.total,
