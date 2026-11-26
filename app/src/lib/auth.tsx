@@ -22,6 +22,8 @@ export interface Profissional {
   caixa_aprovar?: boolean;
   /** Pode cancelar caixa aberto por engano e reabrir caixa para correção (migração 0110 — só a dona) */
   caixa_corrigir?: boolean;
+  /** Recebe o dinheiro entregue pela recepção ao administrativo e dá o check (migração 0171) */
+  caixa_recebe_entrega?: boolean;
   /** Atende pacientes sem ser médico: aparece no caixa como profissional (migração 0167) */
   atende_pacientes?: boolean;
   /** Coluna de setor da agenda, não é uma pessoa (migração 0152) */
