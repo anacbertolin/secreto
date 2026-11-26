@@ -117,6 +117,8 @@ export function ResumoAgendamento(props: {
   convenio: (id?: string | null) => string;
   agenda: (id: string) => string;
   aoAbrir: () => void;
+  /** Abre o WhatsApp do paciente numa janela por cima (sem sair da Agenda) */
+  aoWhatsApp?: () => void;
   /** Grava as notas do agendamento; devolve a mensagem de erro (ou "" se deu certo) */
   aoSalvarNotas: (texto: string) => Promise<string>;
 }) {
@@ -190,7 +192,10 @@ export function ResumoAgendamento(props: {
         <dd>{props.nomeDe(a.criado_por) || "—"}{a.criado_em && ` · ${fmtDataHora(a.criado_em)}`}</dd>
         {a.atualizado_por && (<><dt>Alteração</dt><dd>{props.nomeDe(a.atualizado_por)}{a.atualizado_em && ` · ${fmtDataHora(a.atualizado_em)}`}</dd></>)}
       </dl>
-      <button className="primario mini" onClick={props.aoAbrir}>Abrir agendamento (chegada, remarcar…)</button>
+      <div className="linha" style={{ gap: 6 }}>
+        <button className="primario mini" onClick={props.aoAbrir}>Abrir agendamento (chegada, remarcar…)</button>
+        {props.aoWhatsApp && <button className="mini" style={{ background: "#25a244", color: "white", borderColor: "#25a244" }} onClick={props.aoWhatsApp}>💬 WhatsApp</button>}
+      </div>
     </div>
   );
 }

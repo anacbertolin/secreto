@@ -1850,3 +1850,7 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   responde o número (Opções → ✏️ Salvar nome do contato; na tela antiga, botão "✏️ Salvar nome"). Ordem do nome exibido:
   paciente ligado (prontuário) → nome salvo → nome do perfil do WhatsApp (que a Meta manda a cada mensagem e antes
   sobrescrevia qualquer ajuste). `{nome}` das respostas rápidas e a pesquisa de mensagens usam o nome salvo.
+- (26/11) **💬 WhatsApp direto da Agenda** (pedido da Alessandra): no quadro de resumo do paciente selecionado, botão
+  verde "💬 WhatsApp" abre a conversa numa janela lateral por cima da Agenda (`components/WhatsAppRapido.tsx`, reusa o
+  `Chat`). Acha a conversa pelo prontuário ou pelo telefone do cadastro; sem conversa, abre a "Nova conversa" já com o
+  paciente (modelo aprovado). Só aparece para quem responde algum número; só mostra números ligados à API.
