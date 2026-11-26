@@ -216,3 +216,23 @@
   Golden Cross, Mediservice, Porto Seguro, Unimed Gisele/Gelson, Fundação Itaú, Notre Dame, Assist, Bradesco Operadora.
 - 26/11 (noite, 3ª rodada): 25 cobranças de 13 convênios testadas — todas iguais ao Micrologos. Itens guardam a
   cobrança em que foram enviados (Unimed por médico). Migração 0173. Faltam XML de Klini e Assist para testar.
+
+## Decisões de 26/11/2026 (noite) — sistema novo já em uso pela equipe
+- **A equipe já usa o sistema novo** (Alessandra: orientação/vendas, WhatsApp pela API oficial da Meta; em 26/11 havia
+  33 pacientes, 35 agendamentos, 41 conversas, 4 vendas). **Nada disso pode ser apagado.** Não haverá ensaio completo
+  dentro do Supabase de produção; antes da troca só um teste pequeno do caminho de gravação.
+- **Canal de gravação:** chave secreta `migracao_claude` do Supabase salva pela dona como segredo de rede do ambiente
+  "secreto" (host `ogflxjolbwrzayjtxvhj.supabase.co`, cabeçalho `apikey`). Teste de leitura pela API REST ok em 26/11.
+  O Claude nunca vê o valor. Depois da troca, a dona pode apagar a chave no Supabase.
+- **Nº de prontuário (migração 0181):** até a troca, pacientes novos do sistema novo ganham nº provisório 200.001+.
+  Os do Micrologos mantêm o nº. Depois da troca a numeração continua a do Micrologos (01_pacientes passo 6 ignora 200.001+).
+- **A fazer na carga da troca (ainda não implementado):**
+  1. Juntar os pacientes criados no sistema novo (nºs 3–43 e 200.001+) com o mesmo paciente do Micrologos (CPF, ou nome +
+     nascimento): fica o nº e o cadastro do Micrologos; conversas do WhatsApp, orientação/vendas, agendamentos, contas e
+     caixa passam para ele. Quem não existir no Micrologos fica com o nº que tem (os 3–43 precisam ganhar nº novo antes,
+     porque colidem com nºs do Micrologos).
+  2. Agendamento repetido (mesmo paciente, dia/hora e médico nos dois sistemas): fica só o do sistema novo.
+  3. Convênios/planos criados por outras sessões no sistema novo (ex.: migração 0176 "convênios Unimed provisório") devem
+     ser ligados aos do Micrologos (micrologos_codigo) em vez de duplicados.
+  4. Ferramenta de carga: copiar as tabelas finais do ensaio local para o Supabase pela API REST com a chave (sem gatilhos
+     duplicando auditoria/contas: função de carga que liga `app.migracao`, só para a chave secreta).
