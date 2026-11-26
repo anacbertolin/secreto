@@ -1795,3 +1795,6 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   Dual: paciente paga na hora no caixa (provisório; muda se a Dual pagar depois).
 - (0170) Dona confirmou Córnea — Dr. Max = R$ 500. Os genéricos "Consulta Glaucoma"/"Consulta Córnea" confundiam a recepção:
   o preço particular deles foi desativado (somem do caixa; o procedimento continua para migração/convênios).
+- (26/11, só tela) "Exercício Ortóptico" (R$ 50) e "10 sessões" (R$ 400) já existiam, mas apareciam em "Procedimento" (tipo terapia)
+  e a recepção não achava: no caixa, terapia agora aparece em **Exame** (junto do Teste Ortóptico). A busca do recebimento passou a
+  procurar em **todos os grupos** (marca o grupo sozinho ao escolher o item).
