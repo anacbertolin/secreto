@@ -29,7 +29,7 @@ export interface Conta {
 interface Lote {
   id: string; numero: number; convenio_id: string; competencia: string; status: string; enviado_em: string | null; protocolo: string | null;
   previsao_pagamento: string | null; pago_em: string | null; valor_pago: number | null; observacoes: string | null; criado_em: string;
-  arquivado?: boolean;
+  arquivado?: boolean; numero_tiss?: number | null;
 }
 
 const SEL_CONTA = "*, pacientes(nome, nome_social, numero_prontuario), conta_itens(valor_unitario)";
@@ -661,6 +661,23 @@ export function LoteDetalhe() {
     if (r2.error) return setErro(msgErro(r2.error));
     recarregar();
   }
+  const [gerando, setGerando] = useState(false);
+  const [avisoXml, setAvisoXml] = useState("");
+  async function baixarXml() {
+    setErro(""); setAvisoXml(""); setGerando(true);
+    try {
+      const { gerarXmlDoLote } = await import("../lib/tissLote");
+      const r = await gerarXmlDoLote(l.id);
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([r.bytes as BlobPart], { type: r.nomeArquivo.endsWith(".zip") ? "application/zip" : "application/xml" }));
+      a.download = r.nomeArquivo;
+      a.click();
+      setAvisoXml(`XML gerado: ${r.nomeArquivo} (${r.guias} guia(s)).` + (r.avisos.length ? "\n" + r.avisos.join("\n") : ""));
+      recarregar();
+    } catch (e) {
+      setErro("Não deu para gerar o XML. Corrija e tente de novo:\n" + (e instanceof Error ? e.message : String(e)));
+    } finally { setGerando(false); }
+  }
   const temPagamento = cs.some((c) => ["paga", "glosada"].includes(c.status) || Number(c.valor_glosado) > 0);
   async function reabrirLote() {
     if (!confirm("Reabrir esta cobrança para corrigir?\n\nAs guias voltam para \"Pronta p/ lote\". Você pode tirar o paciente com erro, " +
@@ -691,6 +708,7 @@ export function LoteDetalhe() {
           <div className="linha"><h1 style={{ margin: 0 }}>Lote {l.numero} · {conv?.nome}</h1><Etiqueta cor={STATUS_LOTE[l.status].cor}>{STATUS_LOTE[l.status].rotulo}</Etiqueta></div>
           <p className="sub" style={{ margin: "4px 0 0" }}>
             Competência {fmtCompetencia(l.competencia)} · {cs.length} guia(s) · {fmtMoeda(total)}
+            {l.numero_tiss && ` · lote no XML nº ${l.numero_tiss}`}
             {l.enviado_em && ` · enviado em ${fmtData(l.enviado_em)}`}{l.protocolo && ` · protocolo ${l.protocolo}`}
             {l.pago_em && ` · pago ${fmtMoeda(l.valor_pago)} em ${fmtData(l.pago_em)}`}
           </p>
@@ -698,14 +716,16 @@ export function LoteDetalhe() {
         <div className="linha">
           <Link className="botao" to={`/imprimir/lote/${l.id}`} target="_blank">🖨️ Relação de guias</Link>
           <button onClick={exportarCSV}>⬇️ Planilha (CSV)</button>
+          {l.status !== "cancelado" && !l.arquivado && <button className="primario" disabled={gerando || cs.length === 0} onClick={baixarXml}>{gerando ? "Gerando…" : "📄 Gerar XML"}</button>}
           {l.status === "aberto" && <button className="primario" disabled={cs.length === 0} onClick={() => setModal("enviar")}>📤 Marcar como enviado</button>}
           {l.status === "enviado" && !l.arquivado && <button className="primario" onClick={() => setModal("pagar")}>💰 Registrar pagamento</button>}
           {l.status === "enviado" && !l.arquivado && !temPagamento && <button onClick={reabrirLote} title="Para tirar um paciente com erro e gerar o XML de novo">🔓 Reabrir cobrança</button>}
           {l.status === "aberto" && <button className="perigo" onClick={cancelarLote}>Desfazer lote</button>}
         </div>
       </div>
-      <Aviso>{erro || e1}</Aviso>
+      {(erro || e1) && <Aviso><span style={{ whiteSpace: "pre-line" }}>{erro || e1}</span></Aviso>}
       {l.arquivado && <Aviso tipo="info">Cobrança antiga do Micrologos (antes de 2021): só para consulta.</Aviso>}
+      {avisoXml && <Aviso tipo="ok"><span style={{ whiteSpace: "pre-line" }}>{avisoXml}</span></Aviso>}
       {l.observacoes && <p className="muted pequeno" style={{ whiteSpace: "pre-line", margin: "0 0 10px" }}>{l.observacoes}</p>}
       {!conv?.codigo_prestador && <Aviso tipo="alerta">O código da clínica neste convênio não está cadastrado (Cadastros → Convênios). Ele aparece nas guias.</Aviso>}
       <div className="painel rolagem">

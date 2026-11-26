@@ -80,3 +80,19 @@ cd app && npx -y tsx@4.19.2 scripts/tiss/testar.ts /tmp/tiss && scripts/tiss/val
    - regra de fator convênio × procedimento × olho;
    - código enviado por tabela de preço.
 3. Tela: montar o lote a partir das contas, gerar o XML e o `.zip`, baixar, e registrar no lote (com a trava de "guia conferida").
+
+## Botão "📄 Gerar XML" no lote (26/11/2026)
+- Tela do lote (Faturamento → Lotes → lote) → **Gerar XML**: baixa o `.XML` (ou `.zip`, se `tiss.exige_zip`, ex.: Bradesco).
+- `app/src/lib/tissMontar.ts` (parte pura, testável) transforma as contas em guias; `app/src/lib/tissLote.ts` busca no banco.
+  Teste com dados fictícios: `cd app && npx -y tsx@4.19.2 scripts/tiss/testar_lote.ts /tmp/tiss-lote && scripts/tiss/validar.sh /tmp/tiss-lote 4.03.00` (✅ XSD e hash ok).
+- Nº do lote no XML: sequência própria do convênio (`convenios.tiss.ultimo_lote` + 1), gravada em `lotes.numero_tiss`
+  na primeira geração e mantida se gerar de novo (migração 0166, função `lote_numero_tiss`).
+- Regras desta primeira versão:
+  - conta "consulta" → Guia de Consulta (ou SP/SADT com tipoAtendimento 04 se `consulta_em_sadt`); conta "sadt" → SP/SADT
+    tipoAtendimento 23, equipe grauPart 12; um lote só pode ter um tipo de guia (o sistema avisa);
+  - profissional: conselho 06/UF 33/CBO 225265; nº do conselho = CRM com prefixo 52 se `crm_completo`, sem prefixo se não;
+    código na operadora = `profissional_convenio_codigos` ou, se não houver, o código da clínica (arquivo J);
+  - item "ambos os olhos" com quantidade 2 → quantidade 1 e fator 2,00 (mesmo total), se `mostra_fator`;
+  - data de autorização vazia → data da conta, se `data_autorizacao_vazia_usa_data_conta`.
+- ❌ Ainda não: **Guia de Honorários (cirurgia)** — o sistema avisa e não gera. ⚠️ Conferir o primeiro XML real do
+  Bradesco no portal (nº do CRM com ou sem 52, tipoConsulta, fator) antes de usar nos outros convênios.
