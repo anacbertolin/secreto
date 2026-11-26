@@ -79,8 +79,12 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
   const [erro, setErro] = useState("");
   // CPF e nascimento do médico (Memed) ficam em tabela separada: só a administração e o próprio veem
   const [dp, setDp] = useState({ cpf: "", data_nascimento: "", sexo: "" });
+  // nome do médico como sai nas guias/XML do convênio (ex.: "Gisele Moura Brasil")
+  const [nomeGuia, setNomeGuia] = useState("");
   useEffect(() => {
     if (!p.id) return;
+    supabase.from("profissional_dados_tiss").select("nome_guia").eq("profissional_id", p.id).maybeSingle()
+      .then(({ data }) => data && setNomeGuia(data.nome_guia ?? ""));
     supabase.from("profissionais_dados_pessoais").select("cpf, data_nascimento, sexo").eq("profissional_id", p.id).maybeSingle()
       .then(({ data }) => data && setDp({ cpf: data.cpf ?? "", data_nascimento: data.data_nascimento ?? "", sexo: data.sexo ?? "" }));
   }, [p.id]);
@@ -110,6 +114,10 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
         profissional_id: (r.data as { id: string }).id, cpf: cpf || null, data_nascimento: dp.data_nascimento || null, sexo: dp.sexo || null,
       }, { onConflict: "profissional_id" });
       if (r2.error) return setErro("Salvo, mas o CPF/nascimento não: " + msgErro(r2.error));
+    }
+    if (f.funcao === "medico" && nomeGuia.trim()) {
+      const r3 = await supabase.from("profissional_dados_tiss").upsert({ profissional_id: (r.data as { id: string }).id, nome_guia: nomeGuia.trim() }, { onConflict: "profissional_id" });
+      if (r3.error) return setErro("Salvo, mas o nome na guia não: " + msgErro(r3.error));
     }
     aoSalvar();
   }
@@ -154,10 +162,11 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
             <Campo rotulo="UF do conselho"><input value={f.uf_conselho as string} onChange={set("uf_conselho")} maxLength={2} placeholder="RJ" /></Campo>
             {f.funcao === "medico" && <Campo rotulo="RQE"><input value={f.rqe as string} onChange={set("rqe")} /></Campo>}
             {f.funcao === "medico" && <Campo rotulo="CBO (para as guias)"><input value={f.cbo as string} onChange={set("cbo")} placeholder="225265 (oftalmologista)" /></Campo>}
+            {f.funcao === "medico" && <Campo rotulo="Nome nas guias / XML do convênio"><input value={nomeGuia} onChange={(e) => setNomeGuia(e.target.value)} placeholder="ex.: Gisele Moura Brasil" /></Campo>}
             <Campo rotulo="Especialidade / área" className="inteiro"><input value={f.especialidade as string} onChange={set("especialidade")} placeholder="Ex.: Oftalmologia — Retina" /></Campo>
             {f.funcao === "medico" && (
               <>
-                <div className="inteiro muted pequeno" style={{ marginTop: 4 }}>Para a <b>receita digital (Memed)</b>: só a administração e o próprio médico veem estes dados.</div>
+                <div className="inteiro muted pequeno" style={{ marginTop: 4 }}>Para a <b>receita digital (Memed)</b> e o <b>XML dos convênios</b> (o CPF identifica o médico na guia): só a administração e o próprio médico veem estes dados.</div>
                 <Campo rotulo="CPF do médico"><input inputMode="numeric" value={dp.cpf} onChange={(e) => setDp({ ...dp, cpf: e.target.value })} /></Campo>
                 <Campo rotulo="Data de nascimento"><input type="date" value={dp.data_nascimento} onChange={(e) => setDp({ ...dp, data_nascimento: e.target.value })} /></Campo>
                 <Campo rotulo="Sexo"><select value={dp.sexo} onChange={(e) => setDp({ ...dp, sexo: e.target.value })}><option value="">—</option><option value="F">Feminino</option><option value="M">Masculino</option></select></Campo>

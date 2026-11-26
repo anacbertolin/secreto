@@ -104,3 +104,33 @@ cd app && npx -y tsx@4.19.2 scripts/tiss/testar.ts /tmp/tiss && scripts/tiss/val
   não são copiados (ocorrência registrada).
 - ⚠️ Calibrar com XML reais do Micrologos, convênio por convênio (plano combinado com a dona em 26/11): nº do CRM com ou sem
   52, tipoConsulta, fator 2,00, guia de solicitação, ordem dos itens.
+
+## Comparação com XML reais do Micrologos — Bradesco Saúde (26/11/2026)
+A dona enviou os XML das cobranças 11378 (honorários, lote 1670), 11379 (consultas, lote 1677) e 11380 (SP/SADT,
+lote 1676) pelo Storage (`migracao-micrologos/xml-teste/`). Comparação: `migracao/xml/comparar_xml.py` (não imprime dados
+de paciente). Regras descobertas e aplicadas (migração 0169 + `tissMontar.ts`):
+- `numeroLote` **sem zeros à esquerda** (o `sequencialTransacao` continua com 12 dígitos).
+- Textos **sem acento e sem barra** ("S/C" → "S C", "Fotocoagulação" → "Fotocoagulacao"); nome do médico como no
+  cadastro do Micrologos ("Gisele Moura Brasil"), em `profissional_dados_tiss.nome_guia`.
+- Médico sem código próprio no convênio → `codProfissional/cpfContratado` (CPF do médico, guardado em
+  `profissionais_dados_pessoais` — a mesma tabela da Memed — e lido pelo XML via `tiss_dados_medicos()`, só faturamento/admin;
+  migração 0170). Nome na guia: tela Equipe → "Nome nas guias / XML do convênio".
+- `observacao` = "Conta <nº da conta no Micrologos>" em todas as guias.
+- SP/SADT: `guiaPrincipal` = nº da guia; `tipoConsulta` sempre; `dataSolicitacao` = data da autorização; exames →
+  tipoAtendimento 23 / grauPart 12; procedimento (fotocoagulação) → 03 / 00; fator = quantidade (2 olhos → 2,00) e
+  valorTotal = quantidade × unitário.
+- Honorários: **uma guia por participante** (cirurgião na guia da conta; auxiliar/instrumentador com nº de guia próprio,
+  `conta_itens.numero_guia`); fator = valor ÷ valor de tabela (facectomia 2,00) com o unitário já multiplicado
+  (`conta_itens.fator`).
+- Itens na ordem do Micrologos (ordem de lançamento).
+- Formato: o Micrologos grava com quebras de linha (CRLF) e indentação; o novo grava em uma linha. O hash não muda
+  (só conteúdo das tags conta). ⚠️ Se algum portal recusar, ligar `indentar`.
+- Nº do lote: a cópia do banco é de antes da cobrança 11379 (lote 1677); na cópia final o `ultimo_lote` vem certo.
+- **Resultado (26/11, fim da tarde):** depois dos ajustes (migrações 0169–0171), os 3 XML do sistema novo ficaram
+  **iguais** aos do Micrologos, guia a guia e campo a campo (só mudam data/hora de registro e o hash, que dependem da hora
+  da geração): 11378 honorários R$ 3.097,30 (2 guias: cirurgião e auxiliar), 11379 consultas R$ 6.365,68 (47 guias),
+  11380 SP/SADT R$ 6.359,32 (50 guias), todos válidos no XSD 4.03.00. Outras regras achadas nesta rodada: na SP/SADT os
+  itens vão do maior para o menor valor total; nos honorários o nome do médico vai em maiúsculas; a guia do auxiliar tem
+  nº próprio também na operadora (`conta_itens.numero_guia_operadora`); textos sem hífen; conta do Micrologos com nº de
+  guia repetido sai com o nº original no XML (`legado.guia_micrologos`).
+- Desempenho da carga 06: precisa de `set local jit = off` e `analyze` das tabelas temporárias (sem isso passa de 30 min).

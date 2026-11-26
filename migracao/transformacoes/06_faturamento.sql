@@ -55,7 +55,8 @@ select f.id_faturamento, f.id_paciente_conta, f.id_produto,
   f.procedimento_principal in ('1', 'S') as principal,
   legacy_micrologos.txt(f.matricula_convenio) as matricula, legacy_micrologos.data(f.data_validade_convenio) as validade,
   f.status, legacy_micrologos.txt(f.plano_autorizado) as autorizado, legacy_micrologos.txt(f.observacao) as obs,
-  legacy_micrologos.valor(f.valor_original) as valor_original
+  legacy_micrologos.valor(f.valor_original) as valor_original,
+  row_number() over (partition by f.id_paciente_conta order by f.id_faturamento::numeric) as ordem
 from legacy_micrologos.bruto_faturamentos f;
 create index on _it (id_paciente_conta);
 analyze _it;
@@ -187,7 +188,8 @@ select m.novo_id, c.pac, legacy_micrologos.novo_id('agenda', c.id_agenda), c.dt,
     'tipo_guia_tiss', nullif(btrim(c.tiss_tipo_guia), ''), 'status_micrologos', nullif(btrim(c.status), ''),
     'pagamento', case when c.presumido then 'presumido' end,
     'sem_cobranca', case when c.conv is not null and not c.em_cob then true end,
-    'solicitante', legacy_micrologos.txt(c.tiss_solic_prof_nome))),
+    'solicitante', legacy_micrologos.txt(c.tiss_solic_prof_nome),
+    'tipo_consulta', nullif(btrim(c.tiss_tipo_consulta), ''))),
   coalesce(legacy_micrologos.data_hora(c.data_inclusao), c.dt::timestamptz),
   hs.id,
   case when c.conv is not null and c.tiss_tipo_guia in ('03', '06') then
@@ -206,6 +208,10 @@ from _it i join legacy_micrologos.mapa_ids mc on mc.entidade = 'conta' and mc.le
 on conflict (entidade, legacy_id) do nothing;
 analyze legacy_micrologos.mapa_ids;
 
+-- sem estatísticas e com JIT ligado a inserção dos itens passa de 30 min; assim leva ~40 s (ensaio de 26/11)
+set local jit = off;
+analyze public.contas; analyze _it; analyze _pg; analyze _proc;
+
 -- Os itens antigos entram exatamente como no Micrologos: desliga, só nesta transação, o preço automático,
 -- a trava de conta faturada e o recálculo linha a linha (os totais já foram gravados na conta acima).
 alter table public.conta_itens disable trigger preco;
@@ -213,7 +219,7 @@ alter table public.conta_itens disable trigger trava;
 alter table public.conta_itens disable trigger totais;
 
 insert into public.conta_itens (id, conta_id, procedimento_id, tabela, codigo, descricao, data_execucao, quantidade,
-  valor_unitario, profissional_id, glosa_valor, legado, criado_em, grau_participacao)
+  valor_unitario, profissional_id, glosa_valor, legado, criado_em, grau_participacao, fator)
 select mi.novo_id, mc.novo_id, p.id,
   coalesce(pc.tabela_guia, case when p.tuss is not null then '22' else '00' end),
   coalesce(pc.codigo_guia, p.tuss, btrim(i.id_produto)),
@@ -225,8 +231,11 @@ select mi.novo_id, mc.novo_id, p.id,
     'valor_original', case when i.valor_original is distinct from i.valor then i.valor_original end,
     'recebido_micrologos', pg.recebido, 'glosa_micrologos', nullif(pg.glosa, 0), 'pago_em', pg.pago_em,
     'recurso', pg.recurso, 'autorizado', i.autorizado, 'observacao', i.obs)),
-  coalesce(i.data, ct.data_atendimento)::timestamptz,
-  case when ct.tipo_guia = 'honorarios' then '00' end
+  coalesce(i.data, ct.data_atendimento)::timestamptz + i.ordem * interval '1 second',  -- mantém a ordem do Micrologos
+  case when ct.tipo_guia = 'honorarios' then '00' end,
+  -- fator de redução/acréscimo informado na guia: valor cobrado ÷ valor de tabela (ex.: facectomia Bradesco = 2,00)
+  coalesce(case when i.valor_original > 0 and round(i.valor / i.valor_original, 2) between 0.1 and 10
+                then round(i.valor / i.valor_original, 2) end, 1)
 from _it i
 join legacy_micrologos.mapa_ids mi on mi.entidade = 'item' and mi.legacy_id = btrim(i.id_faturamento)
 join legacy_micrologos.mapa_ids mc on mc.entidade = 'conta' and mc.legacy_id = btrim(i.id_paciente_conta)
@@ -242,10 +251,18 @@ on conflict (id) do nothing;
 -- no nome dela, ligado ao item de origem (FATURAMENTOS_STAFF_MEDICO; a soma bate com VALOR_TOTAL_STAFF)
 create temp table _staff as
 select s.id_faturamento_staff_medico as id_staff, s.id_faturamento, legacy_micrologos.valor(s.valor) as valor,
-  legacy_micrologos.novo_id('medico', s.id_medico) as prof, legacy_micrologos.txt(cat.descricao) as categoria
+  legacy_micrologos.novo_id('medico', s.id_medico) as prof, legacy_micrologos.txt(cat.descricao) as categoria,
+  legacy_micrologos.txt(s.guia_honorario) as guia, legacy_micrologos.txt(s.guia_honorario_operadora) as guia_operadora,
+  coalesce(case when legacy_micrologos.valor(s.valor_unit_staff) > 0
+                 and round(legacy_micrologos.valor(s.valor) / legacy_micrologos.valor(s.valor_unit_staff), 2) between 0.1 and 10
+                then round(legacy_micrologos.valor(s.valor) / legacy_micrologos.valor(s.valor_unit_staff), 2) end, 1) as fator,
+  count(*) over (partition by legacy_micrologos.txt(s.guia_honorario)) as guia_rep
 from legacy_micrologos.bruto_faturamentos_staff_medico s
 left join legacy_micrologos.bruto_medicos_categorias cat on cat.id_medico_categoria = s.id_medico_categoria
 where legacy_micrologos.valor(s.valor) > 0;
+create index on _staff (id_faturamento);
+create index on _it (id_faturamento);
+analyze _staff; analyze _it;
 
 insert into legacy_micrologos.mapa_ids (entidade, legacy_id, novo_id, tabela_nova)
 select 'item_staff', btrim(st.id_staff), gen_random_uuid(), 'public.conta_itens'
@@ -254,15 +271,21 @@ join legacy_micrologos.mapa_ids mc on mc.entidade = 'conta' and mc.legacy_id = b
 on conflict (entidade, legacy_id) do nothing;
 
 insert into public.conta_itens (id, conta_id, procedimento_id, tabela, codigo, descricao, data_execucao, quantidade,
-  valor_unitario, profissional_id, glosa_valor, legado, criado_em, grau_participacao)
+  valor_unitario, profissional_id, glosa_valor, legado, criado_em, grau_participacao, fator, numero_guia, numero_guia_operadora)
 select ms.novo_id, mc.novo_id, null, '00', 'HONOR',
-  coalesce(st.categoria, 'Honorários da equipe') || ' — ' || coalesce(pr.descricao, 'produto ' || btrim(i.id_produto)),
+  -- mesma descrição do procedimento (como no XML); a função (auxiliar, instrumentador) fica no grau de participação
+  coalesce(pr.descricao, 'Produto ' || btrim(i.id_produto) || ' do Micrologos'),
   coalesce(i.data, ct.data_atendimento), 1, st.valor, coalesce(st.prof, i.prof, ct.profissional_id), 0,
   jsonb_strip_nulls(jsonb_build_object('origem', 'Micrologos', 'id_faturamento', btrim(i.id_faturamento),
     'id_staff', btrim(st.id_staff), 'staff', true, 'categoria', st.categoria)),
-  coalesce(i.data, ct.data_atendimento)::timestamptz,
+  coalesce(i.data, ct.data_atendimento)::timestamptz + (1000 + i.ordem) * interval '1 second',
   case when st.categoria ilike 'primeiro aux%' then '01' when st.categoria ilike 'segundo aux%' then '02'
-       when st.categoria ilike 'instrument%' then '05' when st.categoria ilike 'anest%' then '06' else '00' end
+       when st.categoria ilike 'instrument%' then '05' when st.categoria ilike 'anest%' then '06' else '00' end,
+  st.fator,
+  -- guia de honorários própria do participante (Micrologos: GUIA_HONORARIO), se não repetir
+  case when st.guia_rep = 1 and st.guia is not null
+        and not exists (select 1 from public.contas x where x.numero_guia_prestador = st.guia) then st.guia end,
+  st.guia_operadora
 from _staff st
 join _it i on i.id_faturamento = st.id_faturamento and i.staff > 0  -- só o que o Micrologos soma na conta
 join legacy_micrologos.mapa_ids ms on ms.entidade = 'item_staff' and ms.legacy_id = btrim(st.id_staff)

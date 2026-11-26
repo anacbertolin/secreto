@@ -71,6 +71,25 @@ from _med m
 join legacy_micrologos.mapa_ids x on x.entidade = 'medico' and x.legacy_id = m.cod::text
 where not exists (select 1 from public.profissionais p where p.id = x.novo_id);
 
+-- dados para o XML TISS (migrações 0169/0170): nome do médico como sai na guia (profissional_dados_tiss) e CPF
+-- (profissionais_dados_pessoais, a mesma tabela da Memed: só admin e o próprio leem; o XML lê por tiss_dados_medicos()).
+-- O CPF é necessário: sem código próprio no convênio, o Micrologos identifica o médico na guia pelo CPF (XML reais, 26/11).
+create temp table _md_tiss as
+select distinct on (x.novo_id) x.novo_id as prof, legacy_micrologos.txt(md.nome) as nome_guia,
+  case when length(regexp_replace(coalesce(md.cpf, ''), '\D', '', 'g')) = 11 then regexp_replace(md.cpf, '\D', '', 'g') end as cpf
+from legacy_micrologos.bruto_medicos md
+join legacy_micrologos.mapa_ids x on x.entidade = 'medico' and x.legacy_id = btrim(md.id_medico)
+where exists (select 1 from public.profissionais p where p.id = x.novo_id)
+order by x.novo_id, (length(regexp_replace(coalesce(md.cpf, ''), '\D', '', 'g')) = 11) desc, btrim(md.id_medico)::int;
+
+insert into public.profissional_dados_tiss (profissional_id, nome_guia)
+select prof, nome_guia from _md_tiss where nome_guia is not null
+on conflict (profissional_id) do update set nome_guia = excluded.nome_guia;
+
+insert into public.profissionais_dados_pessoais (profissional_id, cpf)
+select prof, cpf from _md_tiss where cpf is not null
+on conflict (profissional_id) do update set cpf = coalesce(public.profissionais_dados_pessoais.cpf, excluded.cpf);
+
 -- conferência
 select m.cod, legacy_micrologos.txt(m.nome) as micrologos, p.nome as sistema_novo, p.ativo, p.email is not null as tem_login
 from _med m
