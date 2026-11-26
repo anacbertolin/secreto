@@ -51,6 +51,21 @@ select a.*,
   end as status_novo
 from _ag a;
 
+-- Agendamentos que a equipe já marcou no sistema novo (decisão da dona, 26/11/2026): o mesmo paciente, no mesmo
+-- horário e com o mesmo médico, marcado nos dois sistemas, fica UMA vez só (o do sistema novo, ligado ao WhatsApp).
+create temp table _ag_equipe as
+select a.id, a.paciente_id, a.profissional_id, a.inicio, a.fim, a.status, coalesce(a.encaixe, false) as encaixe
+from public.agendamentos a
+where not exists (select 1 from legacy_micrologos.mapa_ids m where m.entidade = 'agenda' and m.novo_id = a.id);
+create index on _ag_equipe (paciente_id, inicio);
+analyze _ag_equipe;
+
+insert into legacy_micrologos.ocorrencias (entidade, legacy_id, severidade, regra, mensagem)
+select 'agenda', btrim(a.id_agenda), 'info', 'ja_no_sistema_novo', 'Agendamento já marcado no sistema novo pela equipe: não duplicado'
+from _ag2 a join _ag_equipe e on e.paciente_id = a.pac and e.profissional_id = a.prof and e.inicio = a.ini
+where not exists (select 1 from legacy_micrologos.ocorrencias o where o.entidade = 'agenda' and o.legacy_id = btrim(a.id_agenda));
+delete from _ag2 a using _ag_equipe e where e.paciente_id = a.pac and e.profissional_id = a.prof and e.inicio = a.ini;
+
 -- futuros sobrepostos viram encaixe (o primeiro do horário fica como agendamento normal)
 create temp table _encaixe as
 select id_agenda from (
@@ -58,6 +73,14 @@ select id_agenda from (
          max(fim) over (partition by prof order by ini, id_agenda rows between unbounded preceding and 1 preceding) as fim_ant
   from _ag2 where status_novo in ('agendado', 'confirmado')
 ) x where fim_ant > ini;
+-- e também os que caem no horário de um agendamento "vivo" da equipe (outro paciente, mesma coluna)
+insert into _encaixe
+select a.id_agenda from _ag2 a
+where a.status_novo in ('agendado', 'confirmado')
+  and exists (select 1 from _ag_equipe e where e.profissional_id = a.prof and not e.encaixe
+                and e.status not in ('cancelado', 'faltou', 'atendido')
+                and tstzrange(e.inicio, e.fim) && tstzrange(a.ini, a.fim))
+  and not exists (select 1 from _encaixe x where x.id_agenda = a.id_agenda);
 create index on _encaixe (id_agenda);
 
 insert into legacy_micrologos.mapa_ids (entidade, legacy_id, novo_id, tabela_nova)
