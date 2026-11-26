@@ -4,6 +4,14 @@
 > e `GUIA-PASSO-A-PASSO.md` (o que a dona faz). A dona **não é técnica**: fale em português simples.
 > Última atualização: 14/11/2026, sessão "Dados para migração".
 
+## ⚠️ Aviso da sessão da Agenda (26/11/2026): Unimed provisória já está no banco
+- A pedido da dona (a Alessandra precisava marcar cirurgias da Unimed), a migração `0176_convenios_unimed_provisorio`
+  criou **só o nome** de 6 convênios, com o MESMO código do Micrologos e `tiss = {"provisorio": true}`:
+  Unimed Gelson (8), Gisele (10), Luciano (15), Max (22), Consumed Cirurgia (26), Antonio (29).
+- `transformacoes/02_convenios.sql` foi ajustado: o insert agora **completa** quem tem `tiss ? 'provisorio'`
+  (on conflict (micrologos_codigo) do update), mantendo o nome. Planos e preços entram normalmente pelo código.
+- Agendamentos feitos com esses convênios antes da carga ficam **sem plano**. Conferir/ligar o plano depois da carga.
+
 ## Onde está o trabalho
 | O quê | Onde |
 |---|---|
