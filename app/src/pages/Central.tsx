@@ -581,8 +581,10 @@ const MODELOS_NOVA: Record<SetorWA, { finalidade: string; rotulo: string }[]> = 
   ],
 };
 
-function NovaConversa({ setor, aoFechar, aoAbrir }: { setor: SetorWA; aoFechar: () => void; aoAbrir: (id: string) => void }) {
-  const [paciente, setPaciente] = useState<PacienteResumo | null>(null);
+export function NovaConversa({ setor, aoFechar, aoAbrir, pacienteInicial }: {
+  setor: SetorWA; aoFechar: () => void; aoAbrir: (id: string) => void; pacienteInicial?: PacienteResumo;
+}) {
+  const [paciente, setPaciente] = useState<PacienteResumo | null>(pacienteInicial ?? null);
   const [telefone, setTelefone] = useState("");
   const [nome, setNome] = useState("");
   const [finalidade, setFinalidade] = useState(MODELOS_NOVA[setor][0].finalidade);

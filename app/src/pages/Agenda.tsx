@@ -8,6 +8,8 @@ import { Lembretes } from "./WhatsApp";
 import { CirurgiaVendidaAgenda } from "./VendasOrientacao";
 import { whatsapp } from "../lib/whatsapp";
 import { MiniCalendario, ResumoAgendamento } from "../components/AgendaTopo";
+import { WhatsAppRapido, type PacienteWA } from "../components/WhatsAppRapido";
+import { podeResponderSetor } from "../lib/whatsapp";
 import { Modal } from "../components/ui";
 import {
   listaAgendas, listaConvenios, listaLocais, nomeAgenda, ehAgendaOrientacao, colunaDoAgendamento, SELECT_AGENDA,
@@ -46,6 +48,9 @@ export default function Agenda() {
   const [filtro, setFiltro] = useState<string>(eu?.funcao === "medico" ? eu.id : ehAgendaOrientacao(eu) ? "orientacao" : "todos");
   const [novo, setNovo] = useState<null | { profissional_id?: string; inicio?: Date; duracao?: number; local_id?: string | null; encaixe?: boolean; paciente?: PacienteResumo; tipo?: string }>(null);
   const [aberto, setAberto] = useState<Agendamento | null>(null);
+  // WhatsApp do paciente numa janela por cima (pedido da Alessandra, 26/11)
+  const [waPaciente, setWaPaciente] = useState<PacienteWA | null>(null);
+  const podeWA = podeResponderSetor(eu, "orientacao") || podeResponderSetor(eu, "clinica");
   const [modoAbrir, setModoAbrir] = useState<ModoAgendamento>("");
   const [visao, setVisaoBruta] = useState<"grade" | "lista">(() => (lerPreferencia("visao", "grade") === "lista" ? "lista" : "grade"));
   const setVisao = (v: "grade" | "lista") => { setVisaoBruta(v); gravarPreferencia("visao", v); };
@@ -299,6 +304,7 @@ export default function Agenda() {
               convenio={(id) => base.dados!.convenios.find((c) => c.id === id)?.nome ?? ""}
               agenda={(id) => { const m = medicos.find((x) => x.id === colDe(id)); return m ? nomeAgenda(m) : ""; }}
               aoAbrir={() => sel && setAberto(sel)}
+              aoWhatsApp={podeWA && sel?.pacientes ? () => setWaPaciente(sel.pacientes as PacienteWA) : undefined}
               aoSalvarNotas={async (texto) => {
                 if (!sel) return "";
                 const { error } = await supabase.from("agendamentos").update({ observacoes: texto || null }).eq("id", sel.id);
@@ -474,6 +480,7 @@ export default function Agenda() {
           aoSalvar={() => { setNovo(null); recarregar(); }}
         />
       )}
+      {waPaciente && <WhatsAppRapido paciente={waPaciente} aoFechar={() => setWaPaciente(null)} />}
       {aberto && base.dados && (
         <DetalheAgendamento
           ag={aberto}
