@@ -261,3 +261,16 @@ Roteiro (dia da troca, com o Marcio):
 7. Avisar a equipe; Micrologos só para consulta. Depois: apagar a chave `migracao_claude` no Supabase (opcional).
 - 26/11: dona respondeu — os 14 hospitais ficam todos (já estavam ativos); Epilação Bradesco Empresa = R$ 54,57; Bradesco
   Individual unificado no Empresa (plano inativo, pacientes passam para o Empresa; migração 0185 e 01_pacientes).
+
+## Carga inicial + período EM PARALELO (decisão da dona, 26/11/2026 noite)
+- A dona preferiu não parar a clínica: carga inicial à noite com a cópia de 24/11, depois os dois sistemas em paralelo
+  (testes de XML por plano) e **atualização diária** com a cópia do Micrologos que o Marcio manda, até a troca definitiva.
+- Nesse período NÃO acertar as sequências do roteiro acima: pacientes novos do sistema novo seguem 200.001+ (0181) e
+  cobranças novas 20.001+ (0188), para não colidir com os números que o Micrologos continua gerando.
+- Status das contas: TISS conferido no Micrologos (`tiss_data_conferido`) = "faturado" na recepção → "Pronta p/ cobrança";
+  sem conferir → "Em conferência" (06_faturamento.sql).
+- Regra proposta para a atualização diária (falta a dona confirmar e falta construir): o que nasceu no sistema novo nunca
+  é tocado; o que veio do Micrologos é atualizado pela cópia do dia, a não ser que já tenha sido mexido no sistema novo
+  (aí fica o do sistema novo e a dona é avisada).
+- Cuidado: cada cobrança vai para o convênio por UM sistema só (risco de cobrança em dobro).
+- O banco de trabalho local "carga" guarda o de-para (`mapa_ids`) igual ao do Supabase: é a base da atualização diária.
