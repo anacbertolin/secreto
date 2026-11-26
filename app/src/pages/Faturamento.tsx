@@ -69,13 +69,13 @@ export default function Faturamento() {
       <div className="cabecalho">
         <div>
           <h1>Faturamento</h1>
-          <p className="sub" style={{ margin: 0 }}>Contas dos atendimentos → conferência → lote por convênio → envio → pagamento e glosas</p>
+          <p className="sub" style={{ margin: 0 }}>Contas dos atendimentos → conferência → cobrança por convênio → envio → pagamento e glosas</p>
         </div>
       </div>
       <Aviso>{base.erro}</Aviso>
       <div className="abas">
         <button className={aba === "contas" ? "ativa" : ""} onClick={() => setParams({ aba: "contas" })}>Contas</button>
-        {fat && <button className={aba === "lotes" ? "ativa" : ""} onClick={() => setParams({ aba: "lotes" })}>Lotes</button>}
+        {fat && <button className={aba === "lotes" ? "ativa" : ""} onClick={() => setParams({ aba: "lotes" })}>Cobranças</button>}
         {fat && <button className={aba === "glosas" ? "ativa" : ""} onClick={() => setParams({ aba: "glosas" })}>Glosas e recursos</button>}
         {fat && <button className={aba === "resumo" ? "ativa" : ""} onClick={() => setParams({ aba: "resumo" })}>Produção</button>}
       </div>
@@ -112,8 +112,8 @@ function ListaContas({ convenios, podeLote }: { convenios: Convenio[]; podeLote:
 
   async function criarLote() {
     setErro("");
-    if (convSel.length !== 1 || !convSel[0]) return setErro("Escolha contas prontas de um único convênio.");
-    if (selecionadas.some((c) => c.status !== "pronta" || c.lote_id)) return setErro("Só contas \"Pronta p/ lote\" e sem lote podem entrar num lote.");
+    if (convSel.length !== 1 || !convSel[0]) return setErro("Escolha guias prontas de um único convênio.");
+    if (selecionadas.some((c) => c.status !== "pronta" || c.lote_id)) return setErro("Só guias \"Pronta p/ cobrança\" e fora de outra cobrança podem entrar.");
     const competencia = primeiroDiaMes(new Date(selecionadas.map((c) => c.data_atendimento).sort()[0] + "T12:00:00"));
     const { data, error } = await supabase.from("lotes").insert({ convenio_id: convSel[0], competencia }).select("id").single();
     if (error) return setErro(msgErro(error));
@@ -139,7 +139,7 @@ function ListaContas({ convenios, podeLote }: { convenios: Convenio[]; podeLote:
         <label className="linha pequeno muted">até <input type="date" style={{ width: 150 }} value={f.ate} onChange={(e) => setF({ ...f, ate: e.target.value })} /></label>
         <span style={{ marginLeft: "auto" }} />
         <button onClick={() => setNova(true)}>➕ Conta avulsa</button>
-        {podeLote && <button className="primario" disabled={sel.length === 0} onClick={criarLote}>📦 Criar lote com {sel.length || ""} selecionada(s)</button>}
+        {podeLote && <button className="primario" disabled={sel.length === 0} onClick={criarLote}>📦 Iniciar cobrança com {sel.length || ""} guia(s)</button>}
       </div>
       <Aviso>{erro || e1}</Aviso>
       {carregando && !dados ? <Carregando /> : (
@@ -155,7 +155,7 @@ function ListaContas({ convenios, podeLote }: { convenios: Convenio[]; podeLote:
                   <tr key={c.id} className="clicavel" onClick={() => nav(`/faturamento/conta/${c.id}`)}>
                     {podeLote && (
                       <td onClick={(e) => e.stopPropagation()}>
-                        <input type="checkbox" disabled={!podeSel} checked={sel.includes(c.id)} onChange={(e) => setSel(e.target.checked ? [...sel, c.id] : sel.filter((x) => x !== c.id))} aria-label="Selecionar para lote" />
+                        <input type="checkbox" disabled={!podeSel} checked={sel.includes(c.id)} onChange={(e) => setSel(e.target.checked ? [...sel, c.id] : sel.filter((x) => x !== c.id))} aria-label="Selecionar para a cobrança" />
                       </td>
                     )}
                     <td>{fmtData(c.data_atendimento)}</td>
@@ -319,7 +319,7 @@ export function ContaDetalhe() {
           <div className="linha"><h1 style={{ margin: 0 }}>{TIPO_GUIA[c.tipo_guia]} nº {c.numero_guia_prestador}</h1><Etiqueta cor={STATUS_CONTA[c.status].cor}>{STATUS_CONTA[c.status].rotulo}</Etiqueta></div>
           <p className="sub" style={{ margin: "4px 0 0" }}>
             <Link to={`/pacientes/${c.paciente_id}`}>{nomeExibicao(c.pacientes!)}</Link> · Pront. {c.pacientes!.numero_prontuario} · {fmtData(c.data_atendimento)} · {conv?.nome ?? "Particular"}
-            {lote && <> · <Link to={`/faturamento/lote/${lote.id}`}>Lote {lote.numero}</Link></>}
+            {lote && <> · <Link to={`/faturamento/lote/${lote.id}`}>Cobrança {lote.numero}</Link></>}
           </p>
         </div>
         <div className="linha">
@@ -328,7 +328,7 @@ export function ContaDetalhe() {
           {!c.convenio_id && c.status === "paga" && fat && (repasse
             ? <Link className="botao" to={`/repasse/${repasse.id}`}>💰 Repasse nº {repasse.numero}</Link>
             : <Link className="botao" to={`/repasse?conta=${c.id}`}>💰 Calcular repasse ao médico</Link>)}
-          {c.status === "aberta" && c.convenio_id && <button className="primario" disabled={pend.length > 0} title={pend.join(", ")} onClick={() => mudarStatus("pronta")}>✅ Conferida (pronta p/ lote)</button>}
+          {c.status === "aberta" && c.convenio_id && <button className="primario" disabled={pend.length > 0} title={pend.join(", ")} onClick={() => mudarStatus("pronta")}>✅ Conferida (pronta p/ cobrança)</button>}
           {c.status === "pronta" && !c.lote_id && <button onClick={() => mudarStatus("aberta")}>↩️ Voltar para conferência</button>}
           {c.status === "aberta" && !c.convenio_id && <button className="primario" disabled={itens.length === 0} onClick={() => setModal("receber")}>💵 Receber</button>}
           {podeCancelar && (
@@ -358,8 +358,8 @@ export function ContaDetalhe() {
       {pagaParticular && repasse && <Aviso tipo="info">Para cancelar esta conta, cancele antes o repasse nº {repasse.numero} ao médico.</Aviso>}
       {lote && c.status !== "cancelada" && (
         <Aviso tipo="info">
-          Esta conta está no lote {lote.numero}. Para cancelar ou mexer nela, abra o lote e use “Desfazer lote” (só enquanto o
-          lote ainda não foi enviado ao convênio). Depois de enviado, ajustes são feitos como glosa/recurso.
+          Esta conta está na cobrança {lote.numero}. Para mexer nela, abra a cobrança: antes de enviar, use “tirar da cobrança”;
+          depois de enviada, use “Reabrir cobrança” (para corrigir o XML) ou lance glosa/recurso.
         </Aviso>
       )}
       {c.status === "paga" && !c.convenio_id && <Aviso tipo="ok">Recebido {fmtMoeda(c.valor_pago)} em {fmtData(c.recebido_em)} · {FORMAS_PAGAMENTO[c.forma_pagamento ?? ""] ?? ""}{c.parcelas && c.parcelas > 1 ? ` em ${c.parcelas}x` : ""}</Aviso>}
@@ -613,7 +613,7 @@ function ListaLotes({ convenios }: { convenios: Convenio[] }) {
       <Aviso>{erro}</Aviso>
       {carregando ? <Carregando /> : (
         <table className="tabela">
-          <thead><tr><th>Lote</th><th>Convênio</th><th>Competência</th><th>Guias</th><th style={{ textAlign: "right" }}>Valor</th><th>Envio</th><th>Situação</th></tr></thead>
+          <thead><tr><th>Cobrança</th><th>Convênio</th><th>Competência</th><th>Guias</th><th style={{ textAlign: "right" }}>Valor</th><th>Envio</th><th>Situação</th></tr></thead>
           <tbody>
             {(dados ?? []).map((l) => (
               <tr key={l.id} className="clicavel" onClick={() => nav(`/faturamento/lote/${l.id}`)}>
@@ -626,7 +626,7 @@ function ListaLotes({ convenios }: { convenios: Convenio[] }) {
           </tbody>
         </table>
       )}
-      {dados?.length === 0 && <div className="vazio">Nenhum lote. Na aba Contas, selecione contas prontas de um convênio e clique em "Criar lote".</div>}
+      {dados?.length === 0 && <div className="vazio">Nenhuma cobrança. Na aba Contas, escolha "Pronta p/ cobrança", marque as guias de um convênio e clique em "Iniciar cobrança".</div>}
     </div>
   );
 }
@@ -654,7 +654,7 @@ export function LoteDetalhe() {
     recarregar();
   }
   async function cancelarLote() {
-    if (!confirm("Desfazer este lote? As contas voltam para \"Pronta p/ lote\".")) return;
+    if (!confirm("Desfazer esta cobrança? As guias voltam para \"Pronta p/ cobrança\".")) return;
     const r1 = await supabase.from("contas").update({ lote_id: null }).eq("lote_id", l.id);
     if (r1.error) return setErro(msgErro(r1.error));
     const r2 = await supabase.from("lotes").update({ status: "cancelado" }).eq("id", l.id);
@@ -680,7 +680,7 @@ export function LoteDetalhe() {
   }
   const temPagamento = cs.some((c) => ["paga", "glosada"].includes(c.status) || Number(c.valor_glosado) > 0);
   async function reabrirLote() {
-    if (!confirm("Reabrir esta cobrança para corrigir?\n\nAs guias voltam para \"Pronta p/ lote\". Você pode tirar o paciente com erro, " +
+    if (!confirm("Reabrir esta cobrança para corrigir?\n\nAs guias voltam para \"Pronta p/ cobrança\". Você pode tirar o paciente com erro, " +
       "e depois marca a cobrança como enviada de novo (o XML deve ser gerado de novo).")) return;
     setErro("");
     const r1 = await supabase.from("contas").update({ status: "pronta" }).eq("lote_id", l.id).eq("status", "faturada");
@@ -705,10 +705,10 @@ export function LoteDetalhe() {
     <div>
       <div className="cabecalho">
         <div>
-          <div className="linha"><h1 style={{ margin: 0 }}>Lote {l.numero} · {conv?.nome}</h1><Etiqueta cor={STATUS_LOTE[l.status].cor}>{STATUS_LOTE[l.status].rotulo}</Etiqueta></div>
+          <div className="linha"><h1 style={{ margin: 0 }}>Cobrança {l.numero} · {conv?.nome}</h1><Etiqueta cor={STATUS_LOTE[l.status].cor}>{STATUS_LOTE[l.status].rotulo}</Etiqueta></div>
           <p className="sub" style={{ margin: "4px 0 0" }}>
             Competência {fmtCompetencia(l.competencia)} · {cs.length} guia(s) · {fmtMoeda(total)}
-            {l.numero_tiss && ` · lote no XML nº ${l.numero_tiss}`}
+            {l.numero_tiss && ` · nº no XML ${l.numero_tiss}`}
             {l.enviado_em && ` · enviado em ${fmtData(l.enviado_em)}`}{l.protocolo && ` · protocolo ${l.protocolo}`}
             {l.pago_em && ` · pago ${fmtMoeda(l.valor_pago)} em ${fmtData(l.pago_em)}`}
           </p>
@@ -720,7 +720,7 @@ export function LoteDetalhe() {
           {l.status === "aberto" && <button className="primario" disabled={cs.length === 0} onClick={() => setModal("enviar")}>📤 Marcar como enviado</button>}
           {l.status === "enviado" && !l.arquivado && <button className="primario" onClick={() => setModal("pagar")}>💰 Registrar pagamento</button>}
           {l.status === "enviado" && !l.arquivado && !temPagamento && <button onClick={reabrirLote} title="Para tirar um paciente com erro e gerar o XML de novo">🔓 Reabrir cobrança</button>}
-          {l.status === "aberto" && <button className="perigo" onClick={cancelarLote}>Desfazer lote</button>}
+          {l.status === "aberto" && <button className="perigo" onClick={cancelarLote}>Desfazer cobrança</button>}
         </div>
       </div>
       {(erro || e1) && <Aviso><span style={{ whiteSpace: "pre-line" }}>{erro || e1}</span></Aviso>}
@@ -739,7 +739,7 @@ export function LoteDetalhe() {
                 <td style={{ textAlign: "right" }}>{fmtMoeda(c.valor_total)}</td>
                 <td style={{ textAlign: "right", color: Number(c.valor_glosado) > 0 ? "var(--perigo)" : undefined }}>{Number(c.valor_glosado) > 0 ? fmtMoeda(c.valor_glosado) : "—"}</td>
                 <td><Etiqueta cor={STATUS_CONTA[c.status].cor}>{STATUS_CONTA[c.status].rotulo}</Etiqueta></td>
-                <td>{l.status === "aberto" && <button className="sutil mini" onClick={() => tirar(c)}>tirar do lote</button>}</td>
+                <td>{l.status === "aberto" && <button className="sutil mini" onClick={() => tirar(c)}>tirar da cobrança</button>}</td>
               </tr>
             ))}
           </tbody>
@@ -765,7 +765,7 @@ function EnviarLote({ lote, contas, aoFechar, aoSalvar }: { lote: Lote; contas: 
     aoSalvar();
   }
   return (
-    <Modal titulo={`Enviar lote ${lote.numero}`} aoFechar={aoFechar} rodape={<><button onClick={aoFechar}>Cancelar</button><button className="primario" onClick={salvar}>Confirmar envio</button></>}>
+    <Modal titulo={`Enviar cobrança ${lote.numero}`} aoFechar={aoFechar} rodape={<><button onClick={aoFechar}>Cancelar</button><button className="primario" onClick={salvar}>Confirmar envio</button></>}>
       <Aviso>{erro}</Aviso>
       <p>Depois de enviado, os itens das guias ficam travados (só glosas podem ser lançadas).</p>
       <div className="grade g3">
@@ -796,7 +796,7 @@ function PagarLote({ lote, contas, aoFechar, aoSalvar }: { lote: Lote; contas: C
     aoSalvar();
   }
   return (
-    <Modal titulo={`Pagamento do lote ${lote.numero}`} aoFechar={aoFechar} rodape={<><button onClick={aoFechar}>Cancelar</button><button className="primario" onClick={salvar}>Registrar pagamento</button></>}>
+    <Modal titulo={`Pagamento da cobrança ${lote.numero}`} aoFechar={aoFechar} rodape={<><button onClick={aoFechar}>Cancelar</button><button className="primario" onClick={salvar}>Registrar pagamento</button></>}>
       <Aviso>{erro}</Aviso>
       <p>Faturado: <b>{fmtMoeda(total)}</b> · Glosas lançadas: <b style={{ color: "var(--perigo)" }}>{fmtMoeda(glosado)}</b> · Esperado: <b>{fmtMoeda(total - glosado)}</b></p>
       <p className="muted pequeno">Lance as glosas item a item (em cada guia) antes de registrar o pagamento.</p>

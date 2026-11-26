@@ -178,3 +178,12 @@
     separa a produção de cirurgia por médico? (honorários de auxiliar/instrumentador já saem no nome de cada um)
   - Pedir ao Luciano 2 ou 3 relatórios do Micrologos (PDF) de um mês fechado para conferir o novo relatório número a número.
   - Guia de honorário individual (tipo 06, 1.835 contas) entra como SP/SADT; o tipo original fica em legado.
+
+## Plano combinado com a dona para o XML (26/11/2026)
+1. Terminar de copiar tudo do Micrologos: convênios, planos, preços (já no ensaio), **códigos dos médicos por convênio**
+   (MEDICOS_OPERADORAS → profissional_convenio_codigos), hospitais e a **Guia de Honorários** (cirurgias).
+2. Depois, testes convênio por convênio: Claude pede "baixe no Micrologos o XML do convênio X", a dona manda,
+   Claude compara com o XML do sistema novo e corrige. Nada de XML de teste antes disso.
+3. Nas telas, "lote" passou a se chamar **cobrança** (como no Micrologos). Para criar: Faturamento → Contas →
+   filtro "Pronta p/ cobrança" → marcar as guias de um convênio → "Iniciar cobrança". Em produção ainda não há contas
+   (elas entram na troca), por isso a dona não conseguiu criar.
