@@ -1821,3 +1821,14 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
 - A carga da migração (`migracao/transformacoes/02_convenios.sql`) passou a completar os provisórios pelo código
   (TISS, planos, preços) sem duplicar. Aviso deixado em `migracao/PROXIMOS-PASSOS.md`.
 - Não usar estes convênios para XML antes da carga (falta código do prestador e planos).
+
+## 26/11/2026 — Agenda: "Primeira vez / Seguimento" e encaixe só com agenda cheia
+- Queixa da dona: a janela abria como "Encaixe" sem ser encaixe (confundia a Alessandra). Causa: o clique num horário
+  FORA do expediente cadastrado marcava encaixe sozinho, e o Centro Cirúrgico não tem horário cadastrado.
+- Definição da dona: **encaixe** = a agenda está cheia e entra mais um paciente no mesmo horário. Agora o encaixe só
+  vem marcado quando o horário clicado já tem paciente (ou pelo botão Encaixar). Se a pessoa tenta marcar num horário
+  ocupado sem encaixe, o aviso explica (regra `agenda_sem_conflito`, migração 0153).
+- **Primeira vez / Seguimento** (como no Micrologos) no lugar da caixinha "Primeira consulta": escolha obrigatória
+  (menos na Orientação Cirúrgica). Sugere "Seguimento" sozinho se o paciente já tem atendimento (agendamento atendido
+  ou prontuário do Micrologos) e no tipo Retorno. Grava em `agendamentos.primeira_vez` (sem mudança de banco).
+- No agendamento aberto dá para trocar Primeira vez/Seguimento e Encaixe (corrigir o que já foi lançado).

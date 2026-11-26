@@ -82,7 +82,8 @@ export function NovoAgendamento(props: {
     tipo: ini.tipo ?? "consulta",
     convenio_id: ini.paciente?.convenio_id ?? "",
     local_id: ini.local_id ?? "",
-    primeira_vez: false,
+    // Como no Micrologos: todo agendamento diz se é a PRIMEIRA VEZ do paciente ou SEGUIMENTO (pedido da dona, 26/11)
+    atendimento: (ini.tipo === "retorno" ? "seguimento" : "") as "" | "primeira" | "seguimento",
     encaixe: !!ini.encaixe,
     observacoes: "",
     cirurgiao_id: "",
@@ -99,10 +100,29 @@ export function NovoAgendamento(props: {
     if (paciente) setF((x) => ({ ...x, convenio_id: paciente.convenio_id ?? "" }));
   }, [paciente]);
 
+  // Paciente que já foi atendido antes (no sistema ou no Micrologos) → sugere "Seguimento"
+  const [jaVeio, setJaVeio] = useState(false);
+  useEffect(() => {
+    setJaVeio(false);
+    if (!paciente) return;
+    let vivo = true;
+    Promise.all([
+      supabase.from("agendamentos").select("id").eq("paciente_id", paciente.id).eq("status", "atendido").limit(1),
+      supabase.from("prontuario_legado").select("id").eq("paciente_id", paciente.id).limit(1),
+    ]).then(([a, l]) => {
+      const veio = (a.data?.length ?? 0) > 0 || (l.data?.length ?? 0) > 0;
+      if (!vivo || !veio) return;
+      setJaVeio(true);
+      setF((x) => (x.atendimento ? x : { ...x, atendimento: "seguimento" }));
+    });
+    return () => { vivo = false; };
+  }, [paciente]);
+
   async function salvar() {
     setErro("");
     if (!paciente) return setErro("Escolha o paciente.");
     if (!f.profissional_id) return setErro("Escolha o profissional.");
+    if (!orientacao && !f.atendimento) return setErro("Escolha se é a primeira vez do paciente ou seguimento.");
     const inicio = new Date(`${f.data}T${f.hora}:00`);
     const fim = new Date(inicio.getTime() + Number(f.duracao) * 60000);
     setSalvando(true);
@@ -116,13 +136,18 @@ export function NovoAgendamento(props: {
       convenio_id: f.convenio_id || null,
       plano_id: f.convenio_id && f.convenio_id === paciente.convenio_id ? paciente.plano_id ?? null : null,
       local_id: f.local_id || null,
-      primeira_vez: f.primeira_vez,
+      primeira_vez: !orientacao && f.atendimento === "primeira",
       encaixe: f.encaixe,
       observacoes: f.observacoes || null,
       cirurgiao_id: centro ? f.cirurgiao_id || null : null,
     });
     setSalvando(false);
-    if (error) return setErro(msgErro(error));
+    if (error) {
+      if (/agenda_sem_conflito/.test(error.message)) {
+        return setErro("Já tem paciente marcado neste horário. Escolha outro horário ou, se a agenda está cheia e é para colocar mais um, marque “Encaixe”.");
+      }
+      return setErro(msgErro(error));
+    }
     props.aoSalvar();
   }
 
@@ -191,9 +216,15 @@ export function NovoAgendamento(props: {
                   {props.locais.map((l) => <option key={l.id} value={l.id}>{l.nome}</option>)}
                 </select>
               </Campo>
-              <div className="grade" style={{ alignContent: "end" }}>
-                <label className="check"><input type="checkbox" checked={f.primeira_vez} onChange={(e) => setF({ ...f, primeira_vez: e.target.checked })} /> Primeira consulta</label>
-                <label className="check"><input type="checkbox" checked={f.encaixe} onChange={(e) => setF({ ...f, encaixe: e.target.checked })} /> Encaixe</label>
+              <Campo rotulo="Atendimento *">
+                <div className="grupo-botoes">
+                  <button type="button" className={f.atendimento === "primeira" ? "primario" : ""} onClick={() => setF({ ...f, atendimento: "primeira" })}>Primeira vez</button>
+                  <button type="button" className={f.atendimento === "seguimento" ? "primario" : ""} onClick={() => setF({ ...f, atendimento: "seguimento" })}>Seguimento</button>
+                </div>
+                {jaVeio && <div className="pequeno muted">Já foi atendido antes</div>}
+              </Campo>
+              <div className="inteiro">
+                <label className="check"><input type="checkbox" checked={f.encaixe} onChange={(e) => setF({ ...f, encaixe: e.target.checked })} /> Encaixe <span className="muted pequeno">(só quando a agenda está cheia e entra mais um paciente no mesmo horário)</span></label>
               </div>
             </>
           )}
@@ -279,6 +310,16 @@ export function DetalheAgendamento(props: {
   // Centro Cirúrgico: cirurgião editável na hora (sem fechar a janela)
   const centro = ehCentroCirurgico(props.medicos.find((m) => m.id === a.profissional_id));
   const [cirurgiao, setCirurgiao] = useState(a.cirurgiao_id ?? "");
+  // Primeira vez / Seguimento e Encaixe: muda na hora e recarrega a agenda ao fechar
+  async function atualizarCampo(campos: Record<string, unknown>) {
+    setErro("");
+    const { error } = await supabase.from("agendamentos").update(campos).eq("id", a.id);
+    if (error) {
+      if (/agenda_sem_conflito/.test(error.message)) return setErro("Este horário já tem outro paciente: por isso ele precisa ficar como encaixe (ou remarque para outro horário).");
+      return setErro(msgErro(error));
+    }
+    props.aoAlterar();
+  }
   async function atualizarCirurgiao(v: string) {
     setErro("");
     const { error } = await supabase.from("agendamentos").update({ cirurgiao_id: v || null }).eq("id", a.id);
@@ -317,7 +358,19 @@ export function DetalheAgendamento(props: {
             </dd>
           </div>
         )}
-        <div><dt className="muted pequeno">Tipo</dt><dd style={{ margin: 0 }}>{TIPOS_AGENDA[a.tipo]}{a.primeira_vez && " · 1ª vez"}{a.encaixe && " · encaixe"}</dd></div>
+        <div><dt className="muted pequeno">Tipo</dt><dd style={{ margin: 0 }}>{TIPOS_AGENDA[a.tipo]}</dd></div>
+        {!orientacao && (
+          <div>
+            <dt className="muted pequeno">Atendimento</dt>
+            <dd style={{ margin: 0 }} className="linha">
+              <span className="grupo-botoes">
+                <button type="button" className={a.primeira_vez ? "primario mini" : "mini"} onClick={() => !a.primeira_vez && atualizarCampo({ primeira_vez: true })}>Primeira vez</button>
+                <button type="button" className={!a.primeira_vez ? "primario mini" : "mini"} onClick={() => a.primeira_vez && atualizarCampo({ primeira_vez: false })}>Seguimento</button>
+              </span>
+              <label className="check pequeno"><input type="checkbox" checked={a.encaixe} onChange={(e) => atualizarCampo({ encaixe: e.target.checked })} /> Encaixe</label>
+            </dd>
+          </div>
+        )}
         <div><dt className="muted pequeno">Convênio</dt><dd style={{ margin: 0 }}>{nomePor(props.convenios, a.convenio_id) || "Particular"}</dd></div>
         {a.local_id && <div><dt className="muted pequeno">Sala</dt><dd style={{ margin: 0 }}>{nomePor(props.locais, a.local_id)}</dd></div>}
         {a.confirmado_em && <div><dt className="muted pequeno">Confirmado</dt><dd style={{ margin: 0 }}>{fmtData(a.confirmado_em)} {fmtHora(a.confirmado_em)} {a.canal_confirmacao && `(${a.canal_confirmacao})`}</dd></div>}
