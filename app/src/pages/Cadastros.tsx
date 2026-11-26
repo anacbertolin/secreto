@@ -51,7 +51,7 @@ function TabelaEquipe({ lista, aoEditar, aoAcesso }: { lista: Profissional[]; ao
                 {!p.agenda_recurso && p.sem_acesso && <> <Etiqueta cor="cinza">sem login</Etiqueta></>}
                 {p.especialidade && <div className="muted pequeno">{p.especialidade}</div>}</td>
               <td>{p.usuario ? <>👤 {p.usuario}</> : p.email ?? <span className="muted">— (sem login)</span>}</td>
-              <td>{p.agenda_recurso ? <span className="muted">—</span> : FUNCOES[p.funcao]}{p.orientacao_cirurgica && <div><Etiqueta cor="azul">Orientação cirúrgica</Etiqueta></div>}{p.caixa_conferir && <div><Etiqueta cor="amarelo">Confere o caixa</Etiqueta></div>}{p.caixa_aprovar && <div><Etiqueta cor="verde">Aprova o caixa</Etiqueta></div>}{p.atende_pacientes && p.funcao !== "medico" && <div><Etiqueta cor="roxo">Atende pacientes</Etiqueta></div>}</td>
+              <td>{p.agenda_recurso ? <span className="muted">—</span> : FUNCOES[p.funcao]}{p.orientacao_cirurgica && <div><Etiqueta cor="azul">Orientação cirúrgica</Etiqueta></div>}{p.caixa_conferir && <div><Etiqueta cor="amarelo">Confere o caixa</Etiqueta></div>}{p.caixa_aprovar && <div><Etiqueta cor="verde">Aprova o caixa</Etiqueta></div>}{p.caixa_recebe_entrega && <div><Etiqueta cor="amarelo">Recebe dinheiro do caixa</Etiqueta></div>}{p.atende_pacientes && p.funcao !== "medico" && <div><Etiqueta cor="roxo">Atende pacientes</Etiqueta></div>}</td>
               <td>{p.conselho && `${p.conselho} ${p.numero_conselho ?? ""}/${p.uf_conselho ?? ""}`}</td>
               <td style={{ textAlign: "right" }}>
                 <div className="linha" style={{ justifyContent: "flex-end" }}>
@@ -72,7 +72,7 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
     nome: p.nome ?? "", email: p.usuario ? "" : p.email ?? "", usuario: p.usuario ?? "", funcao: p.funcao ?? "recepcao", conselho: p.conselho ?? "", numero_conselho: p.numero_conselho ?? "",
     uf_conselho: p.uf_conselho ?? "", especialidade: p.especialidade ?? "", rqe: p.rqe ?? "", cbo: (p as { cbo?: string | null }).cbo ?? "", ativo: p.ativo ?? true,
     orientacao_cirurgica: p.orientacao_cirurgica ?? false,
-    caixa_conferir: p.caixa_conferir ?? false, caixa_aprovar: p.caixa_aprovar ?? false, atende_pacientes: p.atende_pacientes ?? false,
+    caixa_conferir: p.caixa_conferir ?? false, caixa_aprovar: p.caixa_aprovar ?? false, atende_pacientes: p.atende_pacientes ?? false, caixa_recebe_entrega: p.caixa_recebe_entrega ?? false,
   });
   // Médicos e funcionários entram com usuário; a administração com e-mail (decisão da dona, 16/11)
   const [modo, setModo] = useState<"usuario" | "email">(p.usuario ? "usuario" : p.email ? "email" : p.funcao === "admin" ? "email" : "usuario");
@@ -191,6 +191,10 @@ function EditarProfissional({ p, aoFechar, aoSalvar }: { p: Partial<Profissional
         <label className="check inteiro">
           <input type="checkbox" checked={f.caixa_aprovar as boolean} onChange={(e) => setF({ ...f, caixa_aprovar: e.target.checked })} />
           <b>&nbsp;Aprova o caixa&nbsp;</b> (aprovação final — supervisão)
+        </label>
+        <label className="check inteiro">
+          <input type="checkbox" checked={f.caixa_recebe_entrega as boolean} onChange={(e) => setF({ ...f, caixa_recebe_entrega: e.target.checked })} />
+          <b>&nbsp;Recebe o dinheiro&nbsp;</b> que a recepção entrega ao administrativo durante o dia (dá o “Recebi”)
         </label>
         {p.id && <label className="check inteiro"><input type="checkbox" checked={f.ativo as boolean} onChange={(e) => setF({ ...f, ativo: e.target.checked })} /> Ativo (desmarque quando a pessoa sair da clínica: ela perde o acesso)</label>}
       </div>
