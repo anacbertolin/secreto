@@ -83,11 +83,11 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
   // (Unimed: "Consumed Olhos"), vai a razão social
   const nomePrest = texto(mic("nome_prestador")).toUpperCase();
   // (Unimed Gisele/Max: o prestador é o próprio médico, ex.: "GISELE MOURA BRASIL")
-  const razaoSocial = nomePrest && !(nomePrest.includes("CONSUMED") && !nomePrest.includes("CONSULTORIOS"))
-    ? nomePrest : "CONSUMED CONSULTORIOS MEDICOS LTDA";
+  // (Klini: "CONSUMED CLINICA DE OLHOS"; só o "Consumed Olhos" da Unimed Cirurgia vira a razão social)
+  const razaoSocial = nomePrest && nomePrest !== "CONSUMED OLHOS" ? nomePrest : "CONSUMED CONSULTORIOS MEDICOS LTDA";
   // Unimed por médico (Unimed Gisele, Max…): o prestador é o próprio médico, e o contratado solicitante é o médico
   // solicitante, com o código de cooperado dele (XML reais de 26/11)
-  const prestadorPessoa = razaoSocial !== "CONSUMED CONSULTORIOS MEDICOS LTDA" && !razaoSocial.includes("CONSUMED");
+  const prestadorPessoa = !razaoSocial.includes("CONSUMED");
   const codCooperado = (profId: string | null | undefined) =>
     [...codigos, ...codigosTodos].find((x) => x.profissional_id === profId && (x.codigo_solicitante || x.codigo_executante));
   // hospital identificado pelo CNPJ quando o convênio identifica por CNPJ (Mediservice); senão pelo código (Unimed)
@@ -137,7 +137,8 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
   // Micrologos escreve na observação "Conta <nº>"; com tiss_cid_na_obs vai antes a observação da conta (ex.: "Glaucoma")
   const obsConta = (c: ContaDb) => {
     if (!c.legado?.id_conta) return c.observacoes ?? undefined;
-    return [cidNaObs ? texto(c.observacoes) : "", `Conta ${c.legado.id_conta}`].filter(Boolean).join(" ");
+    // (o Micrologos tira as vírgulas da observação)
+    return [cidNaObs ? texto((c.observacoes ?? "").replace(/,/g, " ")) : "", `Conta ${c.legado.id_conta}`].filter(Boolean).join(" ");
   };
   const operadora = (c: ContaDb) => c.numero_guia_operadora ?? (tiss.guia_operadora_igual_prestador ? c.numero_guia_prestador : undefined);
   const guias: Guia[] = [];
@@ -235,7 +236,8 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
     // exames: tipoAtendimento 23 e grau 12; procedimento (ex.: fotocoagulação): 03 e grau 00 (XML reais do Bradesco).
     // Conta do Micrologos: vale o tipo de atendimento gravado nela (Unimed: 02 pequena cirurgia, 03…)
     const soExames = itens.every((i) => i.procedimentos?.tipo === "exame");
-    const tipoAtend = consultaNaSadt ? "04" : c.legado?.tipo_atendimento ?? (soExames ? "23" : "03");
+    // (Klini: consulta na SP/SADT com tipo 23 gravado na conta)
+    const tipoAtend = c.legado?.tipo_atendimento ?? (consultaNaSadt ? "04" : soExames ? "23" : "03");
     const ehExame = tipoAtend === "23" || tipoAtend === "04";
     const procs: Procedimento[] = itens.flatMap((i): Procedimento[] => {
       const idProf = i.profissional_id ?? c.profissional_id;
