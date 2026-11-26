@@ -7,6 +7,8 @@ import { fmtData, fmtMoeda, isoDia, numOuNulo } from "../lib/util";
 const TIPOS: Record<string, string> = {
   consulta: "Consulta", exame: "Exame", procedimento: "Procedimento", cirurgia: "Cirurgia", terapia: "Terapia", taxa: "Taxa", material: "Material", medicamento: "Medicamento",
 };
+// Unidade de medida TISS (dm_unidadeMedida) mais usadas para colírios, medicamentos e materiais
+const UNIDADES: Record<string, string> = { "036": "Unidade", "013": "Frasco", "014": "Frasco-ampola", "001": "Ampola", "003": "Bisnaga", "005": "Caixa", "011": "Envelope", "017": "Gotas", "023": "Mililitro", "031": "Seringa", "035": "Tubo" };
 const TABELAS: Record<string, string> = { "22": "22 · Procedimentos (TUSS)", "19": "19 · Materiais", "20": "20 · Medicamentos", "18": "18 · Taxas", "98": "98 · Pacotes", "00": "00 · Tabela própria (particular / Micrologos)" };
 
 interface Preco { id: string; procedimento_id: string; convenio_id: string | null; plano_id: string | null; valor: number; vigente_de: string; ativo: boolean }
@@ -34,7 +36,9 @@ export default function Procedimentos() {
   async function salvar() {
     setErro("");
     if (!edit?.descricao?.trim()) return setErro("Informe a descrição.");
-    const v = { codigo: edit.codigo?.trim() || null, tabela: edit.tabela ?? "22", descricao: edit.descricao.trim(), tipo: edit.tipo ?? "procedimento", padrao_consulta: !!edit.padrao_consulta, ativo: edit.ativo ?? true, observacao: edit.observacao?.trim() || null };
+    const v = { codigo: edit.codigo?.trim() || null, tabela: edit.tabela ?? "22", descricao: edit.descricao.trim(), tipo: edit.tipo ?? "procedimento", padrao_consulta: !!edit.padrao_consulta, ativo: edit.ativo ?? true, observacao: edit.observacao?.trim() || null,
+      unidade_tiss: ["medicamento", "material"].includes(edit.tipo ?? "") ? edit.unidade_tiss || "036" : null,
+      registro_anvisa: ["medicamento", "material"].includes(edit.tipo ?? "") ? edit.registro_anvisa?.trim() || null : null };
     if (v.padrao_consulta) {
       // só um procedimento pode ser o "padrão da consulta"
       const outro = dados?.procs.find((p) => p.padrao_consulta && p.id !== edit.id);
@@ -121,6 +125,13 @@ export default function Procedimentos() {
             <Campo rotulo="Descrição" className="inteiro"><input value={edit.descricao ?? ""} onChange={(e) => setEdit({ ...edit, descricao: e.target.value })} /></Campo>
             <Campo rotulo="Observação" className="inteiro"><input value={edit.observacao ?? ""} onChange={(e) => setEdit({ ...edit, observacao: e.target.value })} placeholder="Ex.: preço para cartão" /></Campo>
             <Campo rotulo="Tipo"><select value={edit.tipo ?? "procedimento"} onChange={(e) => setEdit({ ...edit, tipo: e.target.value })}>{Object.entries(TIPOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Campo>
+            {["medicamento", "material"].includes(edit.tipo ?? "") && (
+              <>
+                <Campo rotulo="Unidade (para o XML)"><select value={edit.unidade_tiss ?? "036"} onChange={(e) => setEdit({ ...edit, unidade_tiss: e.target.value })}>{Object.entries(UNIDADES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Campo>
+                <Campo rotulo="Registro ANVISA (opcional)"><input value={edit.registro_anvisa ?? ""} onChange={(e) => setEdit({ ...edit, registro_anvisa: e.target.value })} /></Campo>
+                <div className="inteiro muted pequeno">No XML do convênio, {edit.tipo === "medicamento" ? "medicamento" : "material"} vai em "outras despesas" (tabela {edit.tipo === "medicamento" ? "20" : "19"}). Pacote (tabela 98) continua como procedimento.</div>
+              </>
+            )}
             <div className="grade" style={{ alignContent: "end" }}>
               <label className="check"><input type="checkbox" checked={!!edit.padrao_consulta} onChange={(e) => setEdit({ ...edit, padrao_consulta: e.target.checked })} /> Lançar sozinho na chegada de uma consulta</label>
               {edit.id && <label className="check"><input type="checkbox" checked={edit.ativo ?? true} onChange={(e) => setEdit({ ...edit, ativo: e.target.checked })} /> Ativo</label>}

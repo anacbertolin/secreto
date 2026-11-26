@@ -4,7 +4,7 @@
 import { No, t, e, tObrig, eObrig, dec2, data, hora, soDigitos, serializar, hashEpilogo, paraLatin1 } from "./xml";
 import type {
   ArquivoTISS, ConfigTISS, Guia, GuiaConsulta, GuiaHonorarios, GuiaSPSADT, IdContratado,
-  LoteTISS, MembroEquipe, Procedimento, Profissional,
+  LoteTISS, MembroEquipe, OutraDespesa, Procedimento, Profissional,
 } from "./tipos";
 
 const NS = "http://www.ans.gov.br/padroes/tiss/schemas";
@@ -136,8 +136,13 @@ function equipeSadt(m: MembroEquipe): No {
   );
 }
 
+const valorDespesa = (d: OutraDespesa) => d.valorTotal ?? arred(d.quantidade * d.valorUnitario * d.reducaoAcrescimo);
+// quantidade com até 4 casas (st_decimal9-4), sem zeros à toa: 1, 2.5, 0.25
+const qtd4 = (q: number) => String(Math.round(q * 10000) / 10000);
+
 function guiaSPSADT(g: GuiaSPSADT, registroANS: string): No {
   const total = arred(g.procedimentos.reduce((s, p) => s + valorTotalItem(p), 0));
+  const despesa = (cod: string) => arred((g.outrasDespesas ?? []).filter((d) => d.codigoDespesa === cod).reduce((s, d) => s + valorDespesa(d), 0));
   return eObrig("guiaSP-SADT",
     eObrig("cabecalhoGuia",
       tObrig("registroANS", registroANS),
@@ -189,10 +194,30 @@ function guiaSPSADT(g: GuiaSPSADT, registroANS: string): No {
       ...valoresItem(p),
       p.equipe.map(equipeSadt),
     ))),
+    e("outrasDespesas", (g.outrasDespesas ?? []).map((d, i) => eObrig("despesa",
+      tObrig("sequencialItem", i + 1),
+      tObrig("codigoDespesa", d.codigoDespesa),
+      eObrig("servicosExecutados",
+        tObrig("dataExecucao", data(d.dataExecucao)),
+        tObrig("codigoTabela", d.codigoTabela),
+        tObrig("codigoProcedimento", d.codigo),
+        tObrig("quantidadeExecutada", qtd4(d.quantidade)),
+        tObrig("unidadeMedida", d.unidadeMedida),
+        tObrig("reducaoAcrescimo", dec2(d.reducaoAcrescimo)),
+        tObrig("valorUnitario", dec2(d.valorUnitario)),
+        tObrig("valorTotal", dec2(valorDespesa(d))),
+        tObrig("descricaoProcedimento", d.descricao.slice(0, 150)),
+        t("registroANVISA", d.registroAnvisa),
+      ),
+    ))),
     t("observacao", g.observacao?.slice(0, 500)),
     eObrig("valorTotal",
       t("valorProcedimentos", dec2(total)),
-      tObrig("valorTotalGeral", dec2(total)),
+      despesa("03") ? t("valorMateriais", dec2(despesa("03"))) : null,
+      despesa("02") ? t("valorMedicamentos", dec2(despesa("02"))) : null,
+      despesa("08") ? t("valorOPME", dec2(despesa("08"))) : null,
+      despesa("01") ? t("valorGasesMedicinais", dec2(despesa("01"))) : null,
+      tObrig("valorTotalGeral", dec2(arred(total + (g.outrasDespesas ?? []).reduce((s, d) => s + valorDespesa(d), 0)))),
     ),
   );
 }
