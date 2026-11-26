@@ -1832,3 +1832,9 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   (menos na Orientação Cirúrgica). Sugere "Seguimento" sozinho se o paciente já tem atendimento (agendamento atendido
   ou prontuário do Micrologos) e no tipo Retorno. Grava em `agendamentos.primeira_vez` (sem mudança de banco).
 - No agendamento aberto dá para trocar Primeira vez/Seguimento e Encaixe (corrigir o que já foi lançado).
+
+## 26/11/2026 — Horário do Centro Cirúrgico (migração 0177)
+- Pedido da dona: Centro Cirúrgico funciona como a clínica: segunda a sexta 8h–17h, sábado 8h–12h. Cadastrado em
+  `horarios_profissional` (intervalos de 15 min). Os médicos e as outras colunas ainda NÃO têm horário cadastrado.
+- Agenda: a faixa de horas só encolhe para o horário cadastrado quando todas as colunas mostradas têm horário;
+  senão continua 7h–19h (para não esconder as colunas sem horário).

@@ -195,7 +195,8 @@ export default function Agenda() {
   const { iniMin, fimMin } = useMemo(() => {
     const hs = (doDia.dados?.horarios ?? []).filter((h) => colunas.some((c) => c.id === h.profissional_id));
     let a = 7 * 60, b = 19 * 60;
-    if (hs.length) {
+    // só encolhe para o horário cadastrado se TODAS as colunas mostradas tiverem horário (senão fica 7h–19h)
+    if (hs.length && colunas.every((c) => hs.some((h) => h.profissional_id === c.id))) {
       a = Math.min(...hs.map((h) => minutosDoDia(h.hora_inicio)));
       b = Math.max(...hs.map((h) => minutosDoDia(h.hora_fim)));
     }
