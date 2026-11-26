@@ -1779,4 +1779,8 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   quem não é médico mas atende (ex.: tecnóloga) aparece no caixa em "Médico / profissional". Colunas de setor da agenda ficam de fora.
 - Marcado para **Eveline Isabel Alves dos Santos** (tecnóloga: campo visual e ortóptica), especialidade preenchida.
 - A agenda continua com as colunas "Eveline (Campo Visual)" e "Ortóptica" (migração 0152, sessão de migração) — não mexido.
-- Em aberto com a dona: a função da Eveline na Equipe está "Recepção"; como tecnóloga talvez seja "Enfermagem / Técnico(a)".
+- Função da Eveline trocada de "Recepção" para **"Enfermagem / Técnico(a)"** (dona, 26/11: ela acessa laudos e prontuário e escreve,
+  principalmente na ortóptica). Com isso ela deixa de lançar no caixa; continua aparecendo no caixa como profissional.
+- O caixa já tem os exames com preço particular: Campo Visual Particular (R$ 180), Teste Ortóptico (R$ 100),
+  Exercício Ortóptico (R$ 50) e 10 sessões (R$ 400) — dá para lançar pelo exame e escolher a Eveline como profissional.
+- Para a migração: descobrir no Micrologos onde ficam os registros da Eveline (ortóptica/campo visual — prontuário ou aba própria).
