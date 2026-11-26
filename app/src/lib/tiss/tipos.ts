@@ -90,7 +90,26 @@ export interface GuiaSPSADT {
   tipoConsulta?: string;
   regimeAtendimento: string; // "01" ambulatorial
   procedimentos: Procedimento[];
+  /** Medicamentos, materiais, OPME… (ct_outrasDespesas). Pacotes NÃO vão aqui: vão como procedimento. */
+  outrasDespesas?: OutraDespesa[];
   observacao?: string;
+}
+
+/** Item de "outras despesas" da SP/SADT (dm_outrasDespesas: 01 gases, 02 medicamentos, 03 materiais, 05 diárias,
+ *  07 taxas e aluguéis, 08 OPME). Tabela: 20 medicamentos (Brasíndice/TUSS), 19 materiais, 00 própria. */
+export interface OutraDespesa {
+  codigoDespesa: "01" | "02" | "03" | "05" | "07" | "08";
+  dataExecucao: string;
+  codigoTabela: string;
+  codigo: string;
+  descricao: string;
+  quantidade: number;
+  /** dm_unidadeMedida, 3 dígitos: 036 unidade, 013 frasco, 001 ampola… */
+  unidadeMedida: string;
+  reducaoAcrescimo: number;
+  valorUnitario: number;
+  valorTotal?: number;
+  registroAnvisa?: string;
 }
 
 export interface GuiaConsulta {

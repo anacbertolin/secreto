@@ -122,7 +122,7 @@ export function filtroBuscaPaciente<Q extends { or: (f: string) => Q; eq: (c: st
   return q.or(`nome.ilike.%${limpo}%,nome_social.ilike.%${limpo}%,prontuario_anterior.eq.${limpo.trim()}${comMae ? `,nome_mae.ilike.%${limpo}%` : ""}`);
 }
 
-export interface Procedimento { id: string; codigo: string | null; tabela: string; descricao: string; tipo: string; padrao_consulta: boolean; ativo: boolean; observacao?: string | null }
+export interface Procedimento { id: string; codigo: string | null; tabela: string; descricao: string; tipo: string; padrao_consulta: boolean; ativo: boolean; observacao?: string | null; unidade_tiss?: string | null; registro_anvisa?: string | null }
 
 export async function listaProcedimentos(): Promise<Procedimento[]> {
   const { data, error } = await supabase.from("procedimentos").select("*").eq("ativo", true).order("descricao");

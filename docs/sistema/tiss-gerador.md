@@ -183,3 +183,12 @@ SP/SADT, 373), 11399 (Hapvida consultas, 1923), 11400 (Hapvida SP/SADT, 1924) + 
   (Klini = 23); nome do contratado solicitante = "nome do prestador" do convênio (Klini "CONSUMED CLINICA DE OLHOS"), só
   "Consumed Olhos" vira a razão social; vírgulas saem da observação. **Total: 28 cobranças de 15 convênios iguais ao
   Micrologos.** Assist, Assim e Golden Cross não são mais atendidos (inativos).
+
+## Medicamentos e materiais no XML (26/11/2026)
+A clínica não cobra medicamento/material dos convênios hoje (vai no pacote), mas o sistema ficou pronto (pedido da dona):
+item da conta cujo procedimento é do tipo "medicamento" ou "material" sai na SP/SADT em `outrasDespesas`
+(02 medicamentos — tabela 20; 03 materiais — tabela 19), com unidade de medida TISS e registro ANVISA do cadastro
+(migração 0186: `procedimentos.unidade_tiss`, `registro_anvisa`; tela Procedimentos mostra os campos para esses tipos),
+e o total da guia separa `valorMedicamentos`/`valorMateriais`. Pacote (tabela 98) continua como procedimento.
+Teste fictício passa no XSD 4.03.00; as 28 cobranças reais continuam iguais ao Micrologos.
+⚠️ Na primeira cobrança real de medicamento, conferir com o manual do convênio (tabela, unidade, código Brasíndice/TUSS).

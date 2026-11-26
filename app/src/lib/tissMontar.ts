@@ -1,6 +1,6 @@
 // Parte pura do XML TISS de um lote (sem banco): contas do sistema -> guias TISS, seguindo o cadastro TISS do convênio.
 // Separada de tissLote.ts para poder ser testada fora do navegador (app/scripts/tiss/testar_lote.ts).
-import { validarLote, type ConfigTISS, type Guia, type IdContratado, type Procedimento, type Profissional, type VersaoTISS } from "./tiss";
+import { validarLote, type ConfigTISS, type Guia, type IdContratado, type OutraDespesa, type Procedimento, type Profissional, type VersaoTISS } from "./tiss";
 
 export interface TissConv {
   versao?: string; exige_zip?: boolean; crm_completo?: boolean; mostra_fator?: boolean; consulta_em_sadt?: boolean;
@@ -17,7 +17,7 @@ export interface TissConv {
 export interface ProfDb { id: string; nome: string; conselho: string | null; numero_conselho: string | null; uf_conselho: string | null; cbo: string | null }
 export interface ItemDb {
   id: string; tabela: string; codigo: string | null; descricao: string; data_execucao: string; quantidade: number;
-  valor_unitario: number | null; olho: string | null; profissional_id: string | null; procedimentos: { tipo: string } | null;
+  valor_unitario: number | null; olho: string | null; profissional_id: string | null; procedimentos: { tipo: string; unidade_tiss?: string | null; registro_anvisa?: string | null } | null;
   grau_participacao?: string | null; fator?: number | null; numero_guia?: string | null; numero_guia_operadora?: string | null;
   /** v1/v2: valor unitário do 1º e do 2º (olho) no Micrologos */
   legado?: { v1?: number | null; v2?: number | null; id_cobranca?: string; hora_ini?: string; hora_fim?: string } | null;
@@ -231,15 +231,34 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
       continue;
     }
 
-    const consultaNaSadt = c.tipo_guia === "consulta" || itens.every((i) => i.procedimentos?.tipo === "consulta");
+    const semDespesa = itens.filter((i) => !["medicamento", "material"].includes(i.procedimentos?.tipo ?? "") || i.tabela === "98");
+    const consultaNaSadt = c.tipo_guia === "consulta" || (semDespesa.length > 0 && semDespesa.every((i) => i.procedimentos?.tipo === "consulta"));
     const solic = profissional(c.solicitante_id ?? c.profissional_id, c.plano_id, "solicitante", n) ?? exec;
     // exames: tipoAtendimento 23 e grau 12; procedimento (ex.: fotocoagulação): 03 e grau 00 (XML reais do Bradesco).
     // Conta do Micrologos: vale o tipo de atendimento gravado nela (Unimed: 02 pequena cirurgia, 03…)
-    const soExames = itens.every((i) => i.procedimentos?.tipo === "exame");
+    const soExames = semDespesa.length > 0 && semDespesa.every((i) => i.procedimentos?.tipo === "exame");
     // (Klini: consulta na SP/SADT com tipo 23 gravado na conta)
     const tipoAtend = c.legado?.tipo_atendimento ?? (consultaNaSadt ? "04" : soExames ? "23" : "03");
     const ehExame = tipoAtend === "23" || tipoAtend === "04";
-    const procs: Procedimento[] = itens.flatMap((i): Procedimento[] => {
+    // medicamento/material lançado na conta vai em "outras despesas" (tabela 20/19), não como procedimento.
+    // Pacote (tabela 98, ex.: Eylia na Unimed) continua como procedimento.
+    const ehDespesa = (i: ItemDb) => ["medicamento", "material"].includes(i.procedimentos?.tipo ?? "") && i.tabela !== "98";
+    const despesas: OutraDespesa[] = itens.filter(ehDespesa).map((i) => {
+      const med = i.procedimentos?.tipo === "medicamento";
+      if (!i.codigo) erros.push(`Guia ${n}: ${med ? "medicamento" : "material"} "${i.descricao}" sem código.`);
+      if (i.valor_unitario === null) erros.push(`Guia ${n}: "${i.descricao}" sem preço.`);
+      const q = Number(i.quantidade), u = Number(i.valor_unitario ?? 0);
+      return {
+        codigoDespesa: med ? "02" : "03", dataExecucao: i.data_execucao,
+        // tabela do preço do convênio; se vier a própria (00) ou TUSS de procedimento (22), usa a padrão do tipo
+        codigoTabela: ["00", "22"].includes(i.tabela) ? (med ? "20" : "19") : i.tabela,
+        codigo: i.codigo ?? "", descricao: texto(i.descricao), quantidade: q,
+        unidadeMedida: i.procedimentos?.unidade_tiss || "036", reducaoAcrescimo: 1, valorUnitario: u, valorTotal: arred(q * u),
+        registroAnvisa: i.procedimentos?.registro_anvisa ?? undefined,
+      };
+    });
+    const itensProc = itens.filter((i) => !ehDespesa(i));
+    const procs: Procedimento[] = itensProc.flatMap((i): Procedimento[] => {
       const idProf = i.profissional_id ?? c.profissional_id;
       const prof = profissional(idProf, c.plano_id, "médico executante", n) ?? exec;
       const q = Number(i.quantidade), u = Number(i.valor_unitario ?? 0);
@@ -290,7 +309,7 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
       dataSolicitacao: c.legado?.data_solicitacao ?? dataAut ?? c.data_atendimento, caraterAtendimento: "1", indicacaoClinica: c.indicacao_clinica ?? undefined,
       executante: { contratado: origem, cnes },
       tipoAtendimento: tipoAtend, indicacaoAcidente: "9", tipoConsulta,
-      regimeAtendimento: "01", procedimentos: procs, observacao: obs,
+      regimeAtendimento: "01", procedimentos: procs, outrasDespesas: despesas.length ? despesas : undefined, observacao: obs,
     });
   }
   if (!guias.length && !erros.length) erros.push("O lote não tem guias.");
