@@ -20,7 +20,7 @@ const ICONE_TIPO: Record<string, string> = {
 
 export function nomeConversa(c: Conversa): string {
   if (c.pacientes) return nomeExibicao(c.pacientes);
-  return c.nome_contato || fmtNumeroWA(c.telefone);
+  return c.nome_salvo || c.nome_contato || fmtNumeroWA(c.telefone);
 }
 
 /** Textos que mudam entre o número da clínica e o da Orientação Cirúrgica */
@@ -348,7 +348,7 @@ export function Chat(props: {
     .sort((x, y) => Number(!x.atalho.startsWith(termoRap)) - Number(!y.atalho.startsWith(termoRap)))
     .slice(0, 40);
   const nomePaciente = (() => {
-    const n = (c.pacientes ? (c.pacientes.nome_social || c.pacientes.nome) : c.nome_contato ?? "").trim().split(/\s+/)[0] ?? "";
+    const n = (c.pacientes ? (c.pacientes.nome_social || c.pacientes.nome) : c.nome_salvo || c.nome_contato || "").trim().split(/\s+/)[0] ?? "";
     return n ? n.charAt(0).toUpperCase() + n.slice(1).toLowerCase() : "";
   })();
   function usarRapida(r: RespostaRapida) {
@@ -541,6 +541,14 @@ export function Chat(props: {
 
   const nomeEquipe = (id: string | null) => equipe.dados?.find((x) => x.id === id)?.nome.split(" ")[0];
   let diaAnterior = "";
+  const [salvarContato, setSalvarContato] = useState(false);
+  // Abaixo do nome: o nome do perfil do WhatsApp (quando diferente) e a observação do número
+  const infoContato = (
+    <>
+      {c.nome_contato && (c.pacientes || c.nome_salvo) && c.nome_contato !== c.nome_salvo && <span className="muted"> · no WhatsApp: {c.nome_contato}</span>}
+      {c.contato_obs && <div className="pequeno" style={{ color: "#b54708" }}>📝 {c.contato_obs}</div>}
+    </>
+  );
 
   const comigo = !!eu && c.responsavel_id === eu.id && !c.arquivada;
   return (
@@ -551,6 +559,7 @@ export function Chat(props: {
           <div className="ct-avatar">{iniciais(nomeConversa(c))}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="ct-nome"><span className="ct-canal" title="WhatsApp">💬</span> <b>{nomeConversa(c)}</b> <span className="muted">· {fmtNumeroWA(c.telefone)}</span></div>
+            {(c.contato_obs || (c.nome_contato && (c.pacientes || c.nome_salvo) && c.nome_contato !== c.nome_salvo)) && <div className="ct-paciente">{infoContato}</div>}
             <div className={"ct-desde" + (c.arquivada ? " encerrada" : !c.responsavel_id ? " fila" : "")}>
               {c.arquivada ? `✅ Conversa encerrada${c.responsavel_id ? ` por ${c.responsavel_id === eu?.id ? "você" : nomeEquipe(c.responsavel_id) ?? "outra pessoa"}` : ""} — guardada em “Encerradas”`
                 : c.responsavel_id ? `Em conversa desde ${c.atendido_desde ? fmtDataHora(c.atendido_desde) : "—"} com ${c.responsavel_id === eu?.id ? "você" : nomeEquipe(c.responsavel_id) ?? "outra pessoa"}`
@@ -573,6 +582,7 @@ export function Chat(props: {
                 <button className="ct-opcoes" onClick={() => setOpcoes(!opcoes)}>Opções ▾</button>
                 {opcoes && (
                   <div className="ct-menu" onMouseLeave={() => setOpcoes(false)}>
+                    <button onClick={() => { setOpcoes(false); setSalvarContato(true); }}>✏️ Salvar nome do contato</button>
                     <button onClick={() => { setOpcoes(false); setLigar(true); }}>{c.paciente_id ? "Trocar paciente" : "Associar paciente"}</button>
                     <button onClick={() => { setOpcoes(false); props.central!.aoAgendar(); }}>Agendar</button>
                     {c.paciente_id && <Link to={`/pacientes/${c.paciente_id}`} onClick={() => setOpcoes(false)}>Agendamentos e ficha</Link>}
@@ -592,7 +602,7 @@ export function Chat(props: {
           <b>{nomeConversa(c)}</b>
           <div className="muted pequeno">
             {fmtNumeroWA(c.telefone)}
-            {c.nome_contato && c.pacientes && ` · no WhatsApp: ${c.nome_contato}`}
+            {infoContato}
             {c.pacientes && <> · <Link to={`/pacientes/${c.pacientes.id}`}>ficha nº {c.pacientes.numero_prontuario}</Link></>}
             {c.pacientes?.whatsapp_autorizado === false && <> · <Etiqueta cor="vermelho">não quer mensagens</Etiqueta></>}
           </div>
@@ -607,6 +617,7 @@ export function Chat(props: {
             </button>
           )}
           {podeResponder && <button className="mini" onClick={() => setLigar(true)}>{c.paciente_id ? "Trocar paciente" : "🔗 Ligar a um paciente"}</button>}
+          {podeResponder && <button className="mini" onClick={() => setSalvarContato(true)}>✏️ Salvar nome</button>}
           {podeResponder && <button className="mini" onClick={() => mudar({ arquivada: !c.arquivada })}>{c.arquivada ? "Desarquivar" : "Arquivar"}</button>}
         </div>
       </div>
@@ -751,6 +762,10 @@ export function Chat(props: {
         </div>
       )}
 
+      {salvarContato && (
+        <SalvarContato conversa={c} aoFechar={() => setSalvarContato(false)}
+          aoSalvar={async (nome, obs) => { await mudar({ nome_salvo: nome, contato_obs: obs }); setSalvarContato(false); }} />
+      )}
       {gerenciarRap && <RespostasRapidas setor={c.setor ?? "clinica"} aoFechar={() => { setGerenciarRap(false); respostas.recarregar(); }} />}
 
       {transferir && (
@@ -1369,3 +1384,35 @@ export const EMOJIS = [
   "📅", "🗓️", "🕐", "⏰", "⏱️", "📍", "🚗", "🚕", "🚌", "🏠", "📞", "📱", "💬", "✉️",
   "✅", "☑️", "✔️", "❌", "⚠️", "❗", "❓", "ℹ️", "➡️", "⬇️", "👉", "💳", "💵", "💰", "🔒", "☀️",
 ];
+
+/** "Salvar contato": nome que a equipe dá ao número (o paciente, mesmo que o celular seja da mãe ou da vizinha) */
+function SalvarContato(props: { conversa: Conversa; aoFechar: () => void; aoSalvar: (nome: string | null, obs: string | null) => Promise<void> }) {
+  const c = props.conversa;
+  const [nome, setNome] = useState(c.nome_salvo ?? "");
+  const [obs, setObs] = useState(c.contato_obs ?? "");
+  const [salvando, setSalvando] = useState(false);
+  return (
+    <Modal titulo="✏️ Salvar nome do contato" aoFechar={props.aoFechar}
+      rodape={<>
+        <button onClick={props.aoFechar}>Cancelar</button>
+        <button className="primario" disabled={salvando} onClick={async () => {
+          setSalvando(true); await props.aoSalvar(nome.trim() || null, obs.trim() || null); setSalvando(false);
+        }}>{salvando ? "Salvando…" : "Salvar"}</button>
+      </>}>
+      <p className="pequeno muted" style={{ marginTop: 0 }}>
+        Como salvar o contato no celular: o nome aparece na lista e nas conversas no lugar do nome do perfil do WhatsApp
+        {c.nome_contato ? <> (hoje: <b>{c.nome_contato}</b>)</> : null}. Número: <b>{fmtNumeroWA(c.telefone)}</b>.
+        {c.pacientes && <> Esta conversa já está ligada ao prontuário de <b>{nomeExibicao(c.pacientes)}</b>, que continua aparecendo primeiro.</>}
+      </p>
+      <label>Nome do paciente
+        <input autoFocus value={nome} maxLength={120} placeholder="Ex.: Maria da Silva (catarata)" onChange={(e) => setNome(e.target.value)} />
+      </label>
+      <label>Observação (opcional)
+        <input value={obs} maxLength={500} placeholder="Ex.: telefone da vizinha / quem escreve é a filha Ana" onChange={(e) => setObs(e.target.value)} />
+      </label>
+      <p className="pequeno muted">
+        Para guardar a conversa no prontuário (aparece na ficha do paciente), use também <b>Opções → Associar paciente</b>.
+      </p>
+    </Modal>
+  );
+}

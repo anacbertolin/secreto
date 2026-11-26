@@ -1846,3 +1846,7 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   `horarios_profissional` (intervalos de 15 min). Os médicos e as outras colunas ainda NÃO têm horário cadastrado.
 - Agenda: a faixa de horas só encolhe para o horário cadastrado quando todas as colunas mostradas têm horário;
   senão continua 7h–19h (para não esconder as colunas sem horário).
+- (26/11) **Salvar nome do contato** (migração 0180): `whatsapp_conversas.nome_salvo` e `contato_obs`, editáveis por quem
+  responde o número (Opções → ✏️ Salvar nome do contato; na tela antiga, botão "✏️ Salvar nome"). Ordem do nome exibido:
+  paciente ligado (prontuário) → nome salvo → nome do perfil do WhatsApp (que a Meta manda a cada mensagem e antes
+  sobrescrevia qualquer ajuste). `{nome}` das respostas rápidas e a pesquisa de mensagens usam o nome salvo.
