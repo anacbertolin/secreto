@@ -13,8 +13,9 @@
 --   convênio, em cobrança dos últimos 6 meses       -> faturada (enviada, aguardando pagamento)
 --   convênio, sem cobrança, últimos 6 meses        -> aberta (falta faturar)
 --   convênio, sem cobrança, mais antiga            -> paga (presumido; legado.sem_cobranca = true)
---   consulta da Unimed sem cobrança (qualquer data) -> paga (presumido): a Unimed não exige cobrança/XML das
---      consultas, então elas nunca entravam em cobrança no Micrologos (dona, 26/11/2026). Prazo de 6 meses confirmado.
+--   consulta da Unimed sem cobrança, últimos 6 meses -> pronta p/ lote (já revisada e faturada; a dona coloca em
+--      cobrança no sistema novo). Mais antiga -> paga (presumido). No Micrologos elas não entravam em cobrança porque a
+--      Unimed não exige XML das consultas (dona, 26/11/2026). Prazo de 6 meses confirmado pela dona.
 -- =====================================================================
 
 -- ---------- parâmetros ----------
@@ -112,11 +113,11 @@ select c.*,
     when c.conv is null then 'paga'
     when c.em_cob and c.cob_data < (select corte_pago from _par) then 'paga'
     when c.em_cob then 'faturada'
-    when c.unimed_consulta then 'paga'
+    when c.unimed_consulta and c.dt >= (select corte_pago from _par) then 'pronta'
     when c.dt >= (select corte_pago from _par) then 'aberta'
     else 'paga' end as st,
   c.conv is not null and not (c.em_cob and c.cob_data >= (select corte_pago from _par))
-    and not (not c.em_cob and not c.unimed_consulta and c.dt >= (select corte_pago from _par)) as presumido,
+    and not (not c.em_cob and c.dt >= (select corte_pago from _par)) as presumido,
   c.dt < (select corte_arquivo from _par) as arq,
   case when c.guia_rep = 1 and nullif(btrim(c.plano_guia), '') is not null then btrim(c.plano_guia)
        else 'ML' || btrim(c.id_paciente_conta) end as guia,
