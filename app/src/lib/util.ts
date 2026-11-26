@@ -190,7 +190,7 @@ export function senhaAleatoria(): string {
 
 export const STATUS_CONTA: Record<string, { rotulo: string; cor: string }> = {
   aberta: { rotulo: "Em conferência", cor: "amarelo" },
-  pronta: { rotulo: "Pronta p/ lote", cor: "azul" },
+  pronta: { rotulo: "Pronta p/ cobrança", cor: "azul" },
   faturada: { rotulo: "Enviada", cor: "roxo" },
   paga: { rotulo: "Paga", cor: "verde" },
   glosada: { rotulo: "Paga c/ glosa", cor: "vermelho" },
