@@ -1861,3 +1861,11 @@ caixa de hoje aberto → faixa amarela "não esqueça de fechar" (explica que o 
 caixa de dia anterior aberto → faixa vermelha "feche primeiro" (passo a passo); ao fechar → mensagem verde (o que acontece,
 quem confere, abrir normalmente no dia seguinte). Quem confere vem do cadastro (caixa_conferir). Guia "Como funciona" ganhou
 2 itens no "E se…?" (sem mudar a versão, a contagem de leituras não recomeça).
+- (0187, pedido do Dr. Gelson) MAIS DE UMA FORMA DE PAGAMENTO na mesma venda/repasse. Caso real: venda nº 6 (injeção do
+  Dr. Gelson) paga R$ 1.300 dinheiro + R$ 900 PIX — estava como R$ 1.300 dinheiro; corrigida para total R$ 2.200 ('misto').
+  `forma_pagamento = 'misto'` + `pagamentos` jsonb [{forma, parcelas, valor}] em orientacao_vendas e repasses; total = soma.
+  Caixa: só a parte em dinheiro (`interno.pagamentos_dinheiro`). Repasse: taxa do cartão parte a parte
+  (`interno.pagamentos_taxa`); parcelas = 1 "à vista" (dinheiro+PIX+débito, médico recebe no dia da cirurgia) + as de cada
+  crédito (fechamento 20/pagamento 25); imposto, custos e clínica proporcionais; `repasse_parcelas.forma` (credito/avista)
+  usado nas datas de pagamento e em "Cirurgias do dia". Telas: botão "➕ Pagou com mais de uma forma" na venda e no repasse
+  (`app/src/components/OutrasFormas.tsx`); listas mostram "Dinheiro R$ 1.300 + PIX R$ 900".
