@@ -431,7 +431,8 @@ export default function Agenda() {
                             inicio: new Date(dia.getTime() + min * 60000),
                             duracao: h?.duracao_min ?? PASSO,
                             local_id: h?.local_id,
-                            encaixe: !h || itens.length > 0,
+                            // encaixe = horário que já tem paciente (agenda cheia). Fora do expediente NÃO é encaixe.
+                            encaixe: itens.some((x) => !["cancelado", "faltou", "atendido"].includes(x.status)),
                           });
                         }}
                       >
