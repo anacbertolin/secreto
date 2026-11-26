@@ -1812,3 +1812,12 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   trocar o cirurgião na hora (corrigir as cirurgias já lançadas). O nome aparece em azul (🩺) no quadradinho da grade,
   na lista e no quadro de resumo.
 - A opção "Cirurgia" já existia em **Tipo** (injeção = "Procedimento"). Convênios: só Particular e Bradesco até a migração.
+
+## 26/11/2026 — Convênios Unimed provisórios para a agenda (migração 0176)
+- Pedido da dona: a Alessandra precisa marcar cirurgias da Unimed (e mandar o WhatsApp) antes de a migração terminar.
+- Migração `0176_convenios_unimed_provisorio`: Unimed Gelson, Gisele, Luciano, Max, Consumed Cirurgia e Antonio,
+  só com o nome, ANS 344397 e o **mesmo código do Micrologos** (`micrologos_codigo` 8, 10, 15, 22, 26, 29),
+  marcados `tiss.provisorio = true`. Unimed Pedro ficou de fora (não atende mais pela Unimed).
+- A carga da migração (`migracao/transformacoes/02_convenios.sql`) passou a completar os provisórios pelo código
+  (TISS, planos, preços) sem duplicar. Aviso deixado em `migracao/PROXIMOS-PASSOS.md`.
+- Não usar estes convênios para XML antes da carga (falta código do prestador e planos).
