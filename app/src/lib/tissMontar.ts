@@ -20,7 +20,7 @@ export interface ItemDb {
   valor_unitario: number | null; olho: string | null; profissional_id: string | null; procedimentos: { tipo: string } | null;
   grau_participacao?: string | null; fator?: number | null; numero_guia?: string | null; numero_guia_operadora?: string | null;
   /** v1/v2: valor unitário do 1º e do 2º (olho) no Micrologos */
-  legado?: { v1?: number | null; v2?: number | null } | null;
+  legado?: { v1?: number | null; v2?: number | null; id_cobranca?: string; hora_ini?: string; hora_fim?: string } | null;
 }
 export interface ContaDb {
   id: string; tipo_guia: string; numero_guia_prestador: string; numero_guia_operadora: string | null; senha_autorizacao: string | null;
@@ -51,17 +51,19 @@ export interface CodigoDb {
 }
 export interface HospitalDb { id: string; nome: string; cnpj: string | null; cnes: string | null; codigo_operadora?: string | null; cnes_convenio?: string | null }
 export interface DadosLote {
-  lote: { numero: number; competencia: string };
+  lote: { numero: number; competencia: string; legado?: { id_cobranca?: string } | null };
   conv: { nome: string; registro_ans: string | null; codigo_prestador: string | null; versao_tiss: string | null; tiss: TissConv | null };
   contas: ContaDb[]; profs: ProfDb[];
   codigos: CodigoDb[];
   hospitais?: HospitalDb[];
+  /** códigos dos médicos em TODOS os convênios (Unimed por médico: código de cooperado do solicitante) */
+  codigosTodos?: CodigoDb[];
   /** profissional_dados_tiss: nome como sai na guia e CPF */
   dadosTiss?: { profissional_id: string; nome_guia: string | null; cpf: string | null }[];
 }
 
 /** Parte pura (sem banco): transforma contas em guias TISS seguindo o cadastro do convênio. */
-export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais = [], dadosTiss = [] }: DadosLote) {
+export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais = [], dadosTiss = [], codigosTodos = [] }: DadosLote) {
   const tiss = conv.tiss ?? {};
   const erros: string[] = [];
   const avisos: string[] = [];
@@ -77,8 +79,26 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
   // Unimed: guia principal em branco e pacote (tabela 98) sem via de acesso/técnica
   const semGuiaPrincipal = !!tiss.nao_preenche_guia_principal || mic("tiss_guiasadt_solic_embranco") === "1";
   const pacoteSadt = mic("tiss_usa_pacote_sadt") === "1";
-  // contratado solicitante: sempre a razão social da clínica (o "nome do prestador" da Unimed é "Consumed Olhos")
-  const razaoSocial = "CONSUMED CONSULTORIOS MEDICOS LTDA";
+  // contratado solicitante: o "nome do prestador" do convênio (Mediservice: "... Ltda Me"); se não for a razão social
+  // (Unimed: "Consumed Olhos"), vai a razão social
+  const nomePrest = texto(mic("nome_prestador")).toUpperCase();
+  // (Unimed Gisele/Max: o prestador é o próprio médico, ex.: "GISELE MOURA BRASIL")
+  const razaoSocial = nomePrest && !(nomePrest.includes("CONSUMED") && !nomePrest.includes("CONSULTORIOS"))
+    ? nomePrest : "CONSUMED CONSULTORIOS MEDICOS LTDA";
+  // Unimed por médico (Unimed Gisele, Max…): o prestador é o próprio médico, e o contratado solicitante é o médico
+  // solicitante, com o código de cooperado dele (XML reais de 26/11)
+  const prestadorPessoa = razaoSocial !== "CONSUMED CONSULTORIOS MEDICOS LTDA" && !razaoSocial.includes("CONSUMED");
+  const codCooperado = (profId: string | null | undefined) =>
+    [...codigos, ...codigosTodos].find((x) => x.profissional_id === profId && (x.codigo_solicitante || x.codigo_executante));
+  // hospital identificado pelo CNPJ quando o convênio identifica por CNPJ (Mediservice); senão pelo código (Unimed)
+  const hospCnpj = mic("tiss_cpfcnpj_codoper") === "C";
+  const semVia = mic("tiss_sem_via_acesso") === "1";            // Unimed Gelson, Fundação Itaú
+  const cidNaObs = mic("tiss_cid_na_obs") === "1";              // Porto, Fundação Itaú: observação da conta + "Conta nº"
+  const comHorario = mic("tiss_xmlcom_horario_produto") === "1";
+  const hora = (h?: string) => (h && /^\d{1,2}:\d{2}/.test(h) ? (h.length === 5 ? `${h}:00` : h.slice(0, 8)) : undefined);
+  // itens que foram enviados em OUTRA cobrança (Unimed por médico) não entram neste XML
+  const cobLote = lote.legado?.id_cobranca;
+  const daCobranca = (i: ItemDb) => !cobLote || !i.legado?.id_cobranca || i.legado.id_cobranca === cobLote;
   if (!conv.registro_ans) erros.push(`Convênio ${conv.nome}: falta o registro ANS (Cadastros → Convênios).`);
   if ("codigoNaOperadora" in origem && !codClinica) erros.push(`Convênio ${conv.nome}: falta o código da clínica na operadora.`);
 
@@ -114,38 +134,55 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
     };
   };
 
+  // Micrologos escreve na observação "Conta <nº>"; com tiss_cid_na_obs vai antes a observação da conta (ex.: "Glaucoma")
+  const obsConta = (c: ContaDb) => {
+    if (!c.legado?.id_conta) return c.observacoes ?? undefined;
+    return [cidNaObs ? texto(c.observacoes) : "", `Conta ${c.legado.id_conta}`].filter(Boolean).join(" ");
+  };
   const operadora = (c: ContaDb) => c.numero_guia_operadora ?? (tiss.guia_operadora_igual_prestador ? c.numero_guia_prestador : undefined);
   const guias: Guia[] = [];
   for (const c of contas) {
     // conta do Micrologos cujo nº de guia se repetia: no XML vai o nº original (o sistema guardou "ML<conta>")
-    const n = c.legado?.guia_micrologos ?? c.numero_guia_prestador;
+    let n = c.legado?.guia_micrologos ?? c.numero_guia_prestador;
+    const todos = c.conta_itens ?? [];
+    const itens = todos.filter(daCobranca);
+    if (todos.length && !itens.length) continue;  // conta só com itens de outra cobrança
+    // Unimed por médico: na cobrança do auxiliar vai só a participação dele, com o nº de guia próprio dela
+    const guiaItem = itens.every((i) => i.numero_guia) && new Set(itens.map((i) => i.numero_guia)).size === 1 && c.tipo_guia !== "honorarios"
+      ? itens[0] : null;
     if (!c.carteirinha) erros.push(`Guia ${n} (${c.pacientes?.nome ?? ""}): falta a carteirinha.`);
-    const itens = c.conta_itens ?? [];
     if (!itens.length) { erros.push(`Guia ${n}: sem itens.`); continue; }
     const temCirurgia = itens.some((i) => i.procedimentos?.tipo === "cirurgia");
     if (c.tipo_guia === "honorarios" || (temCirurgia && tiss.honorarios_se_cirurgia)) {
       // ---------- Guia de Honorários (cirurgia): 1 item por participação (cirurgião 00, auxiliar 01…)
       const hosp = hospitais.find((h) => h.id === c.hospital_id);
       if (!hosp) erros.push(`Guia ${n}: falta o hospital/centro cirúrgico (Dados da guia).`);
-      const codHosp = hosp?.codigo_operadora ?? undefined;
-      if (hosp && !codHosp && !hosp.cnpj) erros.push(`Guia ${n}: o hospital ${hosp.nome} não tem código neste convênio nem CNPJ.`);
+      const codOp = hosp?.codigo_operadora ?? undefined;
+      // Mediservice/Hapvida usam o CNPJ do hospital como código: vai em cnpjLocalExecutante
+      const hospPorCnpj = !!codOp && hospCnpj && /^\d{14}$/.test(codOp);
+      const codHosp = hospPorCnpj ? undefined : codOp;
+      if (hosp && !codOp && !hosp.cnpj) erros.push(`Guia ${n}: o hospital ${hosp.nome} não tem código neste convênio nem CNPJ.`);
       const cnesHosp = hosp?.cnes_convenio ?? hosp?.cnes ?? "";
       if (hosp && !cnesHosp) erros.push(`Guia ${n}: falta o CNES do hospital ${hosp.nome}.`);
       const guiaSolic = c.guia_solicitacao ?? c.numero_guia_operadora;
       if (!guiaSolic) erros.push(`Guia ${n}: falta o nº da guia de solicitação/internação.`);
       const usar = tiss.honorarios_somente_cirurgicos ? itens.filter((i) => i.procedimentos?.tipo === "cirurgia" || i.grau_participacao) : itens;
       if (usar.length < itens.length) avisos.push(`Guia ${n}: ${itens.length - usar.length} item(ns) que não são cirurgia ficaram fora da guia de honorários.`);
-      const obsH = c.legado?.id_conta ? `Conta ${c.legado.id_conta}` : c.observacoes ?? undefined;
+      const obsH = obsConta(c);
       const itemH = (i: ItemDb): Procedimento => {
         const prof = profissional(i.profissional_id ?? c.profissional_id, c.plano_id, "cirurgião", n, c.hospital_id);
         if (!i.codigo) erros.push(`Guia ${n}: item "${i.descricao}" sem código.`);
         if (i.valor_unitario === null) erros.push(`Guia ${n}: item "${i.descricao}" sem preço.`);
         const q = Number(i.quantidade), u = Number(i.valor_unitario ?? 0);
+        const visita = i.procedimentos?.tipo === "consulta" || (i.codigo ?? "").startsWith("101");
         return {
           dataExecucao: i.data_execucao, codigoTabela: i.tabela, codigo: i.codigo ?? "", descricao: texto(i.descricao),
-          quantidade: q, viaAcesso: "1", tecnicaUtilizada: "1",
-          // o valor unitário já vem com o fator (Micrologos: valor 2.382,54 = tabela 1.191,27 × 2,00)
-          reducaoAcrescimo: Number(i.fator ?? 1), valorUnitario: u, valorTotal: arred(q * u),
+          horaInicial: comHorario || visita ? hora(i.legado?.hora_ini) : undefined,
+          horaFinal: comHorario || visita ? hora(i.legado?.hora_fim) : undefined,
+          // cirurgia dos 2 olhos (qtd 2): via 3 (vias diferentes) e fator 2,00; com 1 olho o fator é valor ÷ tabela
+          // (Micrologos: 2.382,54 = 1.191,27 × 2,00, unitário já com o fator)
+          quantidade: q, viaAcesso: semVia || visita ? undefined : q > 1 ? "3" : "1", tecnicaUtilizada: "1",
+          reducaoAcrescimo: q > 1 ? q : Number(i.fator ?? 1), valorUnitario: u, valorTotal: arred(q * u),
           // nos honorários o Micrologos escreve o nome do médico em maiúsculas
           equipe: prof ? [{ grauParticipacao: i.grau_participacao ?? "00", profissional: { ...prof, nome: prof.nome.toUpperCase() } }] : [],
         };
@@ -154,7 +191,7 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
         tipo: "honorarios" as const, guiaSolicInternacao: guiaSolic ?? "",
         senha: c.senha_autorizacao ?? undefined, numeroGuiaOperadora: operadora(c) ?? undefined,
         beneficiario: { numeroCarteira: c.carteirinha ?? "", atendimentoRN: "N" as const },
-        localContratado: { id: codHosp ? { codigoNaOperadora: codHosp } : { cnpj: hosp?.cnpj ?? "" }, nome: texto(hosp?.nome).toUpperCase(), cnes: cnesHosp },
+        localContratado: { id: codHosp ? { codigoNaOperadora: codHosp } : { cnpj: hospPorCnpj ? codOp! : hosp?.cnpj ?? "" }, nome: texto(hosp?.nome).toUpperCase(), cnes: cnesHosp },
         executante: { codigoNaOperadora: codClinica, cnes },
         // na 4.01.00 (Amil) o Micrologos não escreve o caráter do atendimento nos honorários
         dataInicioFaturamento: c.data_atendimento, dataFimFaturamento: c.data_atendimento,
@@ -172,12 +209,12 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
       }
       continue;
     }
+    if (guiaItem) n = guiaItem.numero_guia!;
     const exec = profissional(c.profissional_id ?? itens[0].profissional_id, c.plano_id, "médico executante", n);
     if (!exec) continue;
     const tipoConsulta = c.legado?.tipo_consulta ?? (c.agendamentos?.tipo === "retorno" || c.agendamentos?.primeira_vez === false ? "2" : "1");
-    // Micrologos escreve na observação: Conta <nº da conta>
-    const obs = c.legado?.id_conta ? `Conta ${c.legado.id_conta}` : c.observacoes ?? undefined;
-    const operadoraC = operadora(c);
+    const obs = obsConta(c);
+    const operadoraC = guiaItem ? guiaItem.numero_guia_operadora ?? undefined : operadora(c);
 
     if (c.tipo_guia === "consulta" && !tiss.consulta_em_sadt) {
       const i = itens[0];
@@ -208,7 +245,7 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
       if (i.valor_unitario === null) erros.push(`Guia ${n}: item "${i.descricao}" sem preço.`);
       // grau do médico no convênio (Geap = 11); senão 12 em exame/consulta e 00 em procedimento
       // procedimento/cirurgia = 00; exame/consulta = grau do médico no convênio (Geap = 11) ou 12
-      const grau = ehExame ? regra(idProf, c.plano_id)?.grau_participacao ?? "12" : "00";
+      const grau = i.grau_participacao ?? (ehExame ? regra(idProf, c.plano_id)?.grau_participacao ?? "12" : "00");
       const v1 = Number(i.legado?.v1 ?? 0), v2 = Number(i.legado?.v2 ?? 0);
       const pacote = pacoteSadt && i.tabela === "98";
       const base = { dataExecucao: i.data_execucao, codigoTabela: i.tabela, codigo: i.codigo ?? "", descricao: texto(i.descricao),
@@ -216,15 +253,15 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
       // Geap: só desmembra quando o 2º olho tem valor diferente (ex.: OCT 78,93 + 55,25); valores iguais ficam qtd 2
       if (desmembra && q === 2 && v1 > 0 && v2 > 0 && Math.abs(v1 - v2) > 0.005) {
         return [
-          { ...base, quantidade: 1, viaAcesso: "1", reducaoAcrescimo: 1, valorUnitario: v1, valorTotal: v1 },
-          { ...base, quantidade: 1, viaAcesso: "3", reducaoAcrescimo: 1, valorUnitario: v2, valorTotal: v2 },
+          { ...base, quantidade: 1, viaAcesso: semVia ? undefined : "1", reducaoAcrescimo: 1, valorUnitario: v1, valorTotal: v1 },
+          { ...base, quantidade: 1, viaAcesso: semVia ? undefined : "3", reducaoAcrescimo: 1, valorUnitario: v2, valorTotal: v2 },
         ];
       }
       // fator informado = valor dos olhos somados ÷ valor do 1º (2 olhos sem desconto = 2,00; Hapvida 2º a 70% = 1,70);
       // o total continua quantidade × unitário
       // Geap (que desmembra os olhos) informa sempre 1,00
       const fator = q > 1 && !desmembra ? (v1 > 0 && v2 > 0 ? arred((v1 + (q - 1) * v2) / v1) : q) : 1;
-      return [{ ...base, quantidade: q, viaAcesso: pacote ? undefined : "1", reducaoAcrescimo: fator, valorUnitario: u, valorTotal: arred(q * u) }];
+      return [{ ...base, quantidade: q, viaAcesso: pacote || semVia ? undefined : "1", reducaoAcrescimo: fator, valorUnitario: u, valorTotal: arred(q * u) }];
     });
     // ordem dos itens: Bradesco e Geap do maior para o menor valor unitário; nos outros o de maior valor (principal) vai primeiro
     // (no Micrologos isso acompanha a opção "SADT sem equipe na guia principal": Bradesco e Geap ordenam por valor)
@@ -240,7 +277,14 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
         ? { numeroGuiaOperadora: operadoraC ?? undefined, dataAutorizacao: dataAut ?? c.data_atendimento, senha: c.senha_autorizacao ?? undefined, dataValidadeSenha: c.validade_senha ?? undefined }
         : undefined,
       beneficiario: { numeroCarteira: c.carteirinha ?? "", atendimentoRN: "N" },
-      solicitante: { contratado: origem, nomeContratado: razaoSocial, profissional: solic },
+      solicitante: prestadorPessoa
+        ? (() => {
+            const idSol = c.solicitante_id ?? c.profissional_id;
+            const k = codCooperado(idSol);
+            const cod = k?.codigo_solicitante || k?.codigo_executante;
+            return { contratado: cod ? { codigoNaOperadora: cod } : origem, nomeContratado: solic.nome.toUpperCase(), profissional: solic };
+          })()
+        : { contratado: origem, nomeContratado: razaoSocial, profissional: solic },
       dataSolicitacao: c.legado?.data_solicitacao ?? dataAut ?? c.data_atendimento, caraterAtendimento: "1", indicacaoClinica: c.indicacao_clinica ?? undefined,
       executante: { contratado: origem, cnes },
       tipoAtendimento: tipoAtend, indicacaoAcidente: "9", tipoConsulta,

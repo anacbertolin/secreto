@@ -71,6 +71,13 @@ from _med m
 join legacy_micrologos.mapa_ids x on x.entidade = 'medico' and x.legacy_id = m.cod::text
 where not exists (select 1 from public.profissionais p where p.id = x.novo_id);
 
+-- quem já estava cadastrado sem conselho (ex.: Luciano, instrumentador COREN) recebe o do Micrologos (sai nas guias)
+update public.profissionais p set conselho = coalesce(nullif(upper(btrim(md.conselho_profissional)), ''), 'CRM'),
+  numero_conselho = legacy_micrologos.txt(md.crm), uf_conselho = coalesce(legacy_micrologos.uf(md.conselho_profissional_estado), 'RJ')
+from legacy_micrologos.bruto_medicos md
+join legacy_micrologos.mapa_ids x on x.entidade = 'medico' and x.legacy_id = btrim(md.id_medico)
+where p.id = x.novo_id and p.numero_conselho is null and legacy_micrologos.txt(md.crm) is not null;
+
 -- dados para o XML TISS (migrações 0169/0170): nome do médico como sai na guia (profissional_dados_tiss) e CPF
 -- (profissionais_dados_pessoais, a mesma tabela da Memed: só admin e o próprio leem; o XML lê por tiss_dados_medicos()).
 -- O CPF é necessário: sem código próprio no convênio, o Micrologos identifica o médico na guia pelo CPF (XML reais, 26/11).

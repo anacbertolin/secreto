@@ -214,3 +214,5 @@
   iguais ao Micrologos (ver `docs/sistema/tiss-gerador.md`). A carga 06 passou a trazer também os produtos da conta
   (PRODUTOS_MOVIMENTACAO). Migração 0172 (ordem dos itens do Bradesco). Próximos convênios a testar: Assim, Klini,
   Golden Cross, Mediservice, Porto Seguro, Unimed Gisele/Gelson, Fundação Itaú, Notre Dame, Assist, Bradesco Operadora.
+- 26/11 (noite, 3ª rodada): 25 cobranças de 13 convênios testadas — todas iguais ao Micrologos. Itens guardam a
+  cobrança em que foram enviados (Unimed por médico). Migração 0173. Faltam XML de Klini e Assist para testar.

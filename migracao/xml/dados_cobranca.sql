@@ -11,9 +11,11 @@ c as (
         'profissional_id', i.profissional_id, 'grau_participacao', i.grau_participacao, 'fator', i.fator, 'numero_guia', i.numero_guia, 'numero_guia_operadora', i.numero_guia_operadora, 'legado', i.legado,
         'procedimentos', (select jsonb_build_object('tipo', pr.tipo) from public.procedimentos pr where pr.id = i.procedimento_id))
         order by i.criado_em, i.id), '[]') from public.conta_itens i where i.conta_id = ct.id) as itens
-  from public.contas ct where ct.lote_id = (select id from l) and ct.status <> 'cancelada')
+  from public.contas ct where (ct.lote_id = (select id from l)
+      or ct.id in (select i.conta_id from public.conta_itens i where i.legado->>'id_cobranca' = (select legado->>'id_cobranca' from l)))
+    and ct.status <> 'cancelada')
 select jsonb_build_object(
-  'lote', (select jsonb_build_object('numero', numero, 'competencia', competencia) from l),
+  'lote', (select jsonb_build_object('numero', numero, 'competencia', competencia, 'legado', legado) from l),
   'conv', (select jsonb_build_object('nome', cv.nome, 'registro_ans', cv.registro_ans, 'codigo_prestador', cv.codigo_prestador,
             'versao_tiss', cv.versao_tiss, 'tiss', cv.tiss) from public.convenios cv where cv.id = (select convenio_id from l)),
   'contas', (select coalesce(jsonb_agg(to_jsonb(c) - 'ag' - 'pac' - 'itens' || jsonb_build_object('agendamentos', c.ag, 'pacientes', c.pac, 'conta_itens', c.itens)
@@ -21,6 +23,7 @@ select jsonb_build_object(
   'profs', (select jsonb_agg(jsonb_build_object('id', id, 'nome', nome, 'conselho', conselho, 'numero_conselho', numero_conselho,
             'uf_conselho', uf_conselho, 'cbo', cbo)) from public.profissionais),
   'codigos', (select coalesce(jsonb_agg(to_jsonb(p)), '[]') from public.profissional_convenio_codigos p where p.convenio_id = (select convenio_id from l)),
+  'codigosTodos', (select coalesce(jsonb_agg(to_jsonb(p)), '[]') from public.profissional_convenio_codigos p),
   'dadosTiss', (select coalesce(jsonb_agg(jsonb_build_object('profissional_id', p.id, 'nome_guia', t.nome_guia, 'cpf', d.cpf)), '[]')
             from public.profissionais p left join public.profissional_dados_tiss t on t.profissional_id = p.id
             left join public.profissionais_dados_pessoais d on d.profissional_id = p.id),
