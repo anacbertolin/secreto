@@ -8,7 +8,7 @@ c as (
     (select jsonb_build_object('nome', p.nome) from public.pacientes p where p.id = ct.paciente_id) as pac,
     (select coalesce(jsonb_agg(jsonb_build_object('id', i.id, 'tabela', i.tabela, 'codigo', i.codigo, 'descricao', i.descricao,
         'data_execucao', i.data_execucao, 'quantidade', i.quantidade, 'valor_unitario', i.valor_unitario, 'olho', i.olho,
-        'profissional_id', i.profissional_id, 'grau_participacao', i.grau_participacao,
+        'profissional_id', i.profissional_id, 'grau_participacao', i.grau_participacao, 'fator', i.fator, 'numero_guia', i.numero_guia, 'numero_guia_operadora', i.numero_guia_operadora,
         'procedimentos', (select jsonb_build_object('tipo', pr.tipo) from public.procedimentos pr where pr.id = i.procedimento_id))
         order by i.criado_em, i.id), '[]') from public.conta_itens i where i.conta_id = ct.id) as itens
   from public.contas ct where ct.lote_id = (select id from l) and ct.status <> 'cancelada')
@@ -21,6 +21,9 @@ select jsonb_build_object(
   'profs', (select jsonb_agg(jsonb_build_object('id', id, 'nome', nome, 'conselho', conselho, 'numero_conselho', numero_conselho,
             'uf_conselho', uf_conselho, 'cbo', cbo)) from public.profissionais),
   'codigos', (select coalesce(jsonb_agg(to_jsonb(p)), '[]') from public.profissional_convenio_codigos p where p.convenio_id = (select convenio_id from l)),
+  'dadosTiss', (select coalesce(jsonb_agg(jsonb_build_object('profissional_id', p.id, 'nome_guia', t.nome_guia, 'cpf', d.cpf)), '[]')
+            from public.profissionais p left join public.profissional_dados_tiss t on t.profissional_id = p.id
+            left join public.profissionais_dados_pessoais d on d.profissional_id = p.id),
   'hospitais', (select jsonb_agg(jsonb_build_object('id', h.id, 'nome', h.nome, 'cnpj', h.cnpj, 'cnes', h.cnes,
             'codigo_operadora', k.codigo_operadora, 'cnes_convenio', k.cnes))
             from public.hospitais h left join public.hospital_convenio_codigos k on k.hospital_id = h.id and k.convenio_id = (select convenio_id from l)));

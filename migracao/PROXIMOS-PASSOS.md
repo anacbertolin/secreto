@@ -198,3 +198,7 @@
   dados de pacientes: só na máquina de ensaio). A dona baixa no Micrologos o XML da MESMA cobrança e Claude compara.
   Já testado (sem conferir com o Micrologos ainda): Bradesco cobranças 11378 (honorários), 11379 (consultas),
   11380 (SP/SADT) → XSD e hash ok; honorários com Pro Oftalmo 193216 / CNES 5325722, como no XML real (D2).
+- 26/11 (tarde): comparação com 3 XML reais do Bradesco (11378/11379/11380). Regras aplicadas — ver
+  `docs/sistema/tiss-gerador.md` ("Comparação com XML reais"). Migração 0169: `profissional_dados_tiss` (nome na guia e
+  CPF do médico, preenchidos pelo 03), `conta_itens.fator` e `conta_itens.numero_guia` (guia própria do auxiliar).
+  ❓ Falta tela para cadastrar nome-na-guia/CPF de médico NOVO (hoje só vem do Micrologos) e para editar o fator do item.

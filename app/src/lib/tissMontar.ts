@@ -7,19 +7,21 @@ export interface TissConv {
   digitos_lote?: number | null; digitos_lote_arquivo?: number | null; max_guias_lote?: number | null; max_procedimentos_guia?: number | null;
   data_autorizacao_vazia_usa_data_conta?: boolean; guia_operadora_igual_prestador?: boolean;
   honorarios_se_cirurgia?: boolean; honorarios_somente_cirurgicos?: boolean; omitir_opcionais_honorarios?: boolean;
+  uma_guia_toda_equipe?: boolean; nao_preenche_guia_principal?: boolean;
   prestador?: { identificacao?: string; codigo_operadora?: string; cnpj?: string; nome?: string; cnes?: string };
 }
 export interface ProfDb { id: string; nome: string; conselho: string | null; numero_conselho: string | null; uf_conselho: string | null; cbo: string | null }
 export interface ItemDb {
   id: string; tabela: string; codigo: string | null; descricao: string; data_execucao: string; quantidade: number;
   valor_unitario: number | null; olho: string | null; profissional_id: string | null; procedimentos: { tipo: string } | null;
-  grau_participacao?: string | null;
+  grau_participacao?: string | null; fator?: number | null; numero_guia?: string | null; numero_guia_operadora?: string | null;
 }
 export interface ContaDb {
   id: string; tipo_guia: string; numero_guia_prestador: string; numero_guia_operadora: string | null; senha_autorizacao: string | null;
   data_autorizacao: string | null; validade_senha: string | null; carteirinha: string | null; data_atendimento: string;
   profissional_id: string | null; solicitante_id: string | null; indicacao_clinica: string | null; observacoes: string | null; plano_id: string | null;
   hospital_id?: string | null; guia_solicitacao?: string | null;
+  legado?: { id_conta?: string; tipo_consulta?: string; guia_micrologos?: string } | null;
   agendamentos: { primeira_vez: boolean | null; tipo: string | null } | null;
   pacientes: { nome: string } | null;
   conta_itens: ItemDb[];
@@ -31,6 +33,10 @@ const UF_IBGE: Record<string, string> = {
   SE: "28", BA: "29", MG: "31", ES: "32", RJ: "33", SP: "35", PR: "41", SC: "42", RS: "43", MS: "50", MT: "51", GO: "52", DF: "53",
 };
 const dig = (s: string | null | undefined) => (s ?? "").replace(/\D/g, "");
+/** Como o Micrologos escreve os textos no XML: sem acento, sem barra e sem hífen (ex.: S/C vira S C, Fotocoagulação vira Fotocoagulacao). */
+export const texto = (s: string | null | undefined) =>
+  (s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[/\\-]/g, " ").replace(/\s+/g, " ").trim();
+const arred = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
 
 
 export interface CodigoDb {
@@ -44,17 +50,19 @@ export interface DadosLote {
   contas: ContaDb[]; profs: ProfDb[];
   codigos: CodigoDb[];
   hospitais?: HospitalDb[];
+  /** profissional_dados_tiss: nome como sai na guia e CPF */
+  dadosTiss?: { profissional_id: string; nome_guia: string | null; cpf: string | null }[];
 }
 
 /** Parte pura (sem banco): transforma contas em guias TISS seguindo o cadastro do convênio. */
-export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais = [] }: DadosLote) {
+export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais = [], dadosTiss = [] }: DadosLote) {
   const tiss = conv.tiss ?? {};
   const erros: string[] = [];
   const avisos: string[] = [];
   const versao = (tiss.versao ?? conv.versao_tiss ?? "4.03.00") as VersaoTISS;
   const codClinica = tiss.prestador?.codigo_operadora ?? conv.codigo_prestador ?? "";
   const cnes = tiss.prestador?.cnes ?? "3176479";
-  const nomeClinica = tiss.prestador?.nome ?? "Consumed Consultorios Medicos Ltda";
+  const nomeClinica = texto(tiss.prestador?.nome ?? "Consumed Consultorios Medicos Ltda");
   const origem: IdContratado = tiss.prestador?.identificacao === "cnpj" ? { cnpj: tiss.prestador?.cnpj ?? "05894660000187" } : { codigoNaOperadora: codClinica };
   if (!conv.registro_ans) erros.push(`Convênio ${conv.nome}: falta o registro ANS (Cadastros → Convênios).`);
   if ("codigoNaOperadora" in origem && !codClinica) erros.push(`Convênio ${conv.nome}: falta o código da clínica na operadora.`);
@@ -75,21 +83,25 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
     if (!tiss.crm_completo && numero.startsWith("52") && numero.length >= 8) numero = numero.slice(2); // sem o prefixo do RJ
     if (!numero) erros.push(`${p.nome}: falta o nº do conselho (Cadastros → Equipe).`);
     const cod = regra(p.id, planoId, hospId);
+    const dt = dadosTiss.find((d) => d.profissional_id === p.id);
+    const codProprio = (papel === "solicitante" ? cod?.codigo_solicitante : cod?.codigo_executante) || undefined;
     return {
-      nome: p.nome.toUpperCase(),
+      nome: texto(dt?.nome_guia || p.nome),
       conselho: CONSELHO[(p.conselho ?? "CRM").toUpperCase()] ?? "06",
       numeroConselho: numero,
       uf: UF_IBGE[(p.uf_conselho ?? "RJ").toUpperCase()] ?? "33",
       cbo: p.cbo || "225265",
-      // sem código próprio do médico no convênio, o Micrologos usa o código da clínica (arquivo J)
-      codigoNaOperadora: (papel === "solicitante" ? cod?.codigo_solicitante : cod?.codigo_executante) || codClinica || undefined,
+      // sem código próprio do médico no convênio, o Micrologos identifica o médico pelo CPF (XML reais do Bradesco, 26/11)
+      codigoNaOperadora: codProprio ?? (dt?.cpf ? undefined : codClinica || undefined),
+      cpf: codProprio ? undefined : dt?.cpf ?? undefined,
     };
   };
 
   const operadora = (c: ContaDb) => c.numero_guia_operadora ?? (tiss.guia_operadora_igual_prestador ? c.numero_guia_prestador : undefined);
   const guias: Guia[] = [];
   for (const c of contas) {
-    const n = c.numero_guia_prestador;
+    // conta do Micrologos cujo nº de guia se repetia: no XML vai o nº original (o sistema guardou "ML<conta>")
+    const n = c.legado?.guia_micrologos ?? c.numero_guia_prestador;
     if (!c.carteirinha) erros.push(`Guia ${n} (${c.pacientes?.nome ?? ""}): falta a carteirinha.`);
     const itens = c.conta_itens ?? [];
     if (!itens.length) { erros.push(`Guia ${n}: sem itens.`); continue; }
@@ -106,32 +118,46 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
       if (!guiaSolic) erros.push(`Guia ${n}: falta o nº da guia de solicitação/internação.`);
       const usar = tiss.honorarios_somente_cirurgicos ? itens.filter((i) => i.procedimentos?.tipo === "cirurgia" || i.grau_participacao) : itens;
       if (usar.length < itens.length) avisos.push(`Guia ${n}: ${itens.length - usar.length} item(ns) que não são cirurgia ficaram fora da guia de honorários.`);
-      const procsH: Procedimento[] = usar.map((i) => {
+      const obsH = c.legado?.id_conta ? `Conta ${c.legado.id_conta}` : c.observacoes ?? undefined;
+      const itemH = (i: ItemDb): Procedimento => {
         const prof = profissional(i.profissional_id ?? c.profissional_id, c.plano_id, "cirurgião", n, c.hospital_id);
-        const doisOlhos = !!tiss.mostra_fator && Number(i.quantidade) === 2;
         if (!i.codigo) erros.push(`Guia ${n}: item "${i.descricao}" sem código.`);
         if (i.valor_unitario === null) erros.push(`Guia ${n}: item "${i.descricao}" sem preço.`);
+        const q = Number(i.quantidade), u = Number(i.valor_unitario ?? 0);
         return {
-          dataExecucao: i.data_execucao, codigoTabela: i.tabela, codigo: i.codigo ?? "", descricao: i.descricao,
-          quantidade: doisOlhos ? 1 : Number(i.quantidade), viaAcesso: "1", tecnicaUtilizada: "1",
-          reducaoAcrescimo: doisOlhos ? 2 : 1, valorUnitario: Number(i.valor_unitario ?? 0),
-          equipe: prof ? [{ grauParticipacao: i.grau_participacao ?? "00", profissional: prof }] : [],
+          dataExecucao: i.data_execucao, codigoTabela: i.tabela, codigo: i.codigo ?? "", descricao: texto(i.descricao),
+          quantidade: q, viaAcesso: "1", tecnicaUtilizada: "1",
+          // o valor unitário já vem com o fator (Micrologos: valor 2.382,54 = tabela 1.191,27 × 2,00)
+          reducaoAcrescimo: Number(i.fator ?? 1), valorUnitario: u, valorTotal: arred(q * u),
+          // nos honorários o Micrologos escreve o nome do médico em maiúsculas
+          equipe: prof ? [{ grauParticipacao: i.grau_participacao ?? "00", profissional: { ...prof, nome: prof.nome.toUpperCase() } }] : [],
         };
-      });
-      guias.push({
-        tipo: "honorarios", numeroGuiaPrestador: n, guiaSolicInternacao: guiaSolic ?? "",
+      };
+      const base = {
+        tipo: "honorarios" as const, guiaSolicInternacao: guiaSolic ?? "",
         senha: c.senha_autorizacao ?? undefined, numeroGuiaOperadora: operadora(c) ?? undefined,
-        beneficiario: { numeroCarteira: c.carteirinha ?? "", atendimentoRN: "N" },
-        localContratado: { id: codHosp ? { codigoNaOperadora: codHosp } : { cnpj: hosp?.cnpj ?? "" }, nome: (hosp?.nome ?? "").toUpperCase(), cnes: cnesHosp },
+        beneficiario: { numeroCarteira: c.carteirinha ?? "", atendimentoRN: "N" as const },
+        localContratado: { id: codHosp ? { codigoNaOperadora: codHosp } : { cnpj: hosp?.cnpj ?? "" }, nome: texto(hosp?.nome).toUpperCase(), cnes: cnesHosp },
         executante: { codigoNaOperadora: codClinica, cnes },
-        dataInicioFaturamento: c.data_atendimento, dataFimFaturamento: c.data_atendimento, caraterAtendimento: "1",
-        procedimentos: procsH, observacao: c.observacoes ?? undefined, dataEmissaoGuia: c.data_atendimento,
-      });
+        dataInicioFaturamento: c.data_atendimento, dataFimFaturamento: c.data_atendimento, caraterAtendimento: "1" as const,
+        observacao: obsH, dataEmissaoGuia: c.data_atendimento,
+      };
+      if (tiss.uma_guia_toda_equipe) {
+        guias.push({ ...base, numeroGuiaPrestador: n, procedimentos: usar.map(itemH) });
+      } else {
+        // Micrologos: uma Guia de Honorários por participante; o auxiliar/instrumentador tem nº de guia próprio
+        const principais = usar.filter((i) => !i.numero_guia);
+        if (principais.length) guias.push({ ...base, numeroGuiaPrestador: n, procedimentos: principais.map(itemH) });
+        for (const i of usar.filter((x) => x.numero_guia))
+          guias.push({ ...base, numeroGuiaPrestador: i.numero_guia!, numeroGuiaOperadora: i.numero_guia_operadora ?? base.numeroGuiaOperadora, procedimentos: [itemH(i)] });
+      }
       continue;
     }
     const exec = profissional(c.profissional_id ?? itens[0].profissional_id, c.plano_id, "médico executante", n);
     if (!exec) continue;
-    const tipoConsulta = c.agendamentos?.tipo === "retorno" || c.agendamentos?.primeira_vez === false ? "2" : "1";
+    const tipoConsulta = c.legado?.tipo_consulta ?? (c.agendamentos?.tipo === "retorno" || c.agendamentos?.primeira_vez === false ? "2" : "1");
+    // Micrologos escreve na observação: Conta <nº da conta>
+    const obs = c.legado?.id_conta ? `Conta ${c.legado.id_conta}` : c.observacoes ?? undefined;
     const operadoraC = operadora(c);
 
     if (c.tipo_guia === "consulta" && !tiss.consulta_em_sadt) {
@@ -142,39 +168,43 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
         beneficiario: { numeroCarteira: c.carteirinha ?? "", atendimentoRN: "N" },
         executante: { contratado: origem, cnes }, profissional: exec,
         indicacaoAcidente: "9", regimeAtendimento: "01", dataAtendimento: c.data_atendimento, tipoConsulta,
-        procedimento: { codigoTabela: i.tabela, codigo: i.codigo ?? "", valor: Number(i.quantidade) * Number(i.valor_unitario ?? 0) },
-        observacao: c.observacoes ?? undefined,
+        procedimento: { codigoTabela: i.tabela, codigo: i.codigo ?? "", valor: arred(Number(i.quantidade) * Number(i.valor_unitario ?? 0)) },
+        observacao: obs,
       });
       continue;
     }
 
     const consultaNaSadt = c.tipo_guia === "consulta" || itens.every((i) => i.procedimentos?.tipo === "consulta");
     const solic = profissional(c.solicitante_id ?? c.profissional_id, c.plano_id, "solicitante", n) ?? exec;
+    // exames: tipoAtendimento 23 e grau 12; procedimento (ex.: fotocoagulação): 03 e grau 00 (XML reais do Bradesco)
+    const soExames = itens.every((i) => i.procedimentos?.tipo === "exame");
     const procs: Procedimento[] = itens.map((i) => {
       const prof = profissional(i.profissional_id ?? c.profissional_id, c.plano_id, "médico executante", n) ?? exec;
-      // "ambos os olhos" lançado como quantidade 2 → o Micrologos manda quantidade 1 com fator 2,00 (mesmo total)
-      const doisOlhos = !!tiss.mostra_fator && Number(i.quantidade) === 2 && i.olho === "AO";
+      const q = Number(i.quantidade), u = Number(i.valor_unitario ?? 0);
       if (!i.codigo) erros.push(`Guia ${n}: item "${i.descricao}" sem código.`);
       if (i.valor_unitario === null) erros.push(`Guia ${n}: item "${i.descricao}" sem preço.`);
       return {
-        dataExecucao: i.data_execucao, codigoTabela: i.tabela, codigo: i.codigo ?? "", descricao: i.descricao,
-        quantidade: doisOlhos ? 1 : Number(i.quantidade), viaAcesso: "1", tecnicaUtilizada: "1",
-        reducaoAcrescimo: doisOlhos ? 2 : 1, valorUnitario: Number(i.valor_unitario ?? 0),
-        equipe: [{ grauParticipacao: "12", profissional: prof }],
+        dataExecucao: i.data_execucao, codigoTabela: i.tabela, codigo: i.codigo ?? "", descricao: texto(i.descricao),
+        quantidade: q, viaAcesso: "1", tecnicaUtilizada: "1",
+        // Micrologos com mostra_fator: o fator informado é a quantidade (2 olhos = 2,00); total = qtd × unitário
+        reducaoAcrescimo: tiss.mostra_fator && q > 1 ? q : 1, valorUnitario: u, valorTotal: arred(q * u),
+        equipe: [{ grauParticipacao: consultaNaSadt || soExames ? "12" : "00", profissional: prof }],
       };
     });
+    // Micrologos: itens da SP/SADT do maior para o menor valor total
+    procs.sort((x, y) => (y.valorTotal ?? 0) - (x.valorTotal ?? 0));
     const dataAut = c.data_autorizacao ?? (tiss.data_autorizacao_vazia_usa_data_conta ? c.data_atendimento : null);
     guias.push({
-      tipo: "sp-sadt", numeroGuiaPrestador: n,
+      tipo: "sp-sadt", numeroGuiaPrestador: n, guiaPrincipal: tiss.nao_preenche_guia_principal ? undefined : n,
       autorizacao: c.senha_autorizacao || operadoraC
         ? { numeroGuiaOperadora: operadoraC ?? undefined, dataAutorizacao: dataAut ?? c.data_atendimento, senha: c.senha_autorizacao ?? undefined, dataValidadeSenha: c.validade_senha ?? undefined }
         : undefined,
       beneficiario: { numeroCarteira: c.carteirinha ?? "", atendimentoRN: "N" },
       solicitante: { contratado: origem, nomeContratado: nomeClinica.toUpperCase(), profissional: solic },
-      dataSolicitacao: c.data_atendimento, caraterAtendimento: "1", indicacaoClinica: c.indicacao_clinica ?? undefined,
+      dataSolicitacao: dataAut ?? c.data_atendimento, caraterAtendimento: "1", indicacaoClinica: c.indicacao_clinica ?? undefined,
       executante: { contratado: origem, cnes },
-      tipoAtendimento: consultaNaSadt ? "04" : "23", indicacaoAcidente: "9", tipoConsulta: consultaNaSadt ? tipoConsulta : undefined,
-      regimeAtendimento: "01", procedimentos: procs, observacao: c.observacoes ?? undefined,
+      tipoAtendimento: consultaNaSadt ? "04" : soExames ? "23" : "03", indicacaoAcidente: "9", tipoConsulta,
+      regimeAtendimento: "01", procedimentos: procs, observacao: obs,
     });
   }
   if (!guias.length && !erros.length) erros.push("O lote não tem guias.");
@@ -183,7 +213,8 @@ export function montarLoteTISS({ conv, contas, profs, codigos, lote, hospitais =
 
   const config: ConfigTISS = {
     versao, registroANS: dig(conv.registro_ans).padStart(6, "0"), origem,
-    digitosSequencial: tiss.digitos_lote ?? 12, digitosLoteArquivo: tiss.digitos_lote_arquivo ?? 4,
+    // Micrologos: sequencialTransacao com 12 dígitos, mas numeroLote sem zeros à esquerda (XML reais do Bradesco)
+    digitosSequencial: tiss.digitos_lote ?? 12, digitosNumeroLote: 0, digitosLoteArquivo: tiss.digitos_lote_arquivo ?? 4,
     maxGuiasPorLote: tiss.max_guias_lote ?? undefined, maxProcedimentosPorGuia: tiss.max_procedimentos_guia ?? undefined,
     extensao: ".XML", omitirOpcionaisHonorarios: !!tiss.omitir_opcionais_honorarios,
   };
