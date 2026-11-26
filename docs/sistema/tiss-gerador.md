@@ -178,3 +178,8 @@ SP/SADT, 373), 11399 (Hapvida consultas, 1923), 11400 (Hapvida SP/SADT, 1924) + 
 - Carga 03: quem já estava na Equipe sem conselho recebe o do Micrologos (ex.: Luciano, COREN, instrumentador).
 - Não testados (sem XML): Bradesco Operadora 11381/11382 e Klini 11402 (sem lote no Micrologos), Assist 11135 (arquivo
   do lote 561 não achado em C:\Assist).
+- **4ª rodada (26/11):** Bradesco Operadora 11369 (consulta) e 11343 (SP/SADT) e Klini 11401 (SP/SADT com consultas e
+  tomografias, versão 4.02.00) — iguais. Regras: tipo de atendimento gravado na conta vale também para consulta na SP/SADT
+  (Klini = 23); nome do contratado solicitante = "nome do prestador" do convênio (Klini "CONSUMED CLINICA DE OLHOS"), só
+  "Consumed Olhos" vira a razão social; vírgulas saem da observação. **Total: 28 cobranças de 15 convênios iguais ao
+  Micrologos.** Assist, Assim e Golden Cross não são mais atendidos (inativos).
