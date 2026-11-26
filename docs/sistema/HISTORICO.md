@@ -1784,3 +1784,9 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
 - O caixa já tem os exames com preço particular: Campo Visual Particular (R$ 180), Teste Ortóptico (R$ 100),
   Exercício Ortóptico (R$ 50) e 10 sessões (R$ 400) — dá para lançar pelo exame e escolher a Eveline como profissional.
 - Para a migração: descobrir no Micrologos onde ficam os registros da Eveline (ortóptica/campo visual — prontuário ou aba própria).
+
+### 26/11 — Caixa: itens que faltavam (migração 0168, pedido da dona/recepção)
+- Incluídos na tabela particular: **Consulta Glaucoma — Dr. Max** (R$ 500), **Consulta Córnea — Dr. Pedro** (R$ 600) e
+  **Campo Visual — Dual (parceria)** (R$ 140). A Dual é clínica parceira que manda pacientes para campo visual.
+- Em aberto: os itens antigos da Micrologos "Consulta Glaucoma" (R$ 600) e "Consulta Córnea" (R$ 500) têm valores trocados em relação
+  ao que a recepção informou — perguntar à dona se desativa. Regras da Dual (exames, valores, descontos, quem paga) a levantar no Micrologos.
