@@ -7,13 +7,14 @@
 -- Decisão da dona (25/11/2026): trazer tudo desde 2016; antes de 2021 = ARQUIVADA (só consulta e relatórios).
 -- Depende de 01..04 e da migração 0163. Rodar numa transação com: set local app.migracao = 'on'. Idempotente.
 --
--- Situação da conta (o Micrologos não guarda se o convênio pagou; ❓ confirmar com a dona):
+-- Situação da conta (o Micrologos não guarda se o convênio pagou; regra aprovada pela dona em 26/11/2026):
 --   particular                                     -> paga
 --   convênio, em cobrança fechada há mais de 6 meses -> paga (presumido; legado.pagamento = 'presumido')
 --   convênio, em cobrança dos últimos 6 meses       -> faturada (enviada, aguardando pagamento)
 --   convênio, sem cobrança, últimos 6 meses        -> aberta (falta faturar)
 --   convênio, sem cobrança, mais antiga            -> paga (presumido; legado.sem_cobranca = true)
---      (Unimed Gisele/Gelson têm muitas contas fora de cobrança: ❓ como eram cobradas)
+--   consulta da Unimed sem cobrança (qualquer data) -> paga (presumido): a Unimed não exige cobrança/XML das
+--      consultas, então elas nunca entravam em cobrança no Micrologos (dona, 26/11/2026). Prazo de 6 meses confirmado.
 -- =====================================================================
 
 -- ---------- parâmetros ----------
@@ -84,6 +85,9 @@ select c.*,
   legacy_micrologos.novo_id('paciente', c.id_paciente) as pac,
   coalesce(legacy_micrologos.data(c.data_entrada), legacy_micrologos.data(c.data_inclusao)) as dt,
   pl.id as plano, pl.convenio_id as conv,
+  -- consultas da Unimed não entram em cobrança (o convênio não exige XML das consultas; dona, 26/11)
+  exists (select 1 from public.convenios cv where cv.id = pl.convenio_id and cv.nome ilike 'unimed%')
+    and coalesce(btrim(c.tiss_tipo_guia), '') = '01' as unimed_consulta,
   nullif(btrim(c.id_cobranca), '') is not null and btrim(c.id_cobranca) <> '0' and b.id_cobranca is not null as em_cob,
   coalesce(legacy_micrologos.data(b.data_fim), legacy_micrologos.data(b.data_inicio)) as cob_data,
   s.total, s.n, s.prof, s.matricula, s.validade,
@@ -108,10 +112,11 @@ select c.*,
     when c.conv is null then 'paga'
     when c.em_cob and c.cob_data < (select corte_pago from _par) then 'paga'
     when c.em_cob then 'faturada'
+    when c.unimed_consulta then 'paga'
     when c.dt >= (select corte_pago from _par) then 'aberta'
     else 'paga' end as st,
   c.conv is not null and not (c.em_cob and c.cob_data >= (select corte_pago from _par))
-    and not (not c.em_cob and c.dt >= (select corte_pago from _par)) as presumido,
+    and not (not c.em_cob and not c.unimed_consulta and c.dt >= (select corte_pago from _par)) as presumido,
   c.dt < (select corte_arquivo from _par) as arq,
   case when c.guia_rep = 1 and nullif(btrim(c.plano_guia), '') is not null then btrim(c.plano_guia)
        else 'ML' || btrim(c.id_paciente_conta) end as guia,

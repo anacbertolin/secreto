@@ -661,6 +661,18 @@ export function LoteDetalhe() {
     if (r2.error) return setErro(msgErro(r2.error));
     recarregar();
   }
+  const temPagamento = cs.some((c) => ["paga", "glosada"].includes(c.status) || Number(c.valor_glosado) > 0);
+  async function reabrirLote() {
+    if (!confirm("Reabrir esta cobrança para corrigir?\n\nAs guias voltam para \"Pronta p/ lote\". Você pode tirar o paciente com erro, " +
+      "e depois marca a cobrança como enviada de novo (o XML deve ser gerado de novo).")) return;
+    setErro("");
+    const r1 = await supabase.from("contas").update({ status: "pronta" }).eq("lote_id", l.id).eq("status", "faturada");
+    if (r1.error) return setErro(msgErro(r1.error));
+    const obs = [l.observacoes, `Reaberta para correção em ${fmtData(isoDia(new Date()))}${l.enviado_em ? ` (enviada antes em ${fmtData(l.enviado_em)})` : ""}.`].filter(Boolean).join("\n");
+    const r2 = await supabase.from("lotes").update({ status: "aberto", observacoes: obs }).eq("id", l.id);
+    if (r2.error) return setErro(msgErro(r2.error));
+    recarregar();
+  }
   function exportarCSV() {
     const linhas = [["Guia prestador", "Guia operadora", "Data", "Paciente", "Prontuário", "Carteirinha", "Senha", "Tipo", "Valor", "Glosado"].join(";")];
     for (const c of cs) linhas.push([c.numero_guia_prestador, c.numero_guia_operadora ?? "", fmtData(c.data_atendimento), c.pacientes!.nome, c.pacientes!.numero_prontuario,
@@ -688,6 +700,7 @@ export function LoteDetalhe() {
           <button onClick={exportarCSV}>⬇️ Planilha (CSV)</button>
           {l.status === "aberto" && <button className="primario" disabled={cs.length === 0} onClick={() => setModal("enviar")}>📤 Marcar como enviado</button>}
           {l.status === "enviado" && !l.arquivado && <button className="primario" onClick={() => setModal("pagar")}>💰 Registrar pagamento</button>}
+          {l.status === "enviado" && !l.arquivado && !temPagamento && <button onClick={reabrirLote} title="Para tirar um paciente com erro e gerar o XML de novo">🔓 Reabrir cobrança</button>}
           {l.status === "aberto" && <button className="perigo" onClick={cancelarLote}>Desfazer lote</button>}
         </div>
       </div>
