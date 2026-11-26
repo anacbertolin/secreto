@@ -34,6 +34,9 @@
   - os 8 médicos atuais e o Luciano foram LIGADOS aos cadastros do sistema novo (pelo CRM ou pelo nome); o Pedro tem 2 códigos no Micrologos;
   - 9 médicos antigos entram como inativos, sem login;
   - ❓ **Agendas de recurso:** Centro Cirúrgico, Ortóptica, Orientação Cirúrgica, Contatólogo, Eveline/Campo Visual e Sem Médico aguardam a decisão da dona.
+  - ❓ **Eveline (pedido da dona, 26/11):** descobrir no Micrologos onde ficam os registros da Eveline (tecnóloga de campo visual e
+    ortóptica): se escreve no prontuário ou numa aba própria. No sistema novo ela é "Enfermagem / Técnico(a)" (cadastro
+    Eveline Isabel Alves dos Santos), diferente das colunas de agenda "Eveline (Campo Visual)" e "Ortóptica".
 - **Agenda** (`04_agenda.sql`), testada no ensaio: **387.732 de 387.736** agendamentos (os 4 restantes são dos pacientes de teste).
   - Resultado: 307.742 atendidos, 62.059 faltas, 17.075 cancelados, 856 futuros e 12.950 encaixes.
   - Os setores vão para as colunas da 0152 e a Orientação vai para a coluna da Alessandra.
