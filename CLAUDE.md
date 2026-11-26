@@ -143,6 +143,10 @@
   tela `/whatsapp/assistente`. Lê as conversas com IA (Claude), marca na agenda o que foi combinado, avalia o atendimento
   e monta a base do futuro robô (`bot_conhecimento`). Modelo Sonnet 5.5; horário padrão da clínica é parâmetro na tela.
   Nasce **desligado** (liga na tela). Não usa chave de API (decisão da dona); ela já deu o aval para o envio do texto mascarado. Detalhes: `docs/sistema/HISTORICO.md` (15/11, Assistente).
+- **E-mail da clínica (25–26/11/2026):** Google Workspace Business Starter no domínio **`cmdolhos.com.br`** (só e-mail; DNS no
+  Registro.br, sem Hostinger). Contas pagas `diretoria@` (dona) e `clinica@`; o resto são apelidos grátis (setores e `dr.<nome>@`
+  dos 5 sócios). Cada setor/médico vê só a sua caixa; admin vê todas. NÃO usar `consumedolhos.com.br` para e-mail.
+  Decisões e estado: `docs/sistema/HISTORICO.md` (25–26/11, E-mail).
 - **Transcrição de áudios (15/11/2026):** Whisper da OpenAI (decisão da dona; áudio processado nos EUA). Migração 0040,
   função Edge `whatsapp-transcrever`, segredo `OPENAI_API_KEY`. Detalhes: `docs/sistema/HISTORICO.md`.
 - **Telefone no sistema (15/11/2026):** migrações 0050–0051, ramal SIP no navegador (JsSIP/WebRTC) para qualquer central que

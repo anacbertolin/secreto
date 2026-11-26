@@ -1752,3 +1752,24 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   ano anterior ou com o mês anterior, exporta planilha e imprime. Conta e lote mostram de onde vieram no Micrologos.
 - Carga das contas: `migracao/transformacoes/06_faturamento.sql` (ensaio local ok; detalhes em `migracao/PROXIMOS-PASSOS.md`).
 - Pedido da dona registrado em LACUNAS §4: tirar/recolocar paciente de cobrança já enviada (recurso) e gerar XML de novo.
+
+## 25–26/11/2026 — E-mail da clínica: decisões da dona (sessão "E-mail da clínica")
+- **Provedor:** Google Workspace **Business Starter**, pagamento flexível (mensal) no começo; passar para anual quando
+  estiver tudo funcionando. Escolhido pelo antispam/antigolpe e pela facilidade de ligar ao sistema (API do Gmail).
+- **Domínio só para e-mail: `cmdolhos.com.br`** (registrado pela dona no Registro.br em 25–26/11, titular a clínica,
+  contatos na conta dela). DNS na **edição de zona do próprio Registro.br** — nada de Hostinger nem agência.
+  "CMD" porque a clínica pensa em virar Hospital de Olhos da Baixada; no futuro o domínio novo entra como domínio extra
+  no Google e os dois endereços chegam na mesma caixa.
+- `consumedolhos.com.br` (site) **não é usado para e-mail** e não deve ser mexido por esta frente. O DNS dele fica na
+  Hostinger (ns1/ns2.dns-parking.com); há uma caixa de e-mail na Hostinger que ninguém usa. O contato técnico no
+  Registro.br é de terceiro (agência): trocar para a dona junto com a troca do site.
+- **Contas pagas (2):** `diretoria@` (só a dona, administradora do Google) e `clinica@` (conta da equipe). Todos os outros
+  endereços são **apelidos grátis** da `clinica@` (até 30): `faturamento@`, `financeiro@`, `contato@`, `cirurgia@`,
+  `recepcao@` e um por médico sócio. Nenhum médico vai usar e-mail no celular/fora do sistema.
+- **Médicos sócios (5):** Gelson, Luiza, Gisele, Max e Pedro → `dr.gelson@`, `dr.luiza@`, `dr.gisele@`, `dr.max@`,
+  `dr.pedro@` (a dona pediu "dr." para todos).
+- **Quem vê o quê (aba E-mail do sistema):** cada setor vê só a caixa do seu setor; cada médico vê só a sua caixa;
+  a **admin vê todas**. Equipe usa tudo pelo sistema (sem abrir Gmail).
+- Próximos passos: dona conclui a contratação e a configuração do DNS (MX `smtp.google.com`, SPF, DMARC `p=none`,
+  DKIM) pelo Claude do computador dela; depois criar `clinica@` e os apelidos; depois a aba E-mail (v1: ler, responder,
+  encaminhar, enviar com anexos, guardado no banco no Brasil, registro de quem leu/respondeu), no padrão do WhatsApp.
