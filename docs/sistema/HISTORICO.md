@@ -1773,3 +1773,10 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
 - Próximos passos: dona conclui a contratação e a configuração do DNS (MX `smtp.google.com`, SPF, DMARC `p=none`,
   DKIM) pelo Claude do computador dela; depois criar `clinica@` e os apelidos; depois a aba E-mail (v1: ler, responder,
   encaminhar, enviar com anexos, guardado no banco no Brasil, registro de quem leu/respondeu), no padrão do WhatsApp.
+
+### 26/11 — Caixa: Eveline (tecnóloga) na lista de profissionais (migração 0167, pedido da dona)
+- A lista "Médico" do caixa só mostrava médicos. Novo campo `profissionais.atende_pacientes` ("Atende pacientes", tela Equipe):
+  quem não é médico mas atende (ex.: tecnóloga) aparece no caixa em "Médico / profissional". Colunas de setor da agenda ficam de fora.
+- Marcado para **Eveline Isabel Alves dos Santos** (tecnóloga: campo visual e ortóptica), especialidade preenchida.
+- A agenda continua com as colunas "Eveline (Campo Visual)" e "Ortóptica" (migração 0152, sessão de migração) — não mexido.
+- Em aberto com a dona: a função da Eveline na Equipe está "Recepção"; como tecnóloga talvez seja "Enfermagem / Técnico(a)".
