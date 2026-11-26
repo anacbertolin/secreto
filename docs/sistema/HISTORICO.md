@@ -1841,3 +1841,8 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   ou a administração clicar **✔️ Recebi** (`caixa_entrega_receber`; vale mesmo com o caixa já fechado). Entrega recebida não pode ser cancelada.
   Tela inicial do Caixa mostra para eles as entregas esperando check. Fechar o caixa com entrega sem check: só avisa, não trava.
 - Marcação "Recebe o dinheiro" na tela Equipe. Teste no banco (desfeito) OK. Build OK.
+## 26/11/2026 — Horário do Centro Cirúrgico (migração 0177)
+- Pedido da dona: Centro Cirúrgico funciona como a clínica: segunda a sexta 8h–17h, sábado 8h–12h. Cadastrado em
+  `horarios_profissional` (intervalos de 15 min). Os médicos e as outras colunas ainda NÃO têm horário cadastrado.
+- Agenda: a faixa de horas só encolhe para o horário cadastrado quando todas as colunas mostradas têm horário;
+  senão continua 7h–19h (para não esconder as colunas sem horário).
