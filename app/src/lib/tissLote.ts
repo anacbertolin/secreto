@@ -14,12 +14,12 @@ export async function gerarXmlDoLote(loteId: string): Promise<ResultadoXML> {
   const conv = ok(await supabase.from("convenios").select("nome, registro_ans, codigo_prestador, versao_tiss, tiss").eq("id", lote.convenio_id).single()) as
     { nome: string; registro_ans: string | null; codigo_prestador: string | null; versao_tiss: string | null; tiss: TissConv | null };
   const contas = ok(await supabase.from("contas")
-    .select("id, tipo_guia, numero_guia_prestador, numero_guia_operadora, senha_autorizacao, data_autorizacao, validade_senha, carteirinha, data_atendimento, profissional_id, solicitante_id, indicacao_clinica, observacoes, plano_id, hospital_id, guia_solicitacao, legado, agendamentos(primeira_vez, tipo), pacientes(nome), conta_itens(id, tabela, codigo, descricao, data_execucao, quantidade, valor_unitario, olho, profissional_id, grau_participacao, fator, numero_guia, numero_guia_operadora, criado_em, procedimentos(tipo))")
+    .select("id, tipo_guia, numero_guia_prestador, numero_guia_operadora, senha_autorizacao, data_autorizacao, validade_senha, carteirinha, data_atendimento, profissional_id, solicitante_id, indicacao_clinica, observacoes, plano_id, hospital_id, guia_solicitacao, legado, agendamentos(primeira_vez, tipo), pacientes(nome), conta_itens(id, tabela, codigo, descricao, data_execucao, quantidade, valor_unitario, olho, profissional_id, grau_participacao, fator, numero_guia, numero_guia_operadora, legado, criado_em, procedimentos(tipo))")
     .eq("lote_id", loteId).neq("status", "cancelada").order("data_atendimento")
     .order("criado_em", { referencedTable: "conta_itens" })) as unknown as ContaDb[];
   const profs = ok(await supabase.from("profissionais").select("id, nome, conselho, numero_conselho, uf_conselho, cbo")) as ProfDb[];
   const codigos = ok(await supabase.from("profissional_convenio_codigos")
-    .select("profissional_id, plano_id, hospital_id, codigo_executante, codigo_solicitante, executa_como_id, solicita_como_id")
+    .select("profissional_id, plano_id, hospital_id, codigo_executante, codigo_solicitante, executa_como_id, solicita_como_id, grau_participacao")
     .eq("convenio_id", lote.convenio_id)) as CodigoDb[];
   const hs = ok(await supabase.from("hospitais").select("id, nome, cnpj, cnes, hospital_convenio_codigos(convenio_id, codigo_operadora, cnes)")) as
     { id: string; nome: string; cnpj: string | null; cnes: string | null; hospital_convenio_codigos: { convenio_id: string; codigo_operadora: string | null; cnes: string | null }[] }[];

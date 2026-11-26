@@ -8,7 +8,7 @@ c as (
     (select jsonb_build_object('nome', p.nome) from public.pacientes p where p.id = ct.paciente_id) as pac,
     (select coalesce(jsonb_agg(jsonb_build_object('id', i.id, 'tabela', i.tabela, 'codigo', i.codigo, 'descricao', i.descricao,
         'data_execucao', i.data_execucao, 'quantidade', i.quantidade, 'valor_unitario', i.valor_unitario, 'olho', i.olho,
-        'profissional_id', i.profissional_id, 'grau_participacao', i.grau_participacao, 'fator', i.fator, 'numero_guia', i.numero_guia, 'numero_guia_operadora', i.numero_guia_operadora,
+        'profissional_id', i.profissional_id, 'grau_participacao', i.grau_participacao, 'fator', i.fator, 'numero_guia', i.numero_guia, 'numero_guia_operadora', i.numero_guia_operadora, 'legado', i.legado,
         'procedimentos', (select jsonb_build_object('tipo', pr.tipo) from public.procedimentos pr where pr.id = i.procedimento_id))
         order by i.criado_em, i.id), '[]') from public.conta_itens i where i.conta_id = ct.id) as itens
   from public.contas ct where ct.lote_id = (select id from l) and ct.status <> 'cancelada')

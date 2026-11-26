@@ -134,3 +134,25 @@ de paciente). Regras descobertas e aplicadas (migração 0169 + `tissMontar.ts`)
   nº próprio também na operadora (`conta_itens.numero_guia_operadora`); textos sem hífen; conta do Micrologos com nº de
   guia repetido sai com o nº original no XML (`legado.guia_micrologos`).
 - Desempenho da carga 06: precisa de `set local jit = off` e `analyze` das tabelas temporárias (sem isso passa de 30 min).
+
+## 2ª rodada de comparação — Amil, Unimed Consumed Cirurgia, Geap, Hapvida (26/11/2026, noite)
+Cobranças 11226 (Amil honorários, lote 195), 11351 (Amil SP/SADT, 204), 11390 (Unimed pacotes, 259), 11354 (Geap
+SP/SADT, 373), 11399 (Hapvida consultas, 1923), 11400 (Hapvida SP/SADT, 1924) + as 3 do Bradesco de novo:
+**as 9 ficaram iguais ao Micrologos, campo a campo, com os mesmos totais.** Regras novas (todas no `tissMontar.ts`):
+- CRM sempre completo (com o 52) em todos os convênios.
+- Hapvida identifica a clínica pelo **CNPJ** (`prestador.identificacao = cnpj_cpf`).
+- 4.01.00 (Amil): honorários sem `caraterAtendimento`. ⚠️ Esse XML não passa no XSD 4.03 (falta o XSD 4.01 para validar),
+  mas é igual ao que o Micrologos manda e a Amil aceita.
+- Fator informado = (valor do 1º olho + valor do 2º) ÷ valor do 1º (Hapvida 2º olho a 70% = 1,70; sem desconto = 2,00);
+  Geap informa 1,00 e **desmembra** em 2 linhas (via 1 e via 3) quando o 2º olho tem valor diferente
+  (`tiss_se_desmembra_via_diversas`). Valores do 1º/2º olho vêm de `legado.v1`/`v2` do item.
+- Grau: exame/consulta = grau do médico no convênio (`profissional_convenio_codigos.grau_participacao`, Geap 11) ou 12;
+  procedimento/cirurgia = 00. Tipo de atendimento e data da solicitação: os da conta do Micrologos (`legado`).
+- Ordem dos itens: Bradesco e Geap (`tiss_sadt_semequipe_guia_princ`) do maior para o menor valor unitário; os demais
+  com o de maior valor primeiro.
+- Unimed: sem `guiaPrincipal` (`tiss_guiasadt_solic_embranco`), pacote tabela 98 sem via/técnica (`tiss_usa_pacote_sadt`),
+  código do cooperado do médico (cadastrado na unidade da clínica).
+- Contratado solicitante sempre "CONSUMED CONSULTORIOS MEDICOS LTDA".
+- **Carga das contas:** os produtos lançados na conta (PRODUTOS_MOVIMENTACAO: pacotes Unimed, lentes, medicamentos —
+  4,5 mil itens, R$ 6,3 milhões) agora entram como itens. Com isso 9.921 de 10.904 cobranças batem centavo a centavo
+  com o total do Micrologos (antes 9.212).
