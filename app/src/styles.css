@@ -612,3 +612,6 @@ textarea.resumo-notas { width: 100%; min-height: 44px; font-size: 0.85rem; paddi
 .wa-corrigir { border: 1px solid #b2ccff; background: #eef4ff; color: #175cd3; font-size: 0.72rem; font-weight: 600; padding: 1px 8px; margin-left: 8px; border-radius: 99px; cursor: pointer; }
 .wa-corrigir:hover { background: #d1e0ff; }
 .wa-corrigida { font-size: 0.72rem; color: #b54708; }
+
+/* Agenda: cirurgião no Centro Cirúrgico (26/11/2026) */
+.ag-item .ag-cirurgiao { font-size: 0.76rem; font-weight: 600; color: #1f4fd1; }
