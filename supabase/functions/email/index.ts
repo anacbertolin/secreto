@@ -12,10 +12,14 @@
 //   enviar        multipart: caixa_id, conversa_id?, responde_a? (id da mensagem), modo (novo|responder|encaminhar),
 //                 para, cc?, assunto, texto, encaminhar_anexos? ("1"), arquivos (vários)
 //   anexo         { mensagem_id, indice } → o arquivo (baixa do Google na 1ª vez e guarda no Storage)
+//   spam_listar   → e-mails que o Google pôs no spam (últimos 30 dias), só das caixas que a pessoa vê (0191)
+//   nao_e_spam    { gmail_id } → tira do spam no Google e traz para a caixa certa no sistema
+//   marcar_spam   { conversa_id } → manda a conversa para o spam do Google (ensina o filtro) e arquiva
 //
 // Segredos: Client ID / Client Secret e o token ficam em interno.email_google (a admin digita na tela
 // Cadastros → E-mail). Nada disso volta para o navegador.
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.45.4";
+import { analisarGolpe, nivelMaior, type Alerta } from "./golpe.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -113,7 +117,7 @@ function enderecos(s: string | null | undefined): string[] {
 
 interface Anexo { nome: string; tipo: string; tamanho: number; parte: string; caminho?: string }
 function lerCorpo(payload: Json) {
-  let texto: string | null = null, html: string | null = null;
+  let texto = null as string | null, html = null as string | null;
   const anexos: Anexo[] = [];
   const andar = (p: Json) => {
     if (!p) return;
@@ -155,32 +159,59 @@ async function guardarMensagem(db: SupabaseClient, token: string, id: string, ca
   if (rotulos.some((r) => ["SPAM", "TRASH", "DRAFT"].includes(r))) return 0;
   const enviada = rotulos.includes("SENT");
   const de = cab(m, "From"), para = cab(m, "To"), cc = cab(m, "Cc");
-  const porEndereco = new Map(caixas.map((c) => [c.endereco, c]));
-  const alvo = new Set<string>();
-  const candidatos = enviada
-    ? enderecos(de)
-    : [...enderecos(para), ...enderecos(cc), ...cabTodos(m, "Delivered-To").flatMap(enderecos), ...enderecos(cab(m, "X-Original-To"))];
-  for (const e of candidatos) if (porEndereco.has(e) && porEndereco.get(e)!.tipo !== "geral") alvo.add(porEndereco.get(e)!.id);
-  if (!alvo.size) {
-    const geral = caixas.find((c) => c.tipo === "geral");
-    if (!geral) return 0;
-    alvo.add(geral.id);
-  }
+  const alvo = caixasAlvo(m, caixas, enviada);
+  if (!alvo.size) return 0;
   const { texto, html, anexos } = lerCorpo(m.payload);
   const quando = new Date(Number(m.internalDate) || Date.now()).toISOString();
   const assunto = cab(m, "Subject");
+  // Alerta de golpe (0191): só nos recebidos
+  let alerta: Alerta[] = [];
+  if (!enviada) {
+    const remetente = enderecos(de)[0] ?? "";
+    alerta = analisarGolpe({
+      de, remetente, responderPara: cab(m, "Reply-To"), assunto, texto, anexos,
+      autenticacao: cabTodos(m, "Authentication-Results").join(" ") || cab(m, "ARC-Authentication-Results"),
+      remetenteConhecido: await remetenteConhecido(db, remetente, caixas),
+    });
+  }
   for (const caixaId of alvo) {
     const conversaId = await conversaDoFio(db, caixaId, m.threadId, assunto);
     const { error } = await db.from("email_mensagens").insert({
       conversa_id: conversaId, gmail_id: id, direcao: enviada ? "enviada" : "recebida", de, para, cc, assunto,
       texto: texto?.slice(0, 200_000) ?? null, html: html && html.length <= 800_000 ? html : null,
       message_id: cab(m, "Message-ID") ?? cab(m, "Message-Id"), referencias: cab(m, "References"),
-      anexos, quando,
+      anexos, quando, alerta,
     });
     if (error && !/duplicate key/.test(error.message)) throw new Error(error.message);
-    if (!error) await atualizarConversa(db, conversaId, { enviada, quando, de, para, previa: m.snippet ?? texto ?? "", anexo: anexos.length > 0 });
+    if (!error) await atualizarConversa(db, conversaId, { enviada, quando, de, para, previa: m.snippet ?? texto ?? "", anexo: anexos.length > 0, alerta: nivelMaior(alerta) });
   }
   return alvo.size;
+}
+
+/** Em quais caixas este e-mail deve aparecer (recebido: pelos destinatários; enviado: pelo remetente). */
+function caixasAlvo(m: Json, caixas: Caixa[], enviada: boolean): Set<string> {
+  const porEndereco = new Map(caixas.map((c) => [c.endereco, c]));
+  const alvo = new Set<string>();
+  const candidatos = enviada
+    ? enderecos(cab(m, "From"))
+    : [...enderecos(cab(m, "To")), ...enderecos(cab(m, "Cc")), ...cabTodos(m, "Delivered-To").flatMap(enderecos), ...enderecos(cab(m, "X-Original-To"))];
+  for (const e of candidatos) if (porEndereco.has(e) && porEndereco.get(e)!.tipo !== "geral") alvo.add(porEndereco.get(e)!.id);
+  if (!alvo.size) {
+    const geral = caixas.find((c) => c.tipo === "geral");
+    if (geral) alvo.add(geral.id);
+  }
+  return alvo;
+}
+
+/** A clínica já trocou e-mail com este endereço antes? (endereços da própria clínica contam como conhecidos) */
+async function remetenteConhecido(db: SupabaseClient, email: string, caixas: Caixa[]): Promise<boolean> {
+  if (!email) return false;
+  if (caixas.some((c) => c.endereco === email) || email.endsWith("@cmdolhos.com.br")) return true;
+  const padrao = `%${email.replace(/[%_\\]/g, (x) => "\\" + x)}%`;
+  const { data } = await db.from("email_mensagens").select("id")
+    .or(`and(direcao.eq.enviada,para.ilike.${padrao}),and(direcao.eq.enviada,cc.ilike.${padrao}),and(direcao.eq.recebida,de.ilike.${padrao})`)
+    .limit(1);
+  return !!data?.length;
 }
 
 async function conversaDoFio(db: SupabaseClient, caixaId: string, fio: string, assunto: string | null): Promise<string> {
@@ -195,12 +226,14 @@ async function conversaDoFio(db: SupabaseClient, caixaId: string, fio: string, a
 
 async function atualizarConversa(db: SupabaseClient, conversaId: string, d: {
   enviada: boolean; quando: string; de: string | null; para: string | null; previa: string; anexo: boolean;
+  alerta?: "alto" | "atencao" | null;
 }) {
   const { data: c } = await db.from("email_conversas")
-    .select("ultima_mensagem_em, ultima_recebida_em, ultima_enviada_em, qtd_mensagens, tem_anexo, contato").eq("id", conversaId).single();
+    .select("ultima_mensagem_em, ultima_recebida_em, ultima_enviada_em, qtd_mensagens, tem_anexo, contato, alerta").eq("id", conversaId).single();
   if (!c) return;
   const maisNova = !c.ultima_mensagem_em || d.quando >= c.ultima_mensagem_em;
   const upd: Record<string, unknown> = { qtd_mensagens: (c.qtd_mensagens ?? 0) + 1, tem_anexo: c.tem_anexo || d.anexo };
+  if (d.alerta && c.alerta !== "alto") upd.alerta = d.alerta;
   if (maisNova) {
     upd.ultima_mensagem_em = d.quando;
     upd.previa = d.previa.replace(/\s+/g, " ").slice(0, 240);
@@ -446,6 +479,62 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ---- Spam (0191): ver o que o Google segurou, tirar de lá, ou mandar para lá ----
+    if (corpo.acao === "spam_listar" || corpo.acao === "nao_e_spam") {
+      const { data: visiveis } = await comoEu.from("email_caixas").select("id, endereco, nome, tipo, assinatura").eq("ativo", true);
+      const minhas = new Map(((visiveis ?? []) as Caixa[]).map((c) => [c.id, c]));
+      const { data: todas } = await db.from("email_caixas").select("id, endereco, nome, tipo, assinatura").eq("ativo", true);
+      const caixas = (todas ?? []) as Caixa[];
+      const token = await tokenAcesso(await lerGoogle(db));
+      const META = "format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Cc&metadataHeaders=Subject&metadataHeaders=Delivered-To&metadataHeaders=X-Original-To&metadataHeaders=Reply-To";
+
+      if (corpo.acao === "nao_e_spam") {
+        const id = String(corpo.gmail_id ?? "");
+        const m = await gmail(token, `/messages/${encodeURIComponent(id)}?${META}`);
+        if (![...caixasAlvo(m, caixas, false)].some((c) => minhas.has(c))) return resposta({ erro: "Este e-mail não é de uma caixa sua." }, 403);
+        await gmail(token, `/messages/${encodeURIComponent(id)}/modify`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ removeLabelIds: ["SPAM"], addLabelIds: ["INBOX"] }),
+        });
+        await guardarMensagem(db, token, id, caixas);
+        // se já estava no sistema (alguém tinha marcado como spam), volta para a entrada
+        const { data: ja } = await db.from("email_mensagens").select("conversa_id").eq("gmail_id", id);
+        for (const j of ja ?? []) await db.from("email_conversas").update({ arquivada: false }).eq("id", j.conversa_id);
+        return resposta({ ok: true });
+      }
+
+      const lista = await gmail(token, `/messages?q=${encodeURIComponent("in:spam newer_than:30d")}&maxResults=60`);
+      const itens: Json[] = [];
+      for (const x of lista.messages ?? []) {
+        const m = await gmail(token, `/messages/${x.id}?${META}`);
+        const alvo = [...caixasAlvo(m, caixas, false)].filter((c) => minhas.has(c));
+        if (!alvo.length) continue;
+        itens.push({
+          gmail_id: x.id, de: cab(m, "From"), para: cab(m, "To"), assunto: cab(m, "Subject"), previa: m.snippet ?? "",
+          quando: new Date(Number(m.internalDate) || Date.now()).toISOString(),
+          caixas: alvo.map((c) => minhas.get(c)!.nome),
+        });
+      }
+      return resposta({ itens });
+    }
+
+    if (corpo.acao === "marcar_spam") {
+      const { data: conv } = await comoEu.from("email_conversas").select("id").eq("id", corpo.conversa_id).maybeSingle();
+      if (!conv) return resposta({ erro: "Conversa não encontrada ou sem acesso." }, 404);
+      const { data: msgs } = await db.from("email_mensagens").select("gmail_id").eq("conversa_id", conv.id).eq("direcao", "recebida");
+      const token = await tokenAcesso(await lerGoogle(db));
+      for (const m of msgs ?? []) {
+        try {
+          await gmail(token, `/messages/${encodeURIComponent(m.gmail_id)}/modify`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ addLabelIds: ["SPAM"], removeLabelIds: ["INBOX"] }),
+          });
+        } catch (e) { if ((e as { status?: number }).status !== 404) throw e; }
+      }
+      await db.from("email_conversas").update({ arquivada: true }).eq("id", conv.id);
+      return resposta({ ok: true });
+    }
+
     if (corpo.acao === "anexo") {
       const { data: msg } = await comoEu.from("email_mensagens").select("id, gmail_id, anexos").eq("id", corpo.mensagem_id).maybeSingle();
       if (!msg) return resposta({ erro: "E-mail não encontrado ou sem acesso." }, 404);
@@ -468,7 +557,7 @@ Deno.serve(async (req) => {
           await db.from("email_mensagens").update({ anexos: lista }).eq("id", msg.id);
         }
       }
-      return new Response(bytes, {
+      return new Response(new Blob([bytes as BlobPart]), {
         headers: { ...cors, "Content-Type": a.tipo || "application/octet-stream",
           "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(a.nome)}` },
       });

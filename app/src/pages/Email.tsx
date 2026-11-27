@@ -7,10 +7,10 @@ import { useAuth } from "../lib/auth";
 import { Aviso, Carregando, Campo, Modal, Etiqueta } from "../components/ui";
 import {
   email, enviarEmail, abrirAnexo, nomeContato, emailsDe,
-  type CaixaEmail, type ConversaEmail, type MensagemEmail, type Contagem,
+  type CaixaEmail, type ConversaEmail, type MensagemEmail, type Contagem, type SpamEmail,
 } from "../lib/email";
 
-type Filtro = "entrada" | "sem_resposta" | "arquivadas";
+type Filtro = "entrada" | "sem_resposta" | "arquivadas" | "spam";
 interface Pessoa { id: string; nome: string }
 interface Situacao { credenciais: boolean; conectado: boolean; conta: string | null; ultima_sinc: string | null; ultimo_erro: string | null }
 
@@ -61,7 +61,7 @@ export default function Email() {
   }, []);
 
   async function lerConversas() {
-    if (!caixaId) return;
+    if (!caixaId || filtro === "spam") return;
     let q = supabase.from("email_conversas").select("*").eq("caixa_id", caixaId)
       .eq("arquivada", filtro === "arquivadas").order("ultima_mensagem_em", { ascending: false, nullsFirst: false }).limit(300);
     const b = busca.trim().replace(/[%,()]/g, " ");
@@ -141,12 +141,13 @@ export default function Email() {
         <div className="painel" style={{ padding: 8 }}>
           {caixa && <div className="muted pequeno" style={{ marginBottom: 6 }}>{caixa.endereco}{caixa.descricao ? ` · ${caixa.descricao}` : ""}</div>}
           <div className="linha" style={{ gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
-            {(["entrada", "sem_resposta", "arquivadas"] as Filtro[]).map((f) => (
+            {(["entrada", "sem_resposta", "arquivadas", "spam"] as Filtro[]).map((f) => (
               <button key={f} className={"mini " + (filtro === f ? "primario" : "")} onClick={() => setFiltro(f)}>
-                {f === "entrada" ? "Entrada" : f === "sem_resposta" ? `Sem resposta${contagem[caixaId ?? ""]?.sem_resposta ? ` (${contagem[caixaId ?? ""].sem_resposta} há +2 dias)` : ""}` : "Arquivados"}
+                {f === "entrada" ? "Entrada" : f === "sem_resposta" ? `Sem resposta${contagem[caixaId ?? ""]?.sem_resposta ? ` (${contagem[caixaId ?? ""].sem_resposta} há +2 dias)` : ""}` : f === "arquivadas" ? "Arquivados" : "🚫 Spam"}
               </button>
             ))}
           </div>
+          {filtro === "spam" ? <ListaSpam aoMudar={() => { lerCaixas(); }} /> : <>
           <input placeholder="Procurar por assunto ou pessoa…" value={busca} onChange={(e) => setBusca(e.target.value)} style={{ width: "100%", marginBottom: 6 }} />
           {!conversas ? <Carregando /> : conversas.length === 0 ? <p className="muted">Nenhum e-mail aqui.</p> : (
             <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
@@ -167,11 +168,14 @@ export default function Email() {
                   <div className="linha" style={{ gap: 4, marginTop: 2 }}>
                     {c.responsavel_id && <Etiqueta cor="azul">👤 {primeiroNome(nomePessoa(c.responsavel_id))}</Etiqueta>}
                     {semResposta(c) && c.ultima_recebida_em! < new Date(Date.now() - 2 * 864e5).toISOString() && <Etiqueta cor="amarelo">sem resposta</Etiqueta>}
+                    {c.alerta === "alto" && <Etiqueta cor="vermelho">🚩 possível golpe</Etiqueta>}
+                    {c.alerta === "atencao" && <Etiqueta cor="amarelo">⚠️ cuidado</Etiqueta>}
                   </div>
                 </div>
               ))}
             </div>
           )}
+          </>}
         </div>
 
         {/* Conversa aberta */}
@@ -208,7 +212,7 @@ function Conversa(props: {
 
   async function ler() {
     const [{ data, error }, { data: l }] = await Promise.all([
-      supabase.from("email_mensagens").select("id, conversa_id, direcao, de, para, cc, assunto, texto, html, anexos, quando, enviado_por")
+      supabase.from("email_mensagens").select("id, conversa_id, direcao, de, para, cc, assunto, texto, html, anexos, quando, enviado_por, alerta")
         .eq("conversa_id", c.id).order("quando"),
       supabase.from("email_leituras").select("profissional_id, lida_em").eq("conversa_id", c.id).order("lida_em", { ascending: false }),
     ]);
@@ -264,6 +268,11 @@ function Conversa(props: {
           <button className="mini" onClick={() => acao("email_arquivar", { p_conversa: c.id, p_arquivar: !c.arquivada })}>
             {c.arquivada ? "Voltar para a entrada" : "🗄️ Arquivar"}
           </button>
+          {props.conectado && <button className="mini" onClick={async () => {
+            if (!confirm("Mandar este e-mail para o spam? Ele sai da caixa e o Google aprende a barrar e-mails parecidos.")) return;
+            setErro("");
+            try { await email("marcar_spam", { conversa_id: c.id }); props.aoMudar(); } catch (e) { setErro((e as Error).message); }
+          }}>🚫 É spam</button>}
         </div>
       </div>
       <div className="muted pequeno" style={{ margin: "4px 0 10px" }}>
@@ -302,6 +311,13 @@ function Mensagem(props: {
       {aberta && (
         <>
           <Aviso>{erro}</Aviso>
+          {m.alerta?.length > 0 && (
+            <Aviso tipo={m.alerta.some((a) => a.nivel === "alto") ? "erro" : "alerta"}>
+              <b>{m.alerta.some((a) => a.nivel === "alto") ? "🚩 Cuidado: este e-mail pode ser golpe." : "⚠️ Atenção com este e-mail."}</b>
+              <ul style={{ margin: "4px 0 4px 18px", padding: 0 }}>{m.alerta.map((a, i) => <li key={i}>{a.motivo}</li>)}</ul>
+              <span className="pequeno">Pedido de pagamento, boleto ou troca de conta: <b>confirme por telefone</b>, no número que vocês já têm (nunca no que veio no e-mail).</span>
+            </Aviso>
+          )}
           {m.html && !verTexto ? (
             <>
               <div className="linha" style={{ gap: 6, margin: "6px 0" }}>
@@ -428,5 +444,54 @@ function Escrever({ r, caixas, aoFechar }: { r: Rascunho; caixas: CaixaEmail[]; 
         ))}
       </div>
     </Modal>
+  );
+}
+
+// ---------- Spam: o que o Google segurou (últimos 30 dias, só das caixas da pessoa) ----------
+function ListaSpam({ aoMudar }: { aoMudar: () => void }) {
+  const [itens, setItens] = useState<SpamEmail[] | null>(null);
+  const [erro, setErro] = useState("");
+  const [tirando, setTirando] = useState<string | null>(null);
+  async function ler() {
+    setErro("");
+    try { setItens((await email<{ itens: SpamEmail[] }>("spam_listar")).itens); }
+    catch (e) { setErro((e as Error).message); setItens([]); }
+  }
+  useEffect(() => { ler(); }, []);
+  async function naoESpam(id: string) {
+    setTirando(id); setErro("");
+    try { await email("nao_e_spam", { gmail_id: id }); setItens((l) => (l ?? []).filter((x) => x.gmail_id !== id)); aoMudar(); }
+    catch (e) { setErro((e as Error).message); }
+    setTirando(null);
+  }
+  return (
+    <div>
+      <p className="muted pequeno" style={{ margin: "0 0 6px" }}>
+        E-mails que o Google desconfiou e segurou (últimos 30 dias). Se algum for bom, clique em <b>Não é spam</b>: ele vai para a caixa certa.
+        Na dúvida, não clique em links nem abra anexos.
+      </p>
+      <Aviso>{erro}</Aviso>
+      {!itens ? <Carregando /> : itens.length === 0 ? <p className="muted">Nada no spam. 🎉</p> : (
+        <div style={{ maxHeight: "65vh", overflowY: "auto" }}>
+          {itens.map((x) => (
+            <div key={x.gmail_id} style={{ padding: "8px 6px", borderBottom: "1px solid var(--borda, #ddd)" }}>
+              <div className="linha entre">
+                <b style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nomeContato(x.de)}</b>
+                <span className="muted pequeno">{fmtQuando(x.quando)}</span>
+              </div>
+              <div className="muted pequeno">{x.de}</div>
+              <div>{x.assunto || "(sem assunto)"}</div>
+              <div className="muted pequeno" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.previa}</div>
+              <div className="linha entre" style={{ marginTop: 4 }}>
+                <span className="muted pequeno">para {x.caixas.join(", ")}</span>
+                <button className="mini" disabled={tirando === x.gmail_id} onClick={() => naoESpam(x.gmail_id)}>
+                  {tirando === x.gmail_id ? "Trazendo…" : "✅ Não é spam"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
