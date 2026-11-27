@@ -1874,3 +1874,10 @@ quem confere, abrir normalmente no dia seguinte). Quem confere vem do cadastro (
 `app/src/components/Novidades.tsx` (no topo de todas as telas): aviso azul mostrado UMA vez a quem interessa, some no
 "Entendi" (conta em guia_leituras). Primeiro aviso: "agora dá para registrar mais de uma forma de pagamento" — para quem
 atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). Novidade nova = nova entrada na lista NOVIDADES.
+
+### 27/11/2026 — Correção automática no WhatsApp e na conversa interna
+- A dona relatou que não via a correção. O `spellCheck` (sublinhado vermelho) estava publicado; ele depende do Chrome
+  (Configurações → Idiomas → Verificação ortográfica ligada com Português (Brasil)) e só sublinha — não troca sozinho.
+- Novo `app/src/lib/autocorretor.ts`: ao apertar espaço/pontuação, troca sozinho palavras comuns sem acento ou com erro
+  (nao→não, voce→você, cirugia→cirurgia, amanha→amanhã, vc→você…), mantendo maiúsculas. Só palavras sem ambiguidade
+  (esta/está, e/é, ate/até ficam de fora). Não mexe em atalhos "/". Usado no Chat do WhatsApp e na conversa interna.
