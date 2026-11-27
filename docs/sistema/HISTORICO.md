@@ -1886,3 +1886,7 @@ atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). 
 - Novo `app/src/lib/autocorretor.ts`: ao apertar espaço/pontuação, troca sozinho palavras comuns sem acento ou com erro
   (nao→não, voce→você, cirugia→cirurgia, amanha→amanhã, vc→você…), mantendo maiúsculas. Só palavras sem ambiguidade
   (esta/está, e/é, ate/até ficam de fora). Não mexe em atalhos "/". Usado no Chat do WhatsApp e na conversa interna.
+- (27/11) **"⚠️ Enviei errado"** em foto/áudio/vídeo/documento enviados (dentro das 24 h): a API da Meta não permite
+  apagar mensagem enviada (confirmado de novo; só no modo coexistência pelo app). O botão manda um aviso editável
+  ("…foi enviado por engano. Por favor, desconsidere.") como resposta citando o arquivo, e o arquivo fica marcado
+  "enviado por engano" no sistema (histórico preservado). Aviso de novidade para a orientação (`Novidades.tsx`).
