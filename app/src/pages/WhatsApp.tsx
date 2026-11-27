@@ -11,6 +11,7 @@ import {
 import { BotaoLigar } from "../components/Telefone";
 import { BotoesStatus, STATUS_CENTRAL, fmtEsperando, useCentral, type StatusCentral } from "../lib/central";
 import { gravarAudio, type Gravacao } from "../lib/gravador";
+import { autocorrigir } from "../lib/autocorretor";
 
 const ICONE_SITUACAO: Record<string, string> = { enviando: "🕓", enviada: "✓", entregue: "✓✓", lida: "✓✓", falhou: "⚠️" };
 const ICONE_TIPO: Record<string, string> = {
@@ -723,7 +724,11 @@ export function Chat(props: {
                 autoCapitalize="sentences"
                 value={texto}
                 placeholder={preparando ? "Preparando o áudio…" : anexo && !anexoAudio ? "Legenda (opcional)…" : "Escreva a resposta… (Enter envia, Shift+Enter pula linha)"}
-                onChange={(e) => { setTexto(e.target.value); setRapIdx(0); if (!e.target.value.startsWith("/")) setRapFechado(false); }}
+                onChange={(e) => {
+                  // Correção automática ao apertar espaço/pontuação (só quando digita no fim do texto)
+                  const v = e.target.selectionEnd === e.target.value.length ? autocorrigir(e.target.value) : e.target.value;
+                  setTexto(v); setRapIdx(0); if (!v.startsWith("/")) setRapFechado(false);
+                }}
                 onPaste={(e) => {
                   const f = Array.from(e.clipboardData.files)[0];
                   if (f) { e.preventDefault(); escolherArquivo(f); }

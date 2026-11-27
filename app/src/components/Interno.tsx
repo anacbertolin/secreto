@@ -6,6 +6,7 @@ import { useCarregar, ok, Aviso, Carregando, Modal } from "./ui";
 import { FUNCOES, fmtData, isoDia, type Funcao } from "../lib/util";
 import { SELECT_INTERNA, tituloInterna, type ConversaInterna, type MensagemInterna } from "../lib/interno";
 import { EMOJIS, iniciais } from "../pages/WhatsApp";
+import { autocorrigir } from "../lib/autocorretor";
 
 interface Pessoa { id: string; nome: string; funcao: Funcao }
 
@@ -230,7 +231,7 @@ export function InternoChat(props: { conversaId: string; aoVoltar: () => void })
         )}
         <textarea ref={caixaInt} spellCheck lang="pt-BR" autoCapitalize="sentences"
           value={texto} placeholder="Mensagem para a equipe… (Enter envia, Shift+Enter pula linha)"
-          onChange={(e) => setTexto(e.target.value)}
+          onChange={(e) => setTexto(e.target.selectionEnd === e.target.value.length ? autocorrigir(e.target.value) : e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void enviar(); } }} />
         <button className="primario" disabled={enviando || !texto.trim()} onClick={() => void enviar()}>{editando ? "Salvar" : "Enviar"}</button>
       </div>

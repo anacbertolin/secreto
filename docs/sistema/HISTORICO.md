@@ -1880,3 +1880,9 @@ atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). 
 - `telefonia_config.ligado = false` (feito no banco; a configuração da Api4Com e o ramal 1000 ficam guardados, desligados).
 - O botão do canto (`app/src/components/Telefone.tsx`) agora só aparece quando há telefone de fato: some com o telefone
   desligado na administração, faltando configurar ou sem ramal. Volta sozinho quando a Telecall for configurada e ligada.
+### 27/11/2026 — Correção automática no WhatsApp e na conversa interna
+- A dona relatou que não via a correção. O `spellCheck` (sublinhado vermelho) estava publicado; ele depende do Chrome
+  (Configurações → Idiomas → Verificação ortográfica ligada com Português (Brasil)) e só sublinha — não troca sozinho.
+- Novo `app/src/lib/autocorretor.ts`: ao apertar espaço/pontuação, troca sozinho palavras comuns sem acento ou com erro
+  (nao→não, voce→você, cirugia→cirurgia, amanha→amanhã, vc→você…), mantendo maiúsculas. Só palavras sem ambiguidade
+  (esta/está, e/é, ate/até ficam de fora). Não mexe em atalhos "/". Usado no Chat do WhatsApp e na conversa interna.
