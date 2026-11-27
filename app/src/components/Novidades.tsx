@@ -8,6 +8,16 @@ interface Novidade { id: string; para: (eu: Profissional | null) => boolean; tex
 
 const NOVIDADES: Novidade[] = [
   {
+    id: "novidade_caixa_guia_rosa_fundo", // 27/11/2026, pedido da dona (Luana/Sol: fundo de troco e Guia Rosa)
+    para: (eu) => (eu?.funcao === "recepcao" && !eu?.orientacao_cirurgica) || !!eu?.caixa_recebe_entrega,
+    texto: (nome) => <>
+      <b>🆕 Novidades no caixa, {nome}:</b> (1) no <b>Novo recebimento</b>, se o paciente veio com a <b>guia rosa</b>, clique em
+      <b> “🩷 Guia Rosa”</b> antes de marcar os exames: os valores da guia entram sozinhos. (2) O <b>fundo de troco</b> agora aparece
+      separado do <b>dinheiro do dia</b>. Para levar dinheiro lá em cima, use <b>“💼 Entregar dinheiro ao administrativo”</b> e escolha
+      <b> dinheiro do dia</b> ou <b>fundo de troco</b> (se levar os dois, faça duas entregas).
+    </>,
+  },
+  {
     id: "novidade_whatsapp_enviei_errado", // 27/11/2026, pedido da dona (Alessandra mandou um arquivo errado)
     para: (eu) => !!eu?.orientacao_cirurgica,
     texto: (nome) => <>
