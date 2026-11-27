@@ -627,3 +627,8 @@ textarea.resumo-notas { width: 100%; min-height: 44px; font-size: 0.85rem; paddi
 .wa-respondendo { background: #ecfdf3; border-color: #abefc6; }
 .wa-balao .wa-responder { opacity: 0.35; }
 .wa-balao:hover .wa-responder { opacity: 1; }
+
+/* E-mail da clínica (0190): no celular, caixas, lista e e-mail ficam um embaixo do outro */
+@media (max-width: 900px) {
+  .email-grade { grid-template-columns: 1fr !important; }
+}
