@@ -1951,3 +1951,16 @@ atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). 
   (senão os e-mails saem como clinica@).
 - Ideias combinadas ainda não feitas: respostas prontas, alerta de golpe (boleto/troca de conta), mensagens do site
   caindo no contato@, separar boletos/notas do financeiro@, ligar e-mail a convênio/paciente.
+
+## 27/11/2026 — E-mail: alerta de golpe e caixa de spam (migração 0191, pedido da dona)
+- **Alerta de golpe** (`supabase/functions/email/golpe.ts`): cada e-mail recebido é analisado ao chegar e ganha
+  `email_mensagens.alerta` (motivos) e `email_conversas.alerta` ('alto' | 'atencao'). Regras: o Google não confirmou a
+  origem (SPF/DKIM/DMARC falhou → alto); nome de empresa/convênio/banco com e-mail gratuito (alto); Reply-To para outro
+  domínio; troca de conta bancária/chave Pix (alto se remetente novo); remetente novo falando de boleto/Pix/pagamento
+  (alto se com urgência); pedido de senha/código/"confirme seus dados"; anexos perigosos (.exe, .html, .js…) e
+  compactados de remetente novo. "Remetente conhecido" = já trocou e-mail com a clínica. Na tela: etiqueta
+  "🚩 possível golpe" / "⚠️ cuidado" na lista e faixa com os motivos + "confirme por telefone" no e-mail.
+  Motivo: o Gmail não repassa a outros sistemas a faixa "Tenha cuidado com esta mensagem".
+- **Spam:** botão "🚫 Spam" na lista (ações `spam_listar` / `nao_e_spam` da função: mostra o que o Google segurou nos
+  últimos 30 dias, só das caixas da pessoa; "Não é spam" tira do spam no Google e traz para a caixa) e botão
+  "🚫 É spam" na conversa (`marcar_spam`: manda para o spam do Google, ensinando o filtro, e arquiva).

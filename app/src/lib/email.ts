@@ -10,12 +10,15 @@ export interface ConversaEmail {
   id: string; caixa_id: string; assunto: string | null; contato: string | null; previa: string | null;
   ultima_mensagem_em: string | null; ultima_recebida_em: string | null; ultima_enviada_em: string | null;
   nao_lida: boolean; arquivada: boolean; responsavel_id: string | null; qtd_mensagens: number; tem_anexo: boolean;
+  alerta: "alto" | "atencao" | null;
 }
 export interface AnexoEmail { nome: string; tipo: string; tamanho: number }
 export interface MensagemEmail {
   id: string; conversa_id: string; direcao: "recebida" | "enviada"; de: string | null; para: string | null; cc: string | null;
   assunto: string | null; texto: string | null; html: string | null; anexos: AnexoEmail[]; quando: string; enviado_por: string | null;
+  alerta: { nivel: "alto" | "atencao"; motivo: string }[];
 }
+export interface SpamEmail { gmail_id: string; de: string | null; para: string | null; assunto: string | null; previa: string; quando: string; caixas: string[] }
 export interface Contagem { caixa_id: string; nao_lidas: number; sem_resposta: number }
 
 async function cabecalhos(): Promise<Record<string, string>> {
