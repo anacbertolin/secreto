@@ -1926,3 +1926,28 @@ atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). 
   v18 aceita `responde` (qualquer mensagem da conversa). As bolhas mostram a citação (mensagem respondida, clicável) —
   vale também quando o PACIENTE responde citando (o webhook já grava `em_resposta_a`). "corrigida abaixo" agora só para
   correções/avisos de engano. Aviso de novidade para a orientação.
+
+## 27/11/2026 — Aba E-mail no sistema, v1 (sessão "E-mail da clínica", migração 0190)
+- **Banco (0190 `email`):** `email_caixas` (endereço, tipo setor/medico/geral, `profissional_id` do médico dono,
+  `funcoes` = função inteira com acesso, ex.: recepção; `assinatura`), `email_caixa_acesso` (pessoa ↔ caixa),
+  `email_conversas` (um fio do Gmail por caixa; não lida, arquivada, "quem está cuidando"), `email_mensagens`
+  (texto, HTML, anexos em jsonb, `enviado_por`), `email_leituras` (quem abriu e quando). RLS: `interno.email_pode_caixa`
+  (admin vê todas; dono, função ou acesso). Só a função Edge grava e-mails. Ações por RPC: `email_marcar_lida`,
+  `email_arquivar`, `email_responsavel`, `email_contagem` (não lidas + sem resposta há 2 dias), `email_situacao`,
+  `email_definir_credenciais` (admin). Segredos em `interno.email_google` (Client ID/Secret + refresh token; nunca voltam à tela).
+  Bucket privado `email-anexos`. Agendador `email-sincronizar` a cada 2 min (só se conectado), com a chave do extrator.
+  Caixas e acessos já gravados conforme a lista final da dona; `clinica@` = caixa "Geral" (só admin) para o que não cair em nenhuma.
+- **Função Edge `email`** (verify_jwt = false; confere login por dentro; o GET é a volta do Google no OAuth):
+  conectar/desconectar (admin), sincronizar (Gmail API: 30 dias na 1ª vez, depois pelo histórico), enviar (multipart,
+  até ~18 MB de anexos, responde no mesmo fio com In-Reply-To/References, encaminha com anexos originais), anexo (baixa do
+  Gmail na 1ª vez e guarda no Storage). Escopo `gmail.modify`. App OAuth do tipo **Interno** no Google Cloud da clínica.
+- **Telas:** `/email` (menu ✉️ para todos; mostra só as caixas da pessoa; contador de não lidos no menu), com Entrada /
+  Sem resposta / Arquivados, busca, "Eu cuido deste", "Lido por", e-mail formatado numa moldura sem scripts e com imagens
+  de fora bloqueadas até clicar em "Mostrar imagens" (proteção contra rastreio/golpe). `/cadastros/email` (admin):
+  conexão com o Google, caixas, quem acessa, assinatura e o passo a passo.
+- **Falta (dona):** criar o projeto no Google Cloud (Gmail API + tela de consentimento Interna + ID do cliente Web com o
+  redirecionamento `https://ogflxjolbwrzayjtxvhj.supabase.co/functions/v1/email`), colar Client ID/Secret na tela,
+  "Conectar com o Google" com a conta clinica@, e cadastrar os 15 endereços em "Enviar e-mail como" no Gmail da clinica@
+  (senão os e-mails saem como clinica@).
+- Ideias combinadas ainda não feitas: respostas prontas, alerta de golpe (boleto/troca de conta), mensagens do site
+  caindo no contato@, separar boletos/notas do financeiro@, ligar e-mail a convênio/paciente.

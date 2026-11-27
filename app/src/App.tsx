@@ -38,6 +38,9 @@ import ImportarExames from "./pages/ImportarExames";
 import ConfigMemed from "./pages/ConfigMemed";
 import Ligacoes from "./pages/Ligacoes";
 import ConfigTelefone from "./pages/ConfigTelefone";
+import Email from "./pages/Email";
+import ConfigEmail from "./pages/ConfigEmail";
+import { useEmailNaoLidas } from "./lib/email";
 import Telefone from "./components/Telefone";
 import { Novidades } from "./components/Novidades";
 import AvisoVersao from "./components/AvisoVersao";
@@ -62,6 +65,8 @@ const MENU: ItemMenu[] = [
   // Central de atendimento (23/11): quem atende usa só ela (WhatsApp + telefone + conversa interna);
   // médicos, enfermagem e faturamento entram nela para a conversa interna e consultam o WhatsApp no item abaixo.
   { para: "/central", rotulo: "Central de atendimento", icone: "🎧", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
+  // E-mail da clínica (0190): cada um vê só as suas caixas (a tela confere); admin vê todas
+  { para: "/email", rotulo: "E-mail", icone: "✉️" },
   { para: "/whatsapp", rotulo: "WhatsApp (consulta)", icone: "💬", funcoes: ["medico", "enfermagem", "faturamento"] },
   { para: "/orientacao-cirurgica", rotulo: "Orientação cirúrgica (consulta)", icone: "🩹", ve: (eu) => podeVerSetor(eu, "orientacao") && !eu?.orientacao_cirurgica },
   // Ligações: dentro da Central de atendimento, aba Telefone (pedido da dona, 23/11); a página /ligacoes continua para consulta
@@ -88,6 +93,7 @@ const MENU: ItemMenu[] = [
   { para: "/cadastros/locais", rotulo: "Salas e consultórios", icone: "🚪", funcoes: ["recepcao", "admin"] },
   { para: "/cadastros/exames", rotulo: "Tipos de exame", icone: "📋", funcoes: ["recepcao", "admin"] },
   { para: "/cadastros/telefone", rotulo: "Telefone", icone: "☎️", funcoes: ["admin"] },
+  { para: "/cadastros/email", rotulo: "E-mail da clínica", icone: "✉️", funcoes: ["admin"] },
   { para: "/cadastros/memed", rotulo: "Receita digital (Memed)", icone: "💊", funcoes: ["admin"] },
   { para: "/cadastros/ia", rotulo: "Inteligência artificial", icone: "✨", funcoes: ["admin"] },
   { para: "/cadastros/modelos", rotulo: "Modelos de texto", icone: "📝", funcoes: ["medico", "enfermagem"] },
@@ -116,6 +122,7 @@ export default function App() {
   // Conversa interna da equipe: na Central o som já toca pela própria tela
   const interno = useInternoNaoLidas(eu?.id, loc.pathname !== "/central");
   const naoLidasCentral = naoLidas + naoLidasOrientacao + interno.total;
+  const emailNaoLidos = useEmailNaoLidas(!!eu);
   useEffect(() => {
     document.title = (naoLidasCentral ? `(${naoLidasCentral}) ` : "") + "Consumed · Sistema da Clínica";
   }, [naoLidasCentral]);
@@ -190,6 +197,7 @@ export default function App() {
               <NavLink key={m.para} to={m.para} end={m.para === "/" || m.para === "/whatsapp" || m.para === "/exames"}>
                 <span aria-hidden>{m.icone}</span> {m.rotulo}
                 {m.para === "/central" && naoLidasCentral > 0 && <span className="wa-badge" style={{ marginLeft: "auto" }}>{naoLidasCentral}</span>}
+                {m.para === "/email" && emailNaoLidos > 0 && <span className="wa-badge" style={{ marginLeft: "auto" }}>{emailNaoLidos}</span>}
               </NavLink>,
             ];
           })}
@@ -252,6 +260,8 @@ export default function App() {
           <Route path="/central" element={<Central key="central" />} />
           <Route path="/ligacoes" element={<Protegida funcoes={["medico", "enfermagem", "recepcao", "admin", "faturamento"]}><Ligacoes /></Protegida>} />
           <Route path="/cadastros/telefone" element={<Protegida funcoes={["admin"]}><ConfigTelefone /></Protegida>} />
+          <Route path="/email" element={<Email />} />
+          <Route path="/cadastros/email" element={<Protegida funcoes={["admin"]}><ConfigEmail /></Protegida>} />
           <Route path="/cadastros/memed" element={<Protegida funcoes={["admin"]}><ConfigMemed /></Protegida>} />
           <Route path="/cadastros/ia" element={<Protegida funcoes={["admin"]}><ConfigIA /></Protegida>} />
           <Route path="/cadastros/modelos" element={<Protegida funcoes={["medico", "enfermagem"]}><Modelos /></Protegida>} />
