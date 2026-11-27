@@ -274,3 +274,21 @@ Roteiro (dia da troca, com o Marcio):
   (aí fica o do sistema novo e a dona é avisada).
 - Cuidado: cada cobrança vai para o convênio por UM sistema só (risco de cobrança em dobro).
 - O banco de trabalho local "carga" guarda o de-para (`mapa_ids`) igual ao do Supabase: é a base da atualização diária.
+
+### Como foi a carga inicial (26–27/11/2026)
+- Cópia de 24/11. Entrou tudo e bate 100% com o banco de trabalho "carga":
+  - 117.196 pacientes (2 provisórios 200.001+) e 387.767 agendamentos;
+  - 606.993 registros de prontuário antigo;
+  - 10.396 cobranças, 333.160 contas e 425.129 itens (soma idêntica), 1.880.622 de-para.
+- **Problema:** o banco (tamanho pequeno) estourou o limite de gravação no disco e travou de ~04h30 a ~06h50 (horário de Brasília) do dia 27.
+  Login e WhatsApp pararam; a Meta reenviou as mensagens depois. A dona subiu o banco para **Large**
+  (combinado: voltar para Medium depois da troca definitiva).
+- **Lições:**
+  - o REST tem limite de 8 s por lote: usar lotes pequenos (agenda e contas 500, prontuário 300/1,5 MB,
+    itens 500, de-para 2000);
+  - enviar primeiro os pacientes da equipe que foram juntados (já corrigido no `enviar_tudo.sh`);
+  - o worker do Claude reinicia e derruba o Docker: rodar com `setsid nohup` e repetir a etapa (ver o
+    `reenvio2.sh` da sessão: cada etapa repete até 8 vezes, com marcador de feito);
+  - depois da carga: `analyze` nas tabelas grandes.
+- 0189: índices pela chave do telefone (WhatsApp achava o paciente em 5,4 s, agora em 3 ms).
+- 0188 aplicada: cobranças novas a partir de 20.001.
