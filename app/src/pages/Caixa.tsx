@@ -85,12 +85,16 @@ interface ItemTabela { nome: string; grupo: TipoRecebimento; valor: number }
 const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 /** Tabela de preços PARTICULAR (procedimentos com preço sem convênio — migração 0086). */
-/** Preços da Guia Rosa (migração 0173): nome do procedimento → valor. Sem preço aqui = usa o particular. */
+/** Preços da Guia Rosa (migração 0173): nome do procedimento → valor. Sem preço aqui = usa o particular.
+ *  Linha desativada = o item NÃO existe na Guia Rosa e some da lista (ex.: pacote de laser 5 sessões — 0174). */
+const SEM_GUIA_ROSA = new Set<string>();
 function useGuiaRosa() {
   const { dados } = useCarregar(async () => {
-    const r = ok(await supabase.from("precos_parceria").select("valor, procedimentos(descricao)").eq("tabela", "guia_rosa").eq("ativo", true)) as
-      unknown as { valor: number; procedimentos: { descricao: string } | null }[];
-    return new Map(r.filter((x) => x.procedimentos).map((x) => [x.procedimentos!.descricao, Number(x.valor)]));
+    const r = ok(await supabase.from("precos_parceria").select("valor, ativo, procedimentos(descricao)").eq("tabela", "guia_rosa")) as
+      unknown as { valor: number; ativo: boolean; procedimentos: { descricao: string } | null }[];
+    SEM_GUIA_ROSA.clear();
+    for (const x of r) if (x.procedimentos && !x.ativo) SEM_GUIA_ROSA.add(x.procedimentos.descricao);
+    return new Map(r.filter((x) => x.procedimentos && x.ativo).map((x) => [x.procedimentos!.descricao, Number(x.valor)]));
   }, []);
   return dados ?? new Map<string, number>();
 }
@@ -699,7 +703,9 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
     return m;
   };
   const precoDe = useMemo(() => mapaDe(tabPreco), [tabela, rosa, tabPreco]); // eslint-disable-line react-hooks/exhaustive-deps
-  const detalhes = (t: TipoRecebimento) => (tabela.length ? tabela.filter((i) => i.grupo === t).map((i) => i.nome) : DETALHES[t]);
+  const detalhes = (t: TipoRecebimento) => (tabela.length
+    ? tabela.filter((i) => i.grupo === t && (tabPreco !== "guia_rosa" || !SEM_GUIA_ROSA.has(i.nome) || itens.includes(i.nome))).map((i) => i.nome)
+    : DETALHES[t]);
   const somaTabela = (lista: string[], mapa = precoDe) => n2(lista.reduce((s, i) => s + (mapa.get(i) ?? 0), 0));
   function mudaTabPreco(t: TabelaPreco) {
     setTabPreco(t);
@@ -889,7 +895,9 @@ function IncluirNoAtendimento({ caixaId, at, aoFechar, aoSalvar }: { caixaId: st
   const tabelaBase = useTabelaParticular();
   const rosa = useGuiaRosa();
   // usa a mesma tabela do recebimento original (Particular ou Guia Rosa)
-  const tabela = at.tabela === "guia_rosa" ? tabelaBase.map((i) => (rosa.has(i.nome) ? { ...i, valor: rosa.get(i.nome)! } : i)) : tabelaBase;
+  const tabela = at.tabela === "guia_rosa"
+    ? tabelaBase.filter((i) => !SEM_GUIA_ROSA.has(i.nome)).map((i) => (rosa.has(i.nome) ? { ...i, valor: rosa.get(i.nome)! } : i))
+    : tabelaBase;
   const lista = tabela.length ? tabela : TIPOS_RECEBIMENTO.flatMap((g) => DETALHES[g].map((nome) => ({ nome, grupo: g, valor: 0 })));
   const [itens, setItens] = useState<string[]>([]);
   const [outros, setOutros] = useState("");
