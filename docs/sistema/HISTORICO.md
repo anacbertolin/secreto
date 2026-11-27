@@ -1890,3 +1890,11 @@ atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). 
   apagar mensagem enviada (confirmado de novo; só no modo coexistência pelo app). O botão manda um aviso editável
   ("…foi enviado por engano. Por favor, desconsidere.") como resposta citando o arquivo, e o arquivo fica marcado
   "enviado por engano" no sistema (histórico preservado). Aviso de novidade para a orientação (`Novidades.tsx`).
+
+### 27/11 — Caixa: fundo de troco separado do dinheiro do dia (migração 0172, pedido da recepção/Sol)
+- A tela juntava fundo + dinheiro do dia num número só ("Dinheiro que deve estar na gaveta"). Agora há três quadros:
+  **💰 Fundo de troco na gaveta**, **💵 Dinheiro do dia na gaveta** e **Total que deve estar na gaveta** (o fechamento também).
+- "Entregar dinheiro ao administrativo" pergunta o que está sendo levado: **dinheiro do dia** (`entrega_adm`) ou **fundo de troco**
+  (`entrega_fundo`, não passa do fundo na gaveta). Os dois pedem o "Recebi" do administrativo.
+- Caixa de 27/11 foi fechado com R$ 2.000 contados (fundo 200 + dia 1.800) e uma entrega de R$ 2.000 cancelada — os R$ 200 do fundo
+  entregues hoje não ficaram registrados (precisaria devolver o caixa para corrigir).
