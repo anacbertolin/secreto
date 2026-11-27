@@ -42,7 +42,7 @@ interface Saida {
   id: string; caixa_id: string; valor: number; motivo: string; autorizado_por: string | null;
   cancelado: boolean; motivo_cancelamento: string | null; criado_por: string | null; criado_em: string;
   /** despesa = dinheiro gasto; entrega_adm = subiu para o administrativo (migração 0171) */
-  tipo?: "despesa" | "entrega_adm"; recebido_por?: string | null; recebido_em?: string | null;
+  tipo?: "despesa" | "entrega_adm" | "entrega_fundo"; recebido_por?: string | null; recebido_em?: string | null;
 }
 type Forma = "dinheiro" | "pix" | "debito" | "credito_vista" | "credito_parcelado";
 
@@ -185,7 +185,7 @@ export default function Caixa() {
   const [abrir, setAbrir] = useState(false);
   const podeReceber = papelCaixa(eu).receber;
   const entregas = useCarregar(async () => podeReceber
-    ? ok(await supabase.from("caixa_saidas").select("*").eq("tipo", "entrega_adm").eq("cancelado", false).is("recebido_em", null).order("criado_em")) as Saida[]
+    ? ok(await supabase.from("caixa_saidas").select("*").in("tipo", ["entrega_adm", "entrega_fundo"]).eq("cancelado", false).is("recebido_em", null).order("criado_em")) as Saida[]
     : [], [podeReceber]);
   const dados = (todos ?? []).filter((c) => (c.setor ?? "recepcao") === setor);
   const aberto = dados.find((c) => c.status === "aberto");
@@ -344,9 +344,16 @@ export function CaixaDetalhe() {
   const totalSaidas = n2(sais.filter((s) => !s.cancelado).reduce((s, x) => s + Number(x.valor), 0));
   const esperadoDinheiro = n2(Number(cx.fundo_troco) + porForma.dinheiro - totalSaidas);
   const saisValidas = sais.filter((s) => !s.cancelado);
-  const totalEntregas = n2(saisValidas.filter((s) => s.tipo === "entrega_adm").reduce((t, x) => t + Number(x.valor), 0));
+  const ehEntrega = (x: Saida) => x.tipo === "entrega_adm" || x.tipo === "entrega_fundo";
+  const somaSaidas = (f: (x: Saida) => boolean) => n2(saisValidas.filter(f).reduce((t, x) => t + Number(x.valor), 0));
+  const totalEntregasDia = somaSaidas((x) => x.tipo === "entrega_adm");
+  const totalEntregasFundo = somaSaidas((x) => x.tipo === "entrega_fundo");
+  const totalEntregas = n2(totalEntregasDia + totalEntregasFundo);
   const totalDespesas = n2(totalSaidas - totalEntregas);
-  const entregasPendentes = saisValidas.filter((s) => s.tipo === "entrega_adm" && !s.recebido_em);
+  const entregasPendentes = saisValidas.filter((x) => ehEntrega(x) && !x.recebido_em);
+  // fundo de troco e dinheiro do dia separados (pedido da recepção, 27/11)
+  const fundoNaGaveta = n2(Number(cx.fundo_troco) - totalEntregasFundo);
+  const diaNaGaveta = n2(porForma.dinheiro - totalEntregasDia - totalDespesas);
   const atsValidos = ats.filter((a) => !a.cancelado);
   const cortesias = atsValidos.filter((a) => a.cortesia).length;
   const faltaReceber = n2(atsValidos.reduce((s, a) => s + saldoDe(a), 0));
@@ -442,9 +449,11 @@ export function CaixaDetalhe() {
       </div>
       <div className="cartoes">
         <div className="cartao"><div className="rot">Total recebido</div><div className="num" style={{ fontSize: "1.35rem" }}>{fmtMoeda(totalRecebido)}</div><div className="pequeno muted">cartões {fmtMoeda(totalCartoes)}</div></div>
-        <div className="cartao"><div className="rot">Entregue ao administrativo</div><div className="num" style={{ fontSize: "1.35rem" }}>{fmtMoeda(totalEntregas)}</div>{entregasPendentes.length > 0 && <div className="pequeno" style={{ color: "#b26a00" }}>⏳ {entregasPendentes.length} aguardando check</div>}</div>
+        <div className="cartao"><div className="rot">Entregue ao administrativo</div><div className="num" style={{ fontSize: "1.35rem" }}>{fmtMoeda(totalEntregas)}</div>{totalEntregasFundo > 0 && <div className="pequeno muted">dinheiro do dia {fmtMoeda(totalEntregasDia)} · fundo {fmtMoeda(totalEntregasFundo)}</div>}{entregasPendentes.length > 0 && <div className="pequeno" style={{ color: "#b26a00" }}>⏳ {entregasPendentes.length} aguardando check</div>}</div>
         <div className="cartao"><div className="rot">Despesas</div><div className="num" style={{ fontSize: "1.35rem" }}>{fmtMoeda(totalDespesas)}</div></div>
-        <div className="cartao"><div className="rot">Dinheiro que deve estar na gaveta</div><div className="num" style={{ fontSize: "1.35rem" }}>{fmtMoeda(aberto ? esperadoDinheiro : cx.esperado_dinheiro)}</div><div className="pequeno muted">fundo + dinheiro − entregas − despesas</div></div>
+        <div className="cartao"><div className="rot">💰 Fundo de troco na gaveta</div><div className="num" style={{ fontSize: "1.35rem" }}>{fmtMoeda(fundoNaGaveta)}</div><div className="pequeno muted">{totalEntregasFundo > 0 ? `fundo ${fmtMoeda(cx.fundo_troco)} − entregue ${fmtMoeda(totalEntregasFundo)}` : "troco que já estava na gaveta"}</div></div>
+        <div className="cartao"><div className="rot">💵 Dinheiro do dia na gaveta</div><div className="num" style={{ fontSize: "1.35rem" }}>{fmtMoeda(diaNaGaveta)}</div><div className="pequeno muted">recebido em dinheiro − entregas − despesas</div></div>
+        <div className="cartao"><div className="rot">Total que deve estar na gaveta</div><div className="num" style={{ fontSize: "1.35rem" }}>{fmtMoeda(aberto ? esperadoDinheiro : cx.esperado_dinheiro)}</div><div className="pequeno muted">fundo + dinheiro do dia</div></div>
         {cx.contado_dinheiro !== null && (
           <div className="cartao"><div className="rot">Contado na gaveta</div><div className="num" style={{ fontSize: "1.35rem" }}>{fmtMoeda(cx.contado_dinheiro)}</div><div className="pequeno"><Diferenca v={Number(cx.diferenca_dinheiro)} /></div></div>
         )}
@@ -535,21 +544,21 @@ export function CaixaDetalhe() {
             <tbody>{sais.map((s) => (
               <tr key={s.id} style={{ opacity: s.cancelado ? 0.5 : 1 }}>
                 <td>{new Date(s.criado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</td>
-                <td>{s.tipo === "entrega_adm" ? "💼 Entregue ao administrativo" : "🧾 Despesa"}</td>
+                <td>{s.tipo === "entrega_fundo" ? "💰 Fundo de troco entregue" : s.tipo === "entrega_adm" ? "💼 Dinheiro do dia entregue" : "🧾 Despesa"}</td>
                 <td>
-                  {s.tipo === "entrega_adm"
+                  {ehEntrega(s)
                     ? (s.recebido_em
                         ? <span style={{ color: "var(--verde, #1a7f37)" }}>✅ Recebido por <b>{nomes.nomeCompleto(s.recebido_por)}</b> às {new Date(s.recebido_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}{new Date(s.recebido_em).toDateString() !== new Date(s.criado_em).toDateString() ? ` de ${fmtData(s.recebido_em)}` : ""}</span>
                         : !s.cancelado && <b style={{ color: "#b26a00" }}>⏳ Aguardando o check do administrativo</b>)
                     : <>{s.motivo}{s.autorizado_por ? <span className="muted"> · autorizou: {s.autorizado_por}</span> : null}</>}
-                  {s.tipo === "entrega_adm" && s.motivo !== MOTIVO_ENTREGA && <div className="pequeno muted">{s.motivo.replace(MOTIVO_ENTREGA + " — ", "")}</div>}
+                  {ehEntrega(s) && s.motivo.includes(" — ") && <div className="pequeno muted">{s.motivo.split(" — ").slice(1).join(" — ")}</div>}
                   {s.cancelado && <div className="pequeno"><Etiqueta cor="cinza">cancelada</Etiqueta> {s.motivo_cancelamento}</div>}
                 </td>
                 <td style={num}>{fmtMoeda(s.valor)}</td>
                 <td>{nomes.nome(s.criado_por)}</td>
                 <td className="nao-imprimir" style={{ whiteSpace: "nowrap" }}>
-                  {s.tipo === "entrega_adm" && !s.cancelado && !s.recebido_em && papel.receber && <button className="mini primario" onClick={() => receberEntrega(s)}>✔️ Recebi</button>}
-                  {podeLancar && !s.cancelado && !s.recebido_em && <button className="mini" onClick={() => cancelar("caixa_saidas", s.id, s.tipo === "entrega_adm" ? "esta entrega" : "esta despesa")}>Cancelar</button>}
+                  {ehEntrega(s) && !s.cancelado && !s.recebido_em && papel.receber && <button className="mini primario" onClick={() => receberEntrega(s)}>✔️ Recebi</button>}
+                  {podeLancar && !s.cancelado && !s.recebido_em && <button className="mini" onClick={() => cancelar("caixa_saidas", s.id, ehEntrega(s) ? "esta entrega" : "esta despesa")}>Cancelar</button>}
                 </td>
               </tr>
             ))}</tbody>
@@ -597,8 +606,8 @@ export function CaixaDetalhe() {
       {modal === "receber" && <NovoAtendimento caixaId={cx.id} medicos={nomes.medicos} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
       {modal === "cortesia" && <NovoAtendimento cortesia caixaId={cx.id} medicos={nomes.medicos} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
       {modal === "saida" && <NovaSaida caixaId={cx.id} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
-      {modal === "entrega" && <NovaSaida entrega caixaId={cx.id} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
-      {modal === "fechar" && <FecharCaixa cx={cx} esperado={esperadoDinheiro} porForma={porForma} faltaReceber={faltaReceber} entregasPendentes={n2(entregasPendentes.reduce((t, x) => t + Number(x.valor), 0))} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); setFechouAgora(true); recarregar(); }} />}
+      {modal === "entrega" && <NovaSaida entrega fundoNaGaveta={fundoNaGaveta} diaNaGaveta={diaNaGaveta} caixaId={cx.id} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
+      {modal === "fechar" && <FecharCaixa cx={cx} esperado={esperadoDinheiro} fundoNaGaveta={fundoNaGaveta} diaNaGaveta={diaNaGaveta} porForma={porForma} faltaReceber={faltaReceber} entregasPendentes={n2(entregasPendentes.reduce((t, x) => t + Number(x.valor), 0))} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); setFechouAgora(true); recarregar(); }} />}
       {modal === "dinheiro" && <ConferirDinheiro cx={cx} souQuemFechou={!!eu && cx.fechado_por === eu.id} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />}
       {(modal === "conferir" || modal === "aprovar" || modal === "devolver") && (
         <Decisao tipo={modal} cx={cx} souQuemFechou={!!eu && cx.fechado_por === eu.id} aoFechar={() => setModal("")} aoSalvar={() => { setModal(""); recarregar(); }} />
@@ -933,23 +942,35 @@ function IncluirNoAtendimento({ caixaId, at, aoFechar, aoSalvar }: { caixaId: st
 
 const MOTIVO_ENTREGA = "Dinheiro entregue ao administrativo";
 
-function NovaSaida({ caixaId, entrega, aoFechar, aoSalvar }: { caixaId: string; entrega?: boolean; aoFechar: () => void; aoSalvar: () => void }) {
+const MOTIVO_FUNDO = "Fundo de troco entregue ao administrativo";
+
+function NovaSaida({ caixaId, entrega, fundoNaGaveta = 0, diaNaGaveta = 0, aoFechar, aoSalvar }: {
+  caixaId: string; entrega?: boolean; fundoNaGaveta?: number; diaNaGaveta?: number; aoFechar: () => void; aoSalvar: () => void;
+}) {
   const [f, setF] = useState({ valor: "", motivo: "", autorizou: "" });
+  // entrega: dinheiro do dia ou fundo de troco (separados — pedido da recepção, 27/11)
+  const [deQue, setDeQue] = useState<"dia" | "fundo">("dia");
   const [erro, setErro] = useState("");
   async function salvar() {
     const v = lerValor(f.valor);
     if (v === null || v <= 0) return setErro(entrega ? "Informe quanto dinheiro você está levando." : "Informe o valor da despesa.");
     if (!entrega && f.motivo.trim().length < 2) return setErro("Informe o motivo.");
-    const motivo = entrega ? (f.motivo.trim() ? `${MOTIVO_ENTREGA} — ${f.motivo.trim()}` : MOTIVO_ENTREGA) : f.motivo.trim();
+    const base = deQue === "fundo" ? MOTIVO_FUNDO : MOTIVO_ENTREGA;
+    if (entrega && deQue === "fundo" && v > fundoNaGaveta + 0.004) return setErro(`O fundo de troco na gaveta é ${fmtMoeda(fundoNaGaveta)}: não dá para entregar mais que isso como fundo.`);
+    const motivo = entrega ? (f.motivo.trim() ? `${base} — ${f.motivo.trim()}` : base) : f.motivo.trim();
     const { error } = await supabase.from("caixa_saidas").insert({
-      caixa_id: caixaId, valor: v, motivo, tipo: entrega ? "entrega_adm" : "despesa", autorizado_por: entrega ? null : f.autorizou.trim() || null,
+      caixa_id: caixaId, valor: v, motivo, tipo: entrega ? (deQue === "fundo" ? "entrega_fundo" : "entrega_adm") : "despesa", autorizado_por: entrega ? null : f.autorizou.trim() || null,
     });
     if (error) setErro(msgErro(error)); else aoSalvar();
   }
   if (entrega) return (
     <Modal titulo="Entregar dinheiro ao administrativo" aoFechar={aoFechar} rodape={<><button onClick={aoFechar}>Cancelar</button><button className="primario" onClick={salvar}>Salvar e levar o dinheiro</button></>}>
       <Aviso>{erro}</Aviso>
-      <p>Use quando juntar muito dinheiro na gaveta e for levar para o administrativo antes de fechar o caixa. O caixa continua aberto.</p>
+      <p>Use quando for levar dinheiro para o administrativo. O caixa continua aberto.</p>
+      <div className="linha" style={{ gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+        <button type="button" className={deQue === "dia" ? "primario" : ""} onClick={() => setDeQue("dia")}>💵 Dinheiro do dia <span className="pequeno">({fmtMoeda(diaNaGaveta)} na gaveta)</span></button>
+        <button type="button" className={deQue === "fundo" ? "primario" : ""} onClick={() => { setDeQue("fundo"); if (!f.valor) setF({ ...f, valor: fundoNaGaveta.toFixed(2).replace(".", ",") }); }}>💰 Fundo de troco <span className="pequeno">({fmtMoeda(fundoNaGaveta)} na gaveta)</span></button>
+      </div>
       <div className="grade g2">
         <Campo rotulo="Quanto dinheiro você vai levar (R$)"><input inputMode="decimal" value={f.valor} onChange={(e) => setF({ ...f, valor: e.target.value })} autoFocus /></Campo>
         <Campo rotulo="Observação (opcional)"><input value={f.motivo} onChange={(e) => setF({ ...f, motivo: e.target.value })} placeholder="Ex.: pagamento do laser" /></Campo>
@@ -969,8 +990,8 @@ function NovaSaida({ caixaId, entrega, aoFechar, aoSalvar }: { caixaId: string; 
   );
 }
 
-function FecharCaixa({ cx, esperado, porForma, faltaReceber, entregasPendentes, aoFechar, aoSalvar }: {
-  cx: CaixaRow; esperado: number; porForma: Record<Forma, number>; faltaReceber: number; entregasPendentes: number; aoFechar: () => void; aoSalvar: () => void;
+function FecharCaixa({ cx, esperado, fundoNaGaveta, diaNaGaveta, porForma, faltaReceber, entregasPendentes, aoFechar, aoSalvar }: {
+  cx: CaixaRow; esperado: number; fundoNaGaveta: number; diaNaGaveta: number; porForma: Record<Forma, number>; faltaReceber: number; entregasPendentes: number; aoFechar: () => void; aoSalvar: () => void;
 }) {
   const [contado, setContado] = useState("");
   const [obs, setObs] = useState("");
@@ -989,7 +1010,9 @@ function FecharCaixa({ cx, esperado, porForma, faltaReceber, entregasPendentes, 
       <table className="tabela" style={{ marginBottom: 12 }}>
         <tbody>
           {ORDEM_FORMAS.map((f) => <tr key={f}><td>{FORMAS_CAIXA[f]}</td><td style={num}>{fmtMoeda(porForma[f])}</td></tr>)}
-          <tr><td><b>Dinheiro que deve estar na gaveta</b><div className="pequeno muted">fundo {fmtMoeda(cx.fundo_troco)} + dinheiro − entregas − despesas</div></td><td style={num}><b>{fmtMoeda(esperado)}</b></td></tr>
+          <tr><td>💰 Fundo de troco na gaveta</td><td style={num}>{fmtMoeda(fundoNaGaveta)}</td></tr>
+          <tr><td>💵 Dinheiro do dia na gaveta<div className="pequeno muted">recebido em dinheiro − entregas − despesas</div></td><td style={num}>{fmtMoeda(diaNaGaveta)}</td></tr>
+          <tr><td><b>Total que deve estar na gaveta</b></td><td style={num}><b>{fmtMoeda(esperado)}</b></td></tr>
         </tbody>
       </table>
       <Campo rotulo="Dinheiro contado na gaveta (R$)"><input inputMode="decimal" value={contado} onChange={(e) => setContado(e.target.value)} autoFocus /></Campo>
