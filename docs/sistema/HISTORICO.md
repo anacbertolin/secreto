@@ -1762,14 +1762,23 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   no Google e os dois endereços chegam na mesma caixa.
 - `consumedolhos.com.br` (site) **não é usado para e-mail** e não deve ser mexido por esta frente. O DNS dele fica na
   Hostinger (ns1/ns2.dns-parking.com); há uma caixa de e-mail na Hostinger que ninguém usa. O contato técnico no
-  Registro.br é de terceiro (agência): trocar para a dona junto com a troca do site.
-- **Contas pagas (2):** `diretoria@` (só a dona, administradora do Google) e `clinica@` (conta da equipe). Todos os outros
-  endereços são **apelidos grátis** da `clinica@` (até 30): `faturamento@`, `financeiro@`, `contato@`, `cirurgia@`,
-  `recepcao@` e um por médico sócio. Nenhum médico vai usar e-mail no celular/fora do sistema.
-- **Médicos sócios (5):** Gelson, Luiza, Gisele, Max e Pedro → `dr.gelson@`, `dr.luiza@`, `dr.gisele@`, `dr.max@`,
-  `dr.pedro@` (a dona pediu "dr." para todos).
-- **Quem vê o quê (aba E-mail do sistema):** cada setor vê só a caixa do seu setor; cada médico vê só a sua caixa;
-  a **admin vê todas**. Equipe usa tudo pelo sistema (sem abrir Gmail).
+  Registro.br é o Márcio (TI terceirizado): trocar para a dona junto com a troca do site.
+- **Lista FINAL aprovada pela dona em 27/11** (domínio `cmdolhos.com.br`; tudo pelo sistema, ninguém usa Gmail/celular):
+  - Contas pagas (2): `diretoria@` (só a dona, administradora do Google) e `clinica@` (conta da equipe; os demais
+    endereços são apelidos grátis dela — limite de 30 por conta).
+  - Médicos (7), cada um vê só o seu: `dr.gelson@`, `dr.gisele@`, `dr.luiza@`, `dr.matheus@`, `dr.max@`, `dr.pedro@`,
+    `dr.renato@` ("dr." para todos, pedido da dona).
+  - Setores (8) e quem acessa: `faturamento@` (Andrea, Sol) · `financeiro@` contas a pagar/boletos/notas/insumos
+    (Luciano, Sol) · `centrocirurgico@` cirurgias + orientação cirúrgica (Alessandra, Andrea, Luciano, Sol, Guilherme) ·
+    `exames@` (Juliany, Guilherme) · `centraldemarcacao@` (Isabelle, Ingrid) · `contato@` pacientes/público/formulário do
+    site (Andrea, Sol) · `marketing@` Instagram e avaliações do Google (Andrea) · `recepcao@` (toda a recepção).
+  - **Sem e-mail individual para a equipe** (só médicos). A admin (dona) vê todas as caixas.
+  - "Sol" = Soraline Juliana (faturamento). Andrea Camilo cuida do Instagram/avaliações do Google. Nomes conforme
+    `profissionais`: Juliany de Carvalho Camilo Crespo, Guilherme Pontes Campino, Isabelle Cristina, Ingrid Raiol.
+  - Márcio Leandro da Silva: técnico de TI **terceirizado**, não recebe e-mail. Está em `profissionais` como recepção
+    com login e é o contato técnico do `consumedolhos.com.br` no Registro.br — perguntar à dona se desliga o acesso e
+    troca o contato (ainda sem resposta).
+  - Ideias combinadas para a aba E-mail: aviso de e-mail sem resposta há X dias; separar boletos/notas do `financeiro@`.
 - Próximos passos: dona conclui a contratação e a configuração do DNS (MX `smtp.google.com`, SPF, DMARC `p=none`,
   DKIM) pelo Claude do computador dela; depois criar `clinica@` e os apelidos; depois a aba E-mail (v1: ler, responder,
   encaminhar, enviar com anexos, guardado no banco no Brasil, registro de quem leu/respondeu), no padrão do WhatsApp.
