@@ -1907,3 +1907,8 @@ atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). 
 - A confirmar com a dona: Ecobiometria (folha: particular 110 / Guia Rosa 160 — não cadastrado; "Ecobiometria pedido de fora" = Biometria
   externo 190 → 160 cadastrado); Laser única sessão (folha particular 450, sistema 400; Guia Rosa 350 cadastrado);
   "Pacote 5 sessões" (R$ 2.000) e Teste do Olhinho outros médicos (desconto pix R$ 250) não estão no caixa.
+- (0174, respostas da Sol) Ecobiometria na Guia Rosa = R$ 160 nos dois casos (casa 110 / de fora 190 no particular).
+  Laser única sessão: particular **R$ 450** por aplicação (era 400 da Micrologos; preço antigo desativado), Guia Rosa 350.
+  Novo item **Laser — Pacote 5 sessões (cada olho)** R$ 2.000 só particular (some da lista na Guia Rosa: linha desativada em
+  `precos_parceria`). Teste do Olhinho (Gelson 380 / outros 280) já estava certo.
+- Aviso de novidade (Novidades.tsx) para a recepção e quem recebe entregas: Guia Rosa e fundo de troco separado.
