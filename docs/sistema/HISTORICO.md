@@ -1898,3 +1898,12 @@ atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). 
   (`entrega_fundo`, não passa do fundo na gaveta). Os dois pedem o "Recebi" do administrativo.
 - Caixa de 27/11 foi fechado com R$ 2.000 contados (fundo 200 + dia 1.800) e uma entrega de R$ 2.000 cancelada — os R$ 200 do fundo
   entregues hoje não ficaram registrados (precisaria devolver o caixa para corrigir).
+
+### 27/11 — Caixa: tabela de preços "Guia Rosa" (migração 0173, pedido da recepção)
+- Fonte: folha "TABELA 2026 ATUALIZADA EM 15/06/26" (coluna GUIA ROSA). Nova tabela `precos_parceria` (tabela 'guia_rosa'),
+  25 itens; consulta (AV de grau) R$ 200. Itens com ***** na folha não têm preço de Guia Rosa → usam o particular.
+- Recebimento: botões "Particular" / "🩷 Guia Rosa" no topo; os valores somam sozinhos (vários exames). `caixa_atendimentos.tabela`
+  guarda a tabela usada; etiqueta "🩷 Guia Rosa" na lista; o "➕ Incluir" usa a mesma tabela do recebimento.
+- A confirmar com a dona: Ecobiometria (folha: particular 110 / Guia Rosa 160 — não cadastrado; "Ecobiometria pedido de fora" = Biometria
+  externo 190 → 160 cadastrado); Laser única sessão (folha particular 450, sistema 400; Guia Rosa 350 cadastrado);
+  "Pacote 5 sessões" (R$ 2.000) e Teste do Olhinho outros médicos (desconto pix R$ 250) não estão no caixa.

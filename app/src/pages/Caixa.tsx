@@ -36,6 +36,7 @@ interface Atendimento {
   cortesia: boolean; motivo_cortesia: string | null; cortesia_autorizada_por: string | null; observacao: string | null;
   cancelado: boolean; motivo_cancelamento: string | null; criado_por: string | null; criado_em: string;
   venda_id?: string | null;
+  tabela?: TabelaPreco;
   caixa_pagamentos: Pagamento[];
 }
 interface Saida {
@@ -84,6 +85,17 @@ interface ItemTabela { nome: string; grupo: TipoRecebimento; valor: number }
 const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 /** Tabela de preços PARTICULAR (procedimentos com preço sem convênio — migração 0086). */
+/** Preços da Guia Rosa (migração 0173): nome do procedimento → valor. Sem preço aqui = usa o particular. */
+function useGuiaRosa() {
+  const { dados } = useCarregar(async () => {
+    const r = ok(await supabase.from("precos_parceria").select("valor, procedimentos(descricao)").eq("tabela", "guia_rosa").eq("ativo", true)) as
+      unknown as { valor: number; procedimentos: { descricao: string } | null }[];
+    return new Map(r.filter((x) => x.procedimentos).map((x) => [x.procedimentos!.descricao, Number(x.valor)]));
+  }, []);
+  return dados ?? new Map<string, number>();
+}
+export type TabelaPreco = "particular" | "guia_rosa";
+
 function useTabelaParticular() {
   const { dados } = useCarregar(async () => {
     const hoje = new Date().toISOString().slice(0, 10);
@@ -484,7 +496,7 @@ export function CaixaDetalhe() {
                 return (
                   <tr key={a.id} style={{ opacity: a.cancelado ? 0.5 : 1 }}>
                     <td>{new Date(a.criado_em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</td>
-                    <td><b style={{ textDecoration: a.cancelado ? "line-through" : undefined }}>{a.paciente_nome}</b>
+                    <td><b style={{ textDecoration: a.cancelado ? "line-through" : undefined }}>{a.paciente_nome}</b>{a.tabela === "guia_rosa" && <> <Etiqueta cor="roxo">🩷 Guia Rosa</Etiqueta></>}
                       {a.cancelado && <div className="pequeno"><Etiqueta cor="cinza">cancelado</Etiqueta> {a.motivo_cancelamento}</div>}
                       {a.observacao && <div className="pequeno muted">{a.observacao}</div>}</td>
                     <td>{a.medico_id ? nomes.nomeCompleto(a.medico_id) : "—"}</td>
@@ -678,9 +690,24 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
   const [filtro, setFiltro] = useState("");
   const [valorManual, setValorManual] = useState(false);
   const tabela = useTabelaParticular();
-  const precoDe = useMemo(() => new Map(tabela.map((i) => [i.nome, i.valor])), [tabela]);
+  const rosa = useGuiaRosa();
+  // tabela de preços do recebimento: Particular ou Guia Rosa (pedido da recepção, 27/11)
+  const [tabPreco, setTabPreco] = useState<TabelaPreco>("particular");
+  const mapaDe = (t: TabelaPreco) => {
+    const m = new Map(tabela.map((i) => [i.nome, i.valor]));
+    if (t === "guia_rosa") for (const [k, v] of rosa) if (m.has(k)) m.set(k, v);
+    return m;
+  };
+  const precoDe = useMemo(() => mapaDe(tabPreco), [tabela, rosa, tabPreco]); // eslint-disable-line react-hooks/exhaustive-deps
   const detalhes = (t: TipoRecebimento) => (tabela.length ? tabela.filter((i) => i.grupo === t).map((i) => i.nome) : DETALHES[t]);
-  const somaTabela = (lista: string[]) => n2(lista.reduce((s, i) => s + (precoDe.get(i) ?? 0), 0));
+  const somaTabela = (lista: string[], mapa = precoDe) => n2(lista.reduce((s, i) => s + (mapa.get(i) ?? 0), 0));
+  function mudaTabPreco(t: TabelaPreco) {
+    setTabPreco(t);
+    if (!cortesia && !valorManual && tabela.length) {
+      const soma = somaTabela(itens, mapaDe(t));
+      mudaValor(soma ? soma.toFixed(2).replace(".", ",") : "");
+    }
+  }
   const descricao = [
     ...TIPOS_RECEBIMENTO.filter((t) => tipos.includes(t)).map((t) => {
       const marcados = detalhes(t).filter((d) => itens.includes(d));
@@ -744,7 +771,7 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
     setSalvando(true);
     try {
       const r = await supabase.from("caixa_atendimentos").insert({
-        caixa_id: caixaId, paciente_nome: f.paciente.trim(), medico_id: f.medico || null, descricao,
+        caixa_id: caixaId, paciente_nome: f.paciente.trim(), medico_id: f.medico || null, descricao, tabela: cortesia ? "particular" : tabPreco,
         valor: cortesia ? 0 : valor, cortesia: !!cortesia, motivo_cortesia: cortesia ? f.motivo.trim() : null,
         cortesia_autorizada_por: cortesia ? f.autorizou.trim() || null : null, observacao: f.obs.trim() || null,
       }).select("id").single();
@@ -762,6 +789,14 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
       rodape={<><button onClick={aoFechar}>Cancelar</button><button className="primario" disabled={salvando} onClick={salvar}>{salvando ? "Salvando…" : "Salvar"}</button></>}>
       <Aviso>{erro}</Aviso>
       <div className="grade g2">
+        {!cortesia && rosa.size > 0 && (
+          <div className="inteiro linha" style={{ gap: 8, flexWrap: "wrap" }}>
+            <span className="pequeno muted">Tabela de preços:</span>
+            <button type="button" className={tabPreco === "particular" ? "primario" : ""} onClick={() => mudaTabPreco("particular")}>Particular</button>
+            <button type="button" className={tabPreco === "guia_rosa" ? "primario" : ""} onClick={() => mudaTabPreco("guia_rosa")}>🩷 Guia Rosa</button>
+            {tabPreco === "guia_rosa" && <span className="pequeno muted">itens sem valor de Guia Rosa ficam com o preço particular</span>}
+          </div>
+        )}
         <Campo rotulo="Paciente (nome)" className="inteiro"><input value={f.paciente} onChange={set("paciente")} autoFocus /></Campo>
         <Campo rotulo="Médico / profissional">
           <select value={f.medico} onChange={set("medico")}><option value="">—</option>{medicos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}</select>
@@ -787,7 +822,7 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {detalhes(t).filter((d) => itens.includes(d) || !filtro.trim() || semAcento(d).includes(semAcento(filtro.trim()))).map((d) => (
                   <button key={d} type="button" className={"mini-l" + (itens.includes(d) ? " primario" : "")} onClick={() => alternaItem(d)}>
-                    {itens.includes(d) ? "✓ " : ""}{d}{precoDe.has(d) && <span style={{ opacity: 0.75 }}> · {fmtMoeda(precoDe.get(d)!)}</span>}
+                    {itens.includes(d) ? "✓ " : ""}{d}{precoDe.has(d) && <span style={{ opacity: 0.75 }}> · {fmtMoeda(precoDe.get(d)!)}{tabPreco === "guia_rosa" && rosa.has(d) ? " 🩷" : ""}</span>}
                   </button>
                 ))}
               </div>
@@ -807,7 +842,7 @@ function NovoAtendimento({ caixaId, medicos, cortesia, aoFechar, aoSalvar }: {
               <input inputMode="decimal" value={f.valor} onChange={(e) => { setValorManual(true); mudaValor(e.target.value); }} />
               {itens.some((i) => precoDe.has(i)) && (
                 <span className="muted pequeno">
-                  Tabela particular: {fmtMoeda(somaTabela(itens))}
+                  {tabPreco === "guia_rosa" ? "Tabela Guia Rosa" : "Tabela particular"}: {fmtMoeda(somaTabela(itens))}
                   {valorManual && somaTabela(itens) !== valor && (
                     <> · <a href="#" onClick={(e) => { e.preventDefault(); setValorManual(false); mudaValor(somaTabela(itens).toFixed(2).replace(".", ",")); }}>usar este valor</a></>
                   )}
@@ -851,7 +886,10 @@ function ReceberSaldo({ caixaId, at, aoFechar, aoSalvar }: { caixaId: string; at
 
 /** Paciente já lançado volta do médico e vai fazer exames: inclui no MESMO atendimento (soma no valor e na descrição). */
 function IncluirNoAtendimento({ caixaId, at, aoFechar, aoSalvar }: { caixaId: string; at: Atendimento; aoFechar: () => void; aoSalvar: () => void }) {
-  const tabela = useTabelaParticular();
+  const tabelaBase = useTabelaParticular();
+  const rosa = useGuiaRosa();
+  // usa a mesma tabela do recebimento original (Particular ou Guia Rosa)
+  const tabela = at.tabela === "guia_rosa" ? tabelaBase.map((i) => (rosa.has(i.nome) ? { ...i, valor: rosa.get(i.nome)! } : i)) : tabelaBase;
   const lista = tabela.length ? tabela : TIPOS_RECEBIMENTO.flatMap((g) => DETALHES[g].map((nome) => ({ nome, grupo: g, valor: 0 })));
   const [itens, setItens] = useState<string[]>([]);
   const [outros, setOutros] = useState("");
@@ -908,7 +946,7 @@ function IncluirNoAtendimento({ caixaId, at, aoFechar, aoSalvar }: { caixaId: st
     <Modal largo titulo={`Incluir no atendimento de ${at.paciente_nome}`} aoFechar={aoFechar}
       rodape={<><button onClick={aoFechar}>Cancelar</button><button className="primario" disabled={salvando} onClick={salvar}>{salvando ? "Salvando…" : "Incluir"}</button></>}>
       <Aviso>{erro}</Aviso>
-      <p className="pequeno">Já lançado: <b>{at.descricao ?? "Atendimento"}</b> · {fmtMoeda(at.valor)} · já pago {fmtMoeda(pagoDe(at))}</p>
+      <p className="pequeno">{at.tabela === "guia_rosa" && <><Etiqueta cor="roxo">🩷 Guia Rosa</Etiqueta> preços da Guia Rosa · </>}Já lançado: <b>{at.descricao ?? "Atendimento"}</b> · {fmtMoeda(at.valor)} · já pago {fmtMoeda(pagoDe(at))}</p>
       <div className="grade g2">
         <input className="inteiro" placeholder="🔎 Procurar (ex.: oct, mapeamento, tonometria)" value={filtro} onChange={(e) => setFiltro(e.target.value)} autoFocus />
         {(["Exame", "Procedimento", "Consulta"] as TipoRecebimento[]).map((g) => {
