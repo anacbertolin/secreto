@@ -620,3 +620,10 @@ textarea.resumo-notas { width: 100%; min-height: 44px; font-size: 0.85rem; paddi
 .wa-rapido { width: min(620px, 100%); height: 100%; margin: 0; border-radius: 0; display: flex; flex-direction: column; padding: 12px; box-sizing: border-box; }
 .wa-rapido-topo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .wa-rapido-corpo { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* Responder citando uma mensagem (27/11) */
+.wa-citacao { display: flex; flex-direction: column; align-items: flex-start; width: 100%; text-align: left; background: rgba(0,0,0,0.05); border: none; border-left: 4px solid #25a244; border-radius: 6px; padding: 4px 8px; margin-bottom: 4px; font-size: 0.8rem; cursor: pointer; }
+.wa-balao.enviada .wa-citacao { border-left-color: #175cd3; }
+.wa-citacao span { color: var(--suave); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.wa-respondendo { background: #ecfdf3; border-color: #abefc6; }
+.wa-balao .wa-responder { opacity: 0.35; }
+.wa-balao:hover .wa-responder { opacity: 1; }

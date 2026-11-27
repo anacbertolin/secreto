@@ -8,6 +8,15 @@ interface Novidade { id: string; para: (eu: Profissional | null) => boolean; tex
 
 const NOVIDADES: Novidade[] = [
   {
+    id: "novidade_whatsapp_responder", // 27/11/2026, pedido da Alessandra
+    para: (eu) => !!eu?.orientacao_cirurgica,
+    texto: (nome) => <>
+      <b>🆕 Novidade, {nome}: agora dá para responder em cima de uma mensagem do paciente!</b> Passe o mouse na mensagem e
+      clique em <b>“↩ Responder”</b> (embaixo dela). Escreva e envie: o paciente vê a sua resposta presa àquela pergunta,
+      igual ao celular. Bom para quando ele manda várias perguntas seguidas.
+    </>,
+  },
+  {
     id: "novidade_caixa_guia_rosa_fundo", // 27/11/2026, pedido da dona (Luana/Sol: fundo de troco e Guia Rosa)
     para: (eu) => (eu?.funcao === "recepcao" && !eu?.orientacao_cirurgica) || !!eu?.caixa_recebe_entrega,
     texto: (nome) => <>

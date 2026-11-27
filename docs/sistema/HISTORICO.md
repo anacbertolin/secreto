@@ -1912,3 +1912,8 @@ atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). 
   Novo item **Laser — Pacote 5 sessões (cada olho)** R$ 2.000 só particular (some da lista na Guia Rosa: linha desativada em
   `precos_parceria`). Teste do Olhinho (Gelson 380 / outros 280) já estava certo.
 - Aviso de novidade (Novidades.tsx) para a recepção e quem recebe entregas: Guia Rosa e fundo de troco separado.
+- (27/11) **"↩ Responder" citando uma mensagem** (pedido da Alessandra): botão em cada mensagem (aparece forte ao passar o
+  mouse); a resposta vai com `context.message_id` (a Meta mostra presa à mensagem no celular do paciente). `whatsapp-enviar`
+  v18 aceita `responde` (qualquer mensagem da conversa). As bolhas mostram a citação (mensagem respondida, clicável) —
+  vale também quando o PACIENTE responde citando (o webhook já grava `em_resposta_a`). "corrigida abaixo" agora só para
+  correções/avisos de engano. Aviso de novidade para a orientação.
