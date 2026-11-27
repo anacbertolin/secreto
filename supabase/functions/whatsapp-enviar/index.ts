@@ -8,7 +8,8 @@
 //   estado     → o WhatsApp já está configurado? (sem segredos na resposta)
 //   texto      → { conversa_id, texto, corrige? }  resposta livre (só até 24 h depois da última mensagem do paciente);
 //                "corrige" = id de uma mensagem enviada: vai como resposta citando a mensagem errada (a API da Meta
-//                não deixa editar mensagem já enviada)
+//                não deixa editar mensagem já enviada); "responde" = id de qualquer mensagem da conversa: responde
+//                citando ela (como tocar e segurar → Responder no celular)
 //   retomar    → { conversa_id } ou { paciente_id, setor? }  envia o modelo "retomar_conversa"
 //                (ou "retomar_orientacao" no número da orientação) — fora das 24 h;
 //                { finalidade: "aviso_novo_numero_orientacao" } escolhe o aviso do número novo;
@@ -215,12 +216,14 @@ Deno.serve(async (req) => {
     if (!c.ultima_recebida_em || Date.now() - new Date(c.ultima_recebida_em).getTime() > JANELA_MS) {
       return resposta({ erro: "Passaram mais de 24 h desde a última mensagem do paciente. Pela regra da Meta, use “Chamar o paciente de novo”." }, 409);
     }
-    // Correção: responde citando a mensagem errada (aparece "em cima" no celular do paciente)
+    // Correção ou resposta citando uma mensagem (aparece "em cima" no celular do paciente)
     let citada: string | null = null;
-    if (typeof corpo.corrige === "string" && corpo.corrige) {
+    const alvo = typeof corpo.corrige === "string" && corpo.corrige ? corpo.corrige
+      : typeof corpo.responde === "string" && corpo.responde ? corpo.responde : null;
+    if (alvo) {
       const { data: orig } = await db.from("whatsapp_mensagens").select("wa_id, conversa_id, direcao")
-        .eq("id", corpo.corrige).maybeSingle();
-      if (orig?.conversa_id === c.id && orig.direcao === "enviada" && orig.wa_id) citada = orig.wa_id;
+        .eq("id", alvo).maybeSingle();
+      if (orig?.conversa_id === c.id && orig.wa_id && (alvo !== corpo.corrige || orig.direcao === "enviada")) citada = orig.wa_id;
     }
     const r = await enviarMeta({
       to: c.telefone, type: "text", text: { body: texto, preview_url: true },

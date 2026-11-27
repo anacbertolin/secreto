@@ -331,6 +331,8 @@ export function Chat(props: {
   const [gerenciarRap, setGerenciarRap] = useState(false);
   // Corrigir mensagem enviada: a API da Meta não deixa editar; vai uma correção citando a mensagem errada
   const [corrigindo, setCorrigindo] = useState<Mensagem | null>(null);
+  // Responder citando uma mensagem (pedido da Alessandra, 27/11 — "tocar em cima e responder", como no celular)
+  const [respondendo, setRespondendo] = useState<Mensagem | null>(null);
   const [emojis, setEmojis] = useState(false);
   function inserirNoCursor(trecho: string) {
     const el = caixa.current;
@@ -387,7 +389,10 @@ export function Chat(props: {
   }, [c.id, c.nao_lidas]);
 
   const qtd = msgs.dados?.length ?? 0;
-  const corrigidas = new Set((msgs.dados ?? []).filter((m) => m.direcao === "enviada" && m.em_resposta_a).map((m) => m.em_resposta_a as string));
+  const porWaId = new Map((msgs.dados ?? []).filter((m) => m.wa_id).map((m) => [m.wa_id as string, m]));
+  // Só correções/avisos de engano marcam a mensagem citada (respostas comuns, não)
+  const corrigidas = new Set((msgs.dados ?? []).filter((m) => m.direcao === "enviada" && m.em_resposta_a
+    && /^(✏️ \*Correção|⚠️ \*Atenção)/.test(m.texto ?? "")).map((m) => m.em_resposta_a as string));
   useEffect(() => {
     // Vindo da pesquisa: rola até a mensagem encontrada; senão, até o fim
     const alvo = props.destaque ? document.getElementById("msg-" + props.destaque) : null;
@@ -408,6 +413,8 @@ export function Chat(props: {
   useEffect(() => { if (pendentes.length) fim.current?.scrollIntoView({ block: "end" }); }, [pendentes.length]);
   async function enviarTexto(t0: string) {
     const corr = corrigindo;
+    const resp = corr ? null : respondendo;
+    setRespondendo(null);
     // Texto corrigido ganha "Correção:"; aviso de arquivo enviado por engano vai como escrito
     const t = corr && corr.tipo === "texto" && !/^\*?corre[cç][aã]o/i.test(t0) ? `✏️ *Correção:*\n${t0}` : t0;
     setCorrigindo(null);
@@ -415,13 +422,14 @@ export function Chat(props: {
       id: "tmp-" + Date.now() + Math.random().toString(36).slice(2, 6), conversa_id: c.id, direcao: "enviada", tipo: "texto",
       texto: t, modelo: null, midia_id: null, midia_tipo: null, midia_nome: null, situacao: "enviando", erro: null,
       agendamento_id: null, enviado_por: eu?.id ?? null, quando: new Date().toISOString(),
+      em_resposta_a: (corr ?? resp)?.wa_id ?? null,
     };
     setPendentes((ps) => [...ps, temp]);
     setTexto("");
     setErro("");
     if (!c.responsavel_id && eu) mudar({ responsavel_id: eu.id }); // quem responde assume a conversa
     try {
-      await whatsapp("texto", { conversa_id: c.id, texto: t, corrige: corr?.id ?? null });
+      await whatsapp("texto", { conversa_id: c.id, texto: t, corrige: corr?.id ?? null, responde: resp?.id ?? null });
     } catch (e) {
       const msg = msgErro(e);
       setPendentes((ps) => ps.map((p) => (p.id === temp.id ? { ...p, situacao: "falhou", erro: msg } : p)));
@@ -636,7 +644,11 @@ export function Chat(props: {
           const sep = dia !== diaAnterior ? ((diaAnterior = dia), <div key={"d" + m.id} className="wa-dia">{dia}</div>) : null;
           const podeCorrigir = podeResponder && aberta && m.direcao === "enviada" && !!m.wa_id && m.situacao !== "falhou" && m.tipo !== "modelo";
           return [sep, <Balao key={m.id} m={m} quem={nomeEquipe(m.enviado_por)} podeTranscrever={podeResponder} destacada={m.id === props.destaque}
-            corrigida={!!m.wa_id && corrigidas.has(m.wa_id)}
+            corrigida={m.direcao === "enviada" && !!m.wa_id && corrigidas.has(m.wa_id)}
+            citada={m.em_resposta_a ? porWaId.get(m.em_resposta_a) ?? null : undefined}
+            aoResponder={podeResponder && aberta && m.wa_id && !m.id.startsWith("tmp-") ? () => {
+              setCorrigindo(null); setRespondendo(m); window.setTimeout(() => caixa.current?.focus(), 0);
+            } : undefined}
             aoCorrigir={podeCorrigir ? () => {
               setCorrigindo(m);
               // Foto/áudio/documento: a Meta não deixa apagar — manda um aviso citando o arquivo errado
@@ -644,7 +656,8 @@ export function Chat(props: {
               window.setTimeout(() => caixa.current?.focus(), 0);
             } : undefined} />];
         })}
-        {pendentes.map((m) => <Balao key={m.id} m={m} quem={nomeEquipe(m.enviado_por)} podeTranscrever={false} />)}
+        {pendentes.map((m) => <Balao key={m.id} m={m} quem={nomeEquipe(m.enviado_por)} podeTranscrever={false}
+          citada={m.em_resposta_a ? porWaId.get(m.em_resposta_a) ?? null : undefined} />)}
         <div ref={fim} />
       </div>
 
@@ -695,6 +708,13 @@ export function Chat(props: {
               {emojis && (
                 <div className="wa-emojis" onMouseLeave={() => setEmojis(false)}>
                   {EMOJIS.map((e) => <button key={e} onMouseDown={(ev) => { ev.preventDefault(); inserirNoCursor(e); }}>{e}</button>)}
+                </div>
+              )}
+              {respondendo && !corrigindo && (
+                <div className="wa-corrigindo wa-respondendo">
+                  <span>↩ <b>Respondendo a:</b> “{resumoMsg(respondendo)}”
+                    <span className="pequeno muted"> — o paciente vê a sua resposta presa a esta mensagem.</span></span>
+                  <button className="mini" onClick={() => setRespondendo(null)}>Cancelar</button>
                 </div>
               )}
               {corrigindo && (
@@ -937,8 +957,16 @@ function Transcricao({ m, podePedir }: { m: Mensagem; podePedir: boolean }) {
   );
 }
 
-function Balao({ m, quem, podeTranscrever, destacada, aoCorrigir, corrigida }: {
+/** Começo de uma mensagem, para a citação ("Respondendo a…") */
+function resumoMsg(m: Mensagem): string {
+  const t = m.texto || m.transcricao || ICONE_TIPO[m.tipo] || "Mensagem";
+  return t.length > 90 ? t.slice(0, 90) + "…" : t;
+}
+
+function Balao({ m, quem, podeTranscrever, destacada, aoCorrigir, corrigida, citada, aoResponder }: {
   m: Mensagem; quem?: string; podeTranscrever: boolean; destacada?: boolean; aoCorrigir?: () => void; corrigida?: boolean;
+  /** A mensagem que esta responde (undefined = não é resposta; null = respondeu a uma mensagem que não está na tela) */
+  citada?: Mensagem | null; aoResponder?: () => void;
 }) {
   const [url, setUrl] = useState<string | null>(null);
   const [erro, setErro] = useState("");
@@ -958,6 +986,13 @@ function Balao({ m, quem, podeTranscrever, destacada, aoCorrigir, corrigida }: {
   const enviada = m.direcao === "enviada";
   return (
     <div id={"msg-" + m.id} className={"wa-balao " + (enviada ? "enviada" : "recebida") + (m.situacao === "falhou" ? " falhou" : "") + (destacada ? " destacada" : "")}>
+      {citada !== undefined && (
+        <button className="wa-citacao" title="Ir para a mensagem respondida"
+          onClick={() => { if (citada) document.getElementById("msg-" + citada.id)?.scrollIntoView({ block: "center", behavior: "smooth" }); }}>
+          <b>{citada ? (citada.direcao === "recebida" ? "Paciente" : "Nós") : "Mensagem"}</b>
+          <span>{citada ? resumoMsg(citada) : "(mensagem anterior)"}</span>
+        </button>
+      )}
       {m.tipo === "modelo" && <div className="wa-rotulo">Mensagem-modelo{m.agendamento_id ? " · lembrete" : ""}</div>}
       {m.tipo === "botao" && <div className="wa-rotulo">Tocou no botão</div>}
       {m.midia_id && (
@@ -994,6 +1029,7 @@ function Balao({ m, quem, podeTranscrever, destacada, aoCorrigir, corrigida }: {
         {m.importada ? fmtDataHora(m.quando) : fmtHora(m.quando)}
         {enviada && <span className={"wa-sit " + m.situacao} title={m.situacao}> {ICONE_SITUACAO[m.situacao] ?? ""}</span>}
         {corrigida && <span className="wa-corrigida"> · {m.tipo === "texto" ? "✏️ corrigida abaixo" : "⚠️ enviado por engano (aviso abaixo)"}</span>}
+        {aoResponder && <button className="wa-corrigir wa-responder" title="Responder a esta mensagem" onClick={aoResponder}>↩ Responder</button>}
         {aoCorrigir && (m.tipo === "texto"
           ? <button className="wa-corrigir" title="Mandar a versão certa desta mensagem" onClick={aoCorrigir}>✏️ Corrigir</button>
           : <button className="wa-corrigir" title="Avisar o paciente que este arquivo foi enviado por engano" onClick={aoCorrigir}>⚠️ Enviei errado</button>)}
