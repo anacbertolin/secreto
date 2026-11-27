@@ -39,6 +39,7 @@ import ConfigMemed from "./pages/ConfigMemed";
 import Ligacoes from "./pages/Ligacoes";
 import ConfigTelefone from "./pages/ConfigTelefone";
 import Telefone from "./components/Telefone";
+import { Novidades } from "./components/Novidades";
 import AvisoVersao from "./components/AvisoVersao";
 import { TelefoneProvider } from "./lib/telefone";
 import { CentralProvider } from "./lib/central";
@@ -201,6 +202,7 @@ export default function App() {
         </div>
       </aside>
       <main className={"conteudo" + (loc.pathname === "/central" || loc.pathname === "/orientacao-cirurgica" ? " sem-margem" : "")}>
+        <Novidades />
         <Routes>
           <Route path="/" element={<Inicio />} />
           <Route path="/agenda" element={<Agenda />} />

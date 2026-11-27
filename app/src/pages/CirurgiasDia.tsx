@@ -7,7 +7,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase, msgErro } from "../lib/supabase";
 import { useCarregar, ok, Aviso, Carregando, Etiqueta } from "../components/ui";
 import { fmtData, fmtDataHora, fmtMoeda, isoDia, somaDias } from "../lib/util";
-import { FORMAS_REPASSE } from "../lib/repasse";
+import { descreverForma } from "../components/OutrasFormas";
 import { MarcarDataCirurgia } from "./VendasOrientacao";
 import { GuiaVendas, LeiturasGuia } from "../components/GuiaVendas";
 
@@ -98,7 +98,7 @@ export default function CirurgiasDia() {
                   <td>{l.medico}</td>
                   <td>{l.procedimento}{l.fora_clinica && <> <Etiqueta cor="roxo">fora da clínica</Etiqueta></>}
                     <div className="muted pequeno">{l.venda_numero ? `venda nº ${l.venda_numero}` : ""}{l.repasse_numero ? `${l.venda_numero ? " · " : ""}repasse nº ${l.repasse_numero}` : ""}</div></td>
-                  <td>{FORMAS_REPASSE[l.forma_pagamento] ?? l.forma_pagamento}{l.forma_pagamento === "credito" && l.parcelas > 1 ? ` ${l.parcelas}x` : ""}</td>
+                  <td>{descreverForma(l.forma_pagamento, l.parcelas)}</td>
                   <td style={num}>{fmtMoeda(l.valor_total)}</td>
                   <td>{l.realizada_em
                     ? <><Etiqueta cor="verde">✔ realizada</Etiqueta><div className="muted pequeno">{l.realizada_por?.split(" ")[0]} · {fmtDataHora(l.realizada_em)}</div></>

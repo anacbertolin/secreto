@@ -25,11 +25,12 @@ export function taxaInternaPct(forma: string, parcelas: number, taxas: TaxaCarta
 }
 
 /** Regra geral (migrações 0062, 0070): bruto − imposto − taxa do cartão − custos = honorários; clínica % e médico o resto */
-export function calcularRepasse(valorTotal: number, regras: RegrasRepasse, taxaPct: number, custos = 0, regra = "geral") {
+export function calcularRepasse(valorTotal: number, regras: RegrasRepasse, taxaPct: number, custos = 0, regra = "geral", taxaValor?: number) {
   if (regra === "direto") regras = { ...regras, imposto_pct: 0, centro_cirurgico_pct: 0 }; // sem imposto e sem os 20%
   const imposto = round2((valorTotal * regras.imposto_pct) / 100);
   const bruto = (valorTotal * taxaPct) / 100;
-  const taxa = regras.taxa_arredondamento === "arredondar" ? round2(bruto) : trunc2(bruto);
+  // mais de uma forma (0187): a taxa já vem somada parte a parte
+  const taxa = taxaValor ?? (regras.taxa_arredondamento === "arredondar" ? round2(bruto) : trunc2(bruto));
   const sobra = r(c(valorTotal) - c(imposto) - c(taxa) - c(custos));
   const clinica = round2((sobra * regras.centro_cirurgico_pct) / 100);
   const medico = r(c(sobra) - c(clinica));
@@ -67,4 +68,16 @@ export function nomesProcedimentos(procs: { nome: string }[]): string[] {
   const vistos = new Map<string, string>();
   for (const p of procs) if (!vistos.has(p.nome.toLowerCase())) vistos.set(p.nome.toLowerCase(), p.nome);
   return [...vistos.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+/** taxa do cartão somada parte a parte (mais de uma forma de pagamento — migração 0187); null se faltar taxa cadastrada */
+export function taxaPartes(partes: { forma: string; parcelas: number; valor: number }[], taxas: TaxaCartao[], arred: "truncar" | "arredondar"): number | null {
+  let total = 0;
+  for (const p of partes) {
+    const pctParte = taxaInternaPct(p.forma, p.parcelas, taxas);
+    if (pctParte === null) return null;
+    const bruto = (p.valor * pctParte) / 100;
+    total += arred === "arredondar" ? round2(bruto) : trunc2(bruto);
+  }
+  return r(c(total));
 }

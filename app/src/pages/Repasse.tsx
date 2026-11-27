@@ -8,15 +8,17 @@ import { useCarregar, ok, Aviso, Carregando, Etiqueta, Modal, Campo, BuscaPacien
 import { fmtData, fmtMoeda, isoDia, nomeExibicao, numOuNulo } from "../lib/util";
 import { nomePor } from "../lib/dados";
 import {
-  FORMAS_REPASSE, REGRAS, TIPOS_CUSTO, calcularRepasse, custoDaClinica, partesPorParcela, taxaInternaPct, type RegrasRepasse, type TaxaCartao,
+  FORMAS_REPASSE, REGRAS, TIPOS_CUSTO, calcularRepasse, taxaPartes, custoDaClinica, partesPorParcela, taxaInternaPct, type RegrasRepasse, type TaxaCartao,
   varianteProcedimento, nomesProcedimentos,
 } from "../lib/repasse";
 import { GuiaVendas } from "../components/GuiaVendas";
+import { OutrasFormas, montarPagamento, separarPagamentos, descreverForma, type LinhaPagamento, type PagamentoJson } from "../components/OutrasFormas";
 
 // ------------------------------------------------------------------ tipos
 interface Parcela {
   id: string; repasse_id: string; numero: number; data_prevista: string; valor: number | null; valor_recebido: number | null; recebido_em: string | null;
   imposto: number; custos: number; centro_cirurgico: number; taxa_interna: number | null; medico: number | null; pago_medico_em: string | null;
+  forma?: string | null;
 }
 interface Custo {
   id: string; repasse_id: string; tipo: string; descricao: string; valor: number; favorecido_profissional_id: string | null;
@@ -38,7 +40,7 @@ function desmarcarDireto(c: CustoEdit): CustoEdit {
 interface Repasse {
   id: string; numero: number; conta_id: string | null; paciente_id: string | null; profissional_id: string; procedimento: string;
   data_cirurgia: string | null; data_pagamento: string; valor_total: number; forma_pagamento: string; parcelas: number;
-  realizada_em?: string | null; fora_clinica?: boolean;
+  realizada_em?: string | null; fora_clinica?: boolean; pagamentos?: PagamentoJson[] | null;
   imposto_pct: number; centro_cirurgico_pct: number; taxa_interna_pct: number; taxa_arredondamento: "truncar" | "arredondar";
   imposto_total: number; centro_cirurgico_total: number; taxa_interna_total: number; medico_total: number; custos_total: number;
   procedimento_id: string | null; regra: string; status: string; motivo_cancelamento: string | null; observacoes: string | null;
@@ -52,7 +54,7 @@ interface Config extends RegrasRepasse { id: string }
 export interface VendaOrientacao {
   id: string; numero: number; tipo: string; paciente_id: string; profissional_id: string; procedimento_id: string | null; procedimento: string;
   lente_id: string | null; data_cirurgia: string | null; data_pagamento: string; valor_total: number; forma_pagamento: string; parcelas: number;
-  observacoes: string | null; status: string; motivo: string | null; criado_em: string; anestesista_direto?: number | null; fora_clinica?: boolean; realizada_em?: string | null;
+  observacoes: string | null; status: string; motivo: string | null; criado_em: string; anestesista_direto?: number | null; fora_clinica?: boolean; realizada_em?: string | null; pagamentos?: PagamentoJson[] | null;
   pacientes?: { id: string; nome: string; nome_social: string | null; numero_prontuario: number } | null;
   profissionais?: { nome: string } | null; criador?: { nome: string } | null;
 }
@@ -182,7 +184,7 @@ function Lancamentos({ base }: { base: Awaited<ReturnType<typeof carregarBase>> 
                       {r.regra !== "cobranca" && r.status !== "cancelado" && <div className="pequeno">{r.realizada_em ? "✔ realizada" : <span className="muted">aguarda realização</span>}</div>}</td>
                     <td><b>{r.profissionais?.nome}</b></td>
                     <td>{r.pacientes ? nomeExibicao(r.pacientes) : <span className="muted">—</span>}<div className="muted pequeno">{r.procedimento}</div>{r.regra && r.regra !== "geral" && <Etiqueta cor="roxo">{r.regra === "cobranca" ? "médico deve" : "parceiro"}</Etiqueta>}</td>
-                    <td>{FORMAS_REPASSE[r.forma_pagamento]}{r.parcelas > 1 && ` ${r.parcelas}x`}</td>
+                    <td>{descreverForma(r.forma_pagamento, r.parcelas, r.pagamentos)}</td>
                     <td style={num}>{fmtMoeda(r.valor_total)}</td>
                     <td style={num}>{fmtMoeda(soma(ps, "medico"))}</td>
                     <td className="pequeno">{entrou}/{r.parcelas} já caíram<div className="muted">{pagas}/{r.parcelas} pagas ao médico</div></td>
@@ -211,6 +213,7 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
   const [conta, setConta] = useState<string | null>(null);
   const [custos, setCustos] = useState<CustoEdit[]>([]);
   // troca da lente simples por premium (regra do Dr. Gelson, 24/11): valor + (venda da premium − custo da simples); custo da lente = custo da premium
+  const [extras, setExtras] = useState<LinhaPagamento[]>([]);
   const [premium, setPremium] = useState<{ id: string; acrescimo: number; linha: CustoEdit; indice: number } | null>(null);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -244,9 +247,12 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
     setF((x) => ({
       ...x, regra: p?.regra ?? "geral", profissional_id: venda.profissional_id, procedimento_id: venda.procedimento_id ?? "",
       procedimento: venda.procedimento, data_cirurgia: venda.data_cirurgia ?? "", data_pagamento: venda.data_pagamento,
-      valor: String(venda.valor_total).replace(".", ","), forma: venda.forma_pagamento, parcelas: String(venda.parcelas),
+      valor: separarPagamentos(venda.forma_pagamento, venda.parcelas, venda.valor_total, venda.pagamentos).principal.valor,
+      forma: separarPagamentos(venda.forma_pagamento, venda.parcelas, venda.valor_total, venda.pagamentos).principal.forma,
+      parcelas: separarPagamentos(venda.forma_pagamento, venda.parcelas, venda.valor_total, venda.pagamentos).principal.parcelas,
       observacoes: venda.observacoes ?? "",
     }));
+    setExtras(separarPagamentos(venda.forma_pagamento, venda.parcelas, venda.valor_total, venda.pagamentos).extras);
   }, [venda, base.procedimentos, base.lentes]);
 
   // Vindo de uma conta particular paga: preenche os dados
@@ -279,16 +285,20 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
   }, [contaId, base.medicos]);
 
   const cobranca = f.regra === "cobranca";
+  // mais de uma forma de pagamento (0187)
+  const pag = montarPagamento({ forma: f.forma, parcelas: f.parcelas, valor: f.valor }, cobranca ? [] : extras);
+  const partes = "erro" in pag ? null : (pag.pagamentos ?? null);
+  const taxaMisto = partes ? taxaPartes(partes, base.taxas, base.cfg.taxa_arredondamento) : undefined;
   const custosNum = custos.map((c) => numOuNulo(c.valor));
   const custosTotal = custosNum.reduce<number>((s, v) => s + (v ?? 0), 0);
-  const valor = cobranca ? custosTotal : numOuNulo(f.valor) ?? 0;
-  const n = !cobranca && f.forma === "credito" ? Number(f.parcelas) : 1;
-  const taxaPct = cobranca ? 0 : taxaInternaPct(f.forma, n, base.taxas);
+  const valor = cobranca ? custosTotal : partes ? ("erro" in pag ? 0 : pag.valor_total) : numOuNulo(f.valor) ?? 0;
+  const n = !cobranca && f.forma === "credito" && !partes ? Number(f.parcelas) : 1;
+  const taxaPct = cobranca ? 0 : partes ? (taxaMisto === null || taxaMisto === undefined ? null : valor > 0 ? (taxaMisto * 100) / valor : 0) : taxaInternaPct(f.forma, n, base.taxas);
   const prev = useMemo(() => {
     if (cobranca || valor <= 0 || taxaPct === null) return null; // cobrança: não há divisão
-    const t = calcularRepasse(valor, base.cfg, taxaPct, custosTotal, f.regra);
+    const t = calcularRepasse(valor, base.cfg, taxaPct, custosTotal, f.regra, partes ? taxaMisto ?? 0 : undefined);
     return { ...t, medParc: partesPorParcela(t.medico, n) };
-  }, [cobranca, valor, n, taxaPct, base.cfg, custosTotal, f.regra]);
+  }, [cobranca, valor, n, taxaPct, base.cfg, custosTotal, f.regra, partes, taxaMisto]);
   // cada procedimento aparece UMA vez; o médico define a versão (exceções dele) — lib/repasse.ts
   const procsAtivos = base.procedimentos.filter((p) => p.ativo);
   const nomesProc = nomesProcedimentos(procsAtivos);
@@ -358,6 +368,7 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
     setErro("");
     if (!f.profissional_id) return setErro("Escolha o médico.");
     if (!f.procedimento.trim()) return setErro("Informe o procedimento (ex.: Refrativa AO).");
+    if (!cobranca && "erro" in pag) return setErro(pag.erro);
     if (valor <= 0) return setErro(cobranca ? "Informe o que o médico deve (taxa de sala, lente…)." : "Informe o valor total da cirurgia.");
     if (taxaPct === null) return setErro(`Não há taxa cadastrada para ${n}x. Cadastre na aba "Regras e taxas".`);
     for (const [i, c] of custos.entries()) {
@@ -369,7 +380,8 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
     const { data, error } = await supabase.rpc("repasse_lancar", { p: {
       venda_id: venda?.id ?? null, conta_id: conta, paciente_id: pac?.id ?? null, profissional_id: f.profissional_id, procedimento_id: f.procedimento_id || null,
       regra: f.regra, procedimento: f.procedimento.trim(), data_cirurgia: f.data_cirurgia || null, data_pagamento: f.data_pagamento, valor_total: valor,
-      forma_pagamento: f.forma, parcelas: n, observacoes: f.observacoes.trim() || null,
+      forma_pagamento: partes ? "misto" : f.forma, parcelas: partes && !("erro" in pag) ? pag.parcelas : n, pagamentos: partes,
+      observacoes: f.observacoes.trim() || null,
       custos: custos.map((c, i) => ({ tipo: c.tipo, descricao: c.descricao.trim(), valor: custosNum[i],
         favorecido_profissional_id: c.favorecido_profissional_id || null, favorecido_nome: c.favorecido_nome.trim() || null })),
     } });
@@ -432,7 +444,7 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
         ) : <BuscaPaciente aoEscolher={setPac} />}
       </div>
       {!cobranca && <><div className="grade g3">
-        <Campo rotulo="Valor total da cirurgia (R$)"><input inputMode="decimal" value={f.valor} onChange={set("valor")} placeholder="ex.: 4820,00" /></Campo>
+        <Campo rotulo={extras.length ? "Valor da 1ª forma (R$)" : "Valor total da cirurgia (R$)"}><input inputMode="decimal" value={f.valor} onChange={set("valor")} placeholder="ex.: 4820,00" /></Campo>
         <Campo rotulo="Forma de pagamento">
           <select value={f.forma} onChange={set("forma")}>{Object.entries(FORMAS_REPASSE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
         </Campo>
@@ -444,6 +456,7 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
           </Campo>
         ) : <span />}
       </div>
+      <OutrasFormas extras={extras} setExtras={setExtras} valorPrincipal={f.valor} />
       <Campo rotulo={f.forma === "credito" ? "Data da venda no cartão" : "Data do pagamento"}><input type="date" style={{ maxWidth: 180 }} value={f.data_pagamento} onChange={set("data_pagamento")} /></Campo>
       </>}
       <Campo rotulo="Observações (opcional)"><input value={f.observacoes} onChange={set("observacoes")} /></Campo>
@@ -462,7 +475,7 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
             <tbody>
               <tr><td>Valor total da venda</td><td style={num}>{fmtMoeda(valor)}</td></tr>
               {f.regra === "geral" && <tr><td>Imposto ({pct(base.cfg.imposto_pct)} do total)</td><td style={num}>− {fmtMoeda(prev.imposto)}</td></tr>}
-              {taxaPct! > 0 && <tr><td>Taxa do cartão ({pct(taxaPct!)} do total{f.forma === "credito" && n > 1 ? ", com antecipação" : ""})</td><td style={num}>− {fmtMoeda(prev.taxa)}</td></tr>}
+              {taxaPct! > 0 && <tr><td>Taxa do cartão ({partes ? "somada parte a parte" : `${pct(taxaPct!)} do total`}{!partes && f.forma === "credito" && n > 1 ? ", com antecipação" : ""})</td><td style={num}>− {fmtMoeda(prev.taxa)}</td></tr>}
               {custos.map((c, i) => <tr key={i}><td>{c.descricao || TIPOS_CUSTO[c.tipo]}{(() => { const q = custoDaClinica(c.tipo) ? "" : c.favorecido_profissional_id ? nomePor(base.medicos, c.favorecido_profissional_id) : c.favorecido_nome.trim(); return q && q !== c.descricao ? ` (${q})` : ""; })()}</td><td style={num}>− {fmtMoeda(custosNum[i] ?? 0)}</td></tr>)}
               {f.regra === "geral" ? <>
                 <tr><td className="muted">Honorários (o que sobra)</td><td style={num} className="muted">{fmtMoeda(prev.sobra)}</td></tr>
@@ -471,6 +484,7 @@ function NovoRepasse({ base, contaId, venda, aoFechar, aoCriar }: {
               </> : <tr><td><b>Médico (sem imposto e sem os 20%)</b></td><td style={num}><b>{fmtMoeda(prev.medico)}</b></td></tr>}
             </tbody>
           </table>
+          {partes && <p className="pequeno">Pagamento em mais de uma forma: {descreverForma("misto", 1, partes)}. A parte à vista (dinheiro, PIX, débito) é paga ao médico no dia da cirurgia; cada cartão de crédito segue o fechamento do dia 20 / pagamento no dia 25.</p>}
           {n > 1 && (
             <p className="pequeno">O médico recebe <b>{fmtMoeda(prev.medParc[0])}</b> por parcela, conforme cada uma cai
               {prev.medParc[n - 1] !== prev.medParc[0] && <> (a última leva a sobra de centavos: {fmtMoeda(prev.medParc[n - 1])})</>}.</p>
@@ -559,7 +573,7 @@ export function RepasseDetalhe() {
               <tr><td><b>{r.profissionais?.nome} deve à clínica</b></td><td style={num}><b>{fmtMoeda(r.valor_total)}</b></td></tr>
               <tr><td className="muted">Situação</td><td style={num} className="muted">{ps.every((p) => p.recebido_em) ? `pago em ${fmtData(ps[0]?.recebido_em)}` : "a receber"}</td></tr>
             </> : <>
-            <tr><td>Valor da cirurgia · {FORMAS_REPASSE[r.forma_pagamento]}{r.parcelas > 1 ? ` em ${r.parcelas}x` : ""}</td><td style={num}><b>{fmtMoeda(r.valor_total)}</b></td></tr>
+            <tr><td>Valor da cirurgia · {descreverForma(r.forma_pagamento, r.parcelas, r.pagamentos)}</td><td style={num}><b>{fmtMoeda(r.valor_total)}</b></td></tr>
             {(r.regra ?? "geral") === "geral" && <tr><td>Imposto ({pct(r.imposto_pct)} do total)</td><td style={num}>{fmtMoeda(r.imposto_total)}</td></tr>}
             {r.taxa_interna_pct > 0 && <tr><td>Taxa do cartão ({pct(r.taxa_interna_pct)} do total)</td><td style={num}>{fmtMoeda(r.taxa_interna_total)}</td></tr>}
             {cs.map((c) => <tr key={c.id}><td>{c.descricao}{favorecido(c) && <span className="muted"> · {favorecido(c)}</span>}</td><td style={num}>{fmtMoeda(c.valor)}</td></tr>)}
@@ -620,7 +634,7 @@ export function RepasseDetalhe() {
               {ps.map((p) => (
                 <tr key={p.id}>
                   <td>{p.numero}/{r.parcelas}</td>
-                  <td>{fmtData(p.data_prevista)}</td>
+                  <td>{fmtData(p.data_prevista)}{r.forma_pagamento === "misto" && <div className="muted pequeno">{p.forma === "credito" ? "cartão de crédito" : "à vista"}</div>}</td>
                   <td style={num}>{fmtMoeda(p.valor ?? Number(p.imposto) + Number(p.taxa_interna ?? 0) + Number(p.centro_cirurgico) + Number(p.medico ?? 0))}</td>
                   <td style={num}>{fmtMoeda(p.imposto)}</td>
                   <td style={num}>{fmtMoeda(p.taxa_interna)}</td>
@@ -727,7 +741,7 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
     const cab = ["Medico", "Repasse", "Procedimento", "Cirurgia", "Pagamento", "Parcela", "Cai na conta em", "Valor", "Imposto", "Taxa cartao", "Clinica", "Medico", "Medico recebe em"];
     const v = (x: number | null) => (x === null ? "" : Number(x).toFixed(2).replace(".", ","));
     const corpo = linhas.map((l) => [l.repasses.profissionais?.nome ?? "", l.repasses.numero, l.repasses.procedimento, l.repasses.data_cirurgia,
-      FORMAS_REPASSE[l.repasses.forma_pagamento], `${l.numero}/${l.repasses.parcelas}`, l.recebido_em ?? "", v(l.valor), v(l.imposto),
+      descreverForma(l.repasses.forma_pagamento, 1), `${l.numero}/${l.repasses.parcelas}`, l.recebido_em ?? "", v(l.valor), v(l.imposto),
       v(l.taxa_interna), v(l.centro_cirurgico), v(l.medico), l.pago_medico_em ?? ""]);
     const csv = [cab, ...corpo].map((r) => r.map((x) => `"${String(x).replace(/"/g, '""')}"`).join(";")).join("\r\n");
     const a = document.createElement("a");
@@ -787,7 +801,7 @@ function RelatorioMedicos({ medicos }: { medicos: Medico[] }) {
                   {g.ls.map((l) => (
                     <tr key={l.id}><td>{fmtData(l.recebido_em)}</td><td><Link to={`/repasse/${l.repasse_id}`}>nº {l.repasses.numero}</Link></td>
                       <td>{l.repasses.pacientes ? nomeExibicao(l.repasses.pacientes) : "—"}<div className="muted pequeno">{l.repasses.procedimento} · {fmtData(l.repasses.data_cirurgia)}</div></td>
-                      <td>{l.numero}/{l.repasses.parcelas}<div className="muted pequeno">{FORMAS_REPASSE[l.repasses.forma_pagamento]}</div></td>
+                      <td>{l.numero}/{l.repasses.parcelas}<div className="muted pequeno">{descreverForma(l.repasses.forma_pagamento, 1)}</div></td>
                       <td style={num}>{fmtMoeda(l.valor)}</td><td style={num}>{fmtMoeda(l.imposto)}</td><td style={num}>{fmtMoeda(l.taxa_interna)}</td>
                       <td style={num}>{fmtMoeda(l.centro_cirurgico)}</td><td style={num}><b>{fmtMoeda(l.medico)}</b></td>
                       <td><DataPagamento d={l.pago_medico_em} /></td></tr>
@@ -1267,7 +1281,7 @@ function ParaConferir({ base, aoMudar }: { base: Awaited<ReturnType<typeof carre
                 <td>{fmtData(v.criado_em)}<div className="muted pequeno">{v.criador?.nome}</div></td>
                 <td>{v.pacientes ? nomeExibicao(v.pacientes) : "—"}<div className="muted pequeno">Pront. {v.pacientes?.numero_prontuario}</div></td>
                 <td><b>{v.profissionais?.nome}</b><div className="muted pequeno">{v.procedimento}{v.tipo === "lente" && " · só a lente (convênio)"}</div></td>
-                <td>{FORMAS_REPASSE[v.forma_pagamento]}{v.parcelas > 1 && ` ${v.parcelas}x`}<div className="muted pequeno">{fmtData(v.data_pagamento)}</div></td>
+                <td>{descreverForma(v.forma_pagamento, v.parcelas, v.pagamentos)}<div className="muted pequeno">{fmtData(v.data_pagamento)}</div></td>
                 <td style={num}>{fmtMoeda(v.valor_total)}{v.anestesista_direto ? <div className="muted pequeno">+ {fmtMoeda(v.anestesista_direto)} pago direto ao anestesista</div> : null}</td>
                 <td>{v.status === "devolvida" ? <><Etiqueta cor="vermelho">devolvida</Etiqueta><div className="muted pequeno">{v.motivo}</div></> : <Etiqueta cor="amarelo">aguardando</Etiqueta>}</td>
                 <td>{v.status === "aguardando" && <div className="linha" style={{ gap: 4 }}>

@@ -1854,3 +1854,23 @@ venda aguardando, e as outras abas mostram um aviso com botão para ir até elas
   verde "💬 WhatsApp" abre a conversa numa janela lateral por cima da Agenda (`components/WhatsAppRapido.tsx`, reusa o
   `Chat`). Acha a conversa pelo prontuário ou pelo telefone do cadastro; sem conversa, abre a "Nova conversa" já com o
   paciente (modelo aprovado). Só aparece para quem responde algum número; só mostra números ligados à API.
+
+## 26/11/2026 — Avisos do caixa da Orientação (pedido do Dr. Gelson)
+`app/src/components/AvisoCaixaOrientacao.tsx`, para quem atende a Orientação (Vendas, Caixa e Agenda): a partir das 17h com o
+caixa de hoje aberto → faixa amarela "não esqueça de fechar" (explica que o Luciano pode não estar e quem mais confere);
+caixa de dia anterior aberto → faixa vermelha "feche primeiro" (passo a passo); ao fechar → mensagem verde (o que acontece,
+quem confere, abrir normalmente no dia seguinte). Quem confere vem do cadastro (caixa_conferir). Guia "Como funciona" ganhou
+2 itens no "E se…?" (sem mudar a versão, a contagem de leituras não recomeça).
+- (0187, pedido do Dr. Gelson) MAIS DE UMA FORMA DE PAGAMENTO na mesma venda/repasse. Caso real: venda nº 6 (injeção do
+  Dr. Gelson) paga R$ 1.300 dinheiro + R$ 900 PIX — estava como R$ 1.300 dinheiro; corrigida para total R$ 2.200 ('misto').
+  `forma_pagamento = 'misto'` + `pagamentos` jsonb [{forma, parcelas, valor}] em orientacao_vendas e repasses; total = soma.
+  Caixa: só a parte em dinheiro (`interno.pagamentos_dinheiro`). Repasse: taxa do cartão parte a parte
+  (`interno.pagamentos_taxa`); parcelas = 1 "à vista" (dinheiro+PIX+débito, médico recebe no dia da cirurgia) + as de cada
+  crédito (fechamento 20/pagamento 25); imposto, custos e clínica proporcionais; `repasse_parcelas.forma` (credito/avista)
+  usado nas datas de pagamento e em "Cirurgias do dia". Telas: botão "➕ Pagou com mais de uma forma" na venda e no repasse
+  (`app/src/components/OutrasFormas.tsx`); listas mostram "Dinheiro R$ 1.300 + PIX R$ 900".
+
+## 27/11/2026 — Aviso de novidade (uma vez)
+`app/src/components/Novidades.tsx` (no topo de todas as telas): aviso azul mostrado UMA vez a quem interessa, some no
+"Entendi" (conta em guia_leituras). Primeiro aviso: "agora dá para registrar mais de uma forma de pagamento" — para quem
+atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). Novidade nova = nova entrada na lista NOVIDADES.
