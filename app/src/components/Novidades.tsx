@@ -8,6 +8,16 @@ interface Novidade { id: string; para: (eu: Profissional | null) => boolean; tex
 
 const NOVIDADES: Novidade[] = [
   {
+    id: "novidade_whatsapp_enviei_errado", // 27/11/2026, pedido da dona (Alessandra mandou um arquivo errado)
+    para: (eu) => !!eu?.orientacao_cirurgica,
+    texto: (nome) => <>
+      <b>🆕 Novidade, {nome}: mandou um arquivo errado no WhatsApp?</b> O WhatsApp oficial não deixa apagar, mas agora,
+      embaixo da foto/áudio/documento que você enviou, tem o botão <b>“⚠️ Enviei errado”</b>: ele manda um aviso pedindo
+      para o paciente desconsiderar, citando o arquivo. Depois é só mandar o certo pelo 📎. Em texto, o botão é
+      <b> “✏️ Corrigir”</b>. Dica: confira o arquivo na pré-visualização antes de clicar em Enviar.
+    </>,
+  },
+  {
     id: "novidade_mais_formas_pagamento", // 27/11/2026, pedido do Dr. Gelson
     para: (eu) => !!eu?.orientacao_cirurgica || eu?.funcao === "faturamento",
     texto: (nome) => <>

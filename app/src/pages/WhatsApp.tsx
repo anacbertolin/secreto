@@ -408,7 +408,8 @@ export function Chat(props: {
   useEffect(() => { if (pendentes.length) fim.current?.scrollIntoView({ block: "end" }); }, [pendentes.length]);
   async function enviarTexto(t0: string) {
     const corr = corrigindo;
-    const t = corr && !/^\*?corre[cç][aã]o/i.test(t0) ? `✏️ *Correção:*\n${t0}` : t0;
+    // Texto corrigido ganha "Correção:"; aviso de arquivo enviado por engano vai como escrito
+    const t = corr && corr.tipo === "texto" && !/^\*?corre[cç][aã]o/i.test(t0) ? `✏️ *Correção:*\n${t0}` : t0;
     setCorrigindo(null);
     const temp: Mensagem = {
       id: "tmp-" + Date.now() + Math.random().toString(36).slice(2, 6), conversa_id: c.id, direcao: "enviada", tipo: "texto",
@@ -633,10 +634,15 @@ export function Chat(props: {
         {(msgs.dados ?? []).map((m) => {
           const dia = fmtData(m.quando);
           const sep = dia !== diaAnterior ? ((diaAnterior = dia), <div key={"d" + m.id} className="wa-dia">{dia}</div>) : null;
-          const podeCorrigir = podeResponder && aberta && m.direcao === "enviada" && m.tipo === "texto" && !!m.wa_id && m.situacao !== "falhou";
+          const podeCorrigir = podeResponder && aberta && m.direcao === "enviada" && !!m.wa_id && m.situacao !== "falhou" && m.tipo !== "modelo";
           return [sep, <Balao key={m.id} m={m} quem={nomeEquipe(m.enviado_por)} podeTranscrever={podeResponder} destacada={m.id === props.destaque}
             corrigida={!!m.wa_id && corrigidas.has(m.wa_id)}
-            aoCorrigir={podeCorrigir ? () => { setCorrigindo(m); setTexto(m.texto ?? ""); window.setTimeout(() => caixa.current?.focus(), 0); } : undefined} />];
+            aoCorrigir={podeCorrigir ? () => {
+              setCorrigindo(m);
+              // Foto/áudio/documento: a Meta não deixa apagar — manda um aviso citando o arquivo errado
+              setTexto(m.tipo === "texto" ? (m.texto ?? "") : `⚠️ *Atenção:* ${m.tipo === "audio" ? "o áudio" : m.tipo === "imagem" ? "a foto" : m.tipo === "video" ? "o vídeo" : "o arquivo"} acima foi enviado por engano. Por favor, desconsidere.`);
+              window.setTimeout(() => caixa.current?.focus(), 0);
+            } : undefined} />];
         })}
         {pendentes.map((m) => <Balao key={m.id} m={m} quem={nomeEquipe(m.enviado_por)} podeTranscrever={false} />)}
         <div ref={fim} />
@@ -693,8 +699,13 @@ export function Chat(props: {
               )}
               {corrigindo && (
                 <div className="wa-corrigindo">
-                  <span>✏️ <b>Corrigindo:</b> “{(corrigindo.texto ?? "").slice(0, 90)}{(corrigindo.texto ?? "").length > 90 ? "…" : ""}”
-                    <span className="pequeno muted"> — o paciente recebe o texto certo como resposta à mensagem errada.</span></span>
+                  {corrigindo.tipo === "texto" ? (
+                    <span>✏️ <b>Corrigindo:</b> “{(corrigindo.texto ?? "").slice(0, 90)}{(corrigindo.texto ?? "").length > 90 ? "…" : ""}”
+                      <span className="pequeno muted"> — o paciente recebe o texto certo como resposta à mensagem errada.</span></span>
+                  ) : (
+                    <span>⚠️ <b>Arquivo enviado por engano</b>{corrigindo.midia_nome ? `: ${corrigindo.midia_nome}` : ""}
+                      <span className="pequeno muted"> — o WhatsApp oficial não deixa apagar; o aviso abaixo vai citando o arquivo. Depois, envie o arquivo certo pelo 📎.</span></span>
+                  )}
                   <button className="mini" onClick={() => { setCorrigindo(null); setTexto(""); }}>Cancelar</button>
                 </div>
               )}
@@ -982,8 +993,10 @@ function Balao({ m, quem, podeTranscrever, destacada, aoCorrigir, corrigida }: {
         {enviada && !m.enviado_por && m.tipo === "texto" && !m.importada && <span>Resposta automática · </span>}
         {m.importada ? fmtDataHora(m.quando) : fmtHora(m.quando)}
         {enviada && <span className={"wa-sit " + m.situacao} title={m.situacao}> {ICONE_SITUACAO[m.situacao] ?? ""}</span>}
-        {corrigida && <span className="wa-corrigida"> · ✏️ corrigida abaixo</span>}
-        {aoCorrigir && <button className="wa-corrigir" title="Mandar a versão certa desta mensagem" onClick={aoCorrigir}>✏️ Corrigir</button>}
+        {corrigida && <span className="wa-corrigida"> · {m.tipo === "texto" ? "✏️ corrigida abaixo" : "⚠️ enviado por engano (aviso abaixo)"}</span>}
+        {aoCorrigir && (m.tipo === "texto"
+          ? <button className="wa-corrigir" title="Mandar a versão certa desta mensagem" onClick={aoCorrigir}>✏️ Corrigir</button>
+          : <button className="wa-corrigir" title="Avisar o paciente que este arquivo foi enviado por engano" onClick={aoCorrigir}>⚠️ Enviei errado</button>)}
       </div>
       {m.situacao === "falhou" && m.erro && <div className="pequeno" style={{ color: "var(--perigo)" }}>Não enviada: {m.erro}</div>}
     </div>
