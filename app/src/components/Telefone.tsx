@@ -83,7 +83,8 @@ export default function Telefone() {
   }, [c]);
   useEffect(() => { if (tel?.ultimaEncerrada) setNota(""); }, [tel?.ultimaEncerrada]);
 
-  if (!tel || tel.estado === "sem_ramal" || tel.estado === "carregando") return null;
+  // Sem telefone ligado (sem ramal, desligado na administração ou faltando configurar): o botão do canto não aparece
+  if (!tel || tel.estado === "sem_ramal" || tel.estado === "carregando" || tel.estado === "desligado" || tel.estado === "incompleto") return null;
   const est = ROTULO_ESTADO[tel.estado] ?? ROTULO_ESTADO.conectando;
 
   async function salvarNota() {
@@ -187,8 +188,6 @@ export default function Telefone() {
         <button className="sutil" onClick={() => setAberto(false)} aria-label="Fechar">✕</button>
       </div>
       {tel.erro && <div className="tel-erro">{tel.erro}</div>}
-      {tel.estado === "desligado" && <div className="tel-sub">A administração ainda não ligou o telefone do sistema (Cadastros → Telefone).</div>}
-      {tel.estado === "incompleto" && <div className="tel-sub">Falta cadastrar o endereço da central ou a senha deste ramal (Cadastros → Telefone).</div>}
       {pronto && (
         <>
           <form className="linha" style={{ marginTop: 10, gap: 6 }} onSubmit={(e) => { e.preventDefault(); void tel.ligar(numero); }}>
