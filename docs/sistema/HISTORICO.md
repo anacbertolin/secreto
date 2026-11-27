@@ -1874,3 +1874,9 @@ quem confere, abrir normalmente no dia seguinte). Quem confere vem do cadastro (
 `app/src/components/Novidades.tsx` (no topo de todas as telas): aviso azul mostrado UMA vez a quem interessa, some no
 "Entendi" (conta em guia_leituras). Primeiro aviso: "agora dá para registrar mais de uma forma de pagamento" — para quem
 atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). Novidade nova = nova entrada na lista NOVIDADES.
+
+### 27/11/2026 — Api4Com desligada; botão do telefone some sem telefone ligado
+- Pedido da dona: não usar mais a Api4Com (vai tentar a Telecall) e o botão "📞 Disponível" do canto tampava o Enviar.
+- `telefonia_config.ligado = false` (feito no banco; a configuração da Api4Com e o ramal 1000 ficam guardados, desligados).
+- O botão do canto (`app/src/components/Telefone.tsx`) agora só aparece quando há telefone de fato: some com o telefone
+  desligado na administração, faltando configurar ou sem ramal. Volta sozinho quando a Telecall for configurada e ligada.
