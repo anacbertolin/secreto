@@ -128,6 +128,7 @@ create temp table _ct as
 select c.*,
   legacy_micrologos.novo_id('paciente', c.id_paciente) as pac,
   coalesce(legacy_micrologos.data(c.data_entrada), legacy_micrologos.data(c.data_inclusao)) as dt,
+  nullif(btrim(c.tiss_data_conferido), '') is not null as tiss_conferido,
   pl.id as plano, pl.convenio_id as conv,
   -- consultas da Unimed não entram em cobrança (o convênio não exige XML das consultas; dona, 26/11)
   exists (select 1 from public.convenios cv where cv.id = pl.convenio_id and cv.nome ilike 'unimed%')
@@ -157,6 +158,8 @@ select c.*,
     when c.em_cob and c.cob_data < (select corte_pago from _par) then 'paga'
     when c.em_cob then 'faturada'
     when c.unimed_consulta and c.dt >= (select corte_pago from _par) then 'pronta'
+    -- TISS conferido no Micrologos (= "faturado" na recepção) -> Pronta p/ cobrança; sem conferir -> Em conferência (dona, 26/11)
+    when c.dt >= (select corte_pago from _par) and c.tiss_conferido then 'pronta'
     when c.dt >= (select corte_pago from _par) then 'aberta'
     else 'paga' end as st,
   c.conv is not null and not (c.em_cob and c.cob_data >= (select corte_pago from _par))
