@@ -1986,3 +1986,5 @@ atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). 
   classificaria o antigo como Marketing): "Olá, {{1}}! Aqui é da Consumed Clínica de Olhos, sobre o seu atendimento que está
   em andamento conosco. Para darmos continuidade, por favor responda esta mensagem." — `whatsapp_modelos.corpo` atualizado.
   Quando aprovados, a dona liga os dois em WhatsApp → Modelos.
+- (28/11) **DKIM ativo** (TXT `google._domainkey` no Registro.br, 2048 bits). O painel do Google não deixou trocar para um
+  plano mais barato: continua Business Starter mensal. Falta: senha definitiva da clinica@, duas etapas, ligar ao sistema.
