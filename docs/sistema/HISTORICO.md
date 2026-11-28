@@ -1975,3 +1975,14 @@ atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). 
   A dona quer avaliar um plano anual mais barato antes de 11/12 (conferir se mantém Gmail com domínio e acesso pela API).
 - Falta: senha definitiva da clinica@, verificação em duas etapas nas duas contas, DKIM, e ligar ao sistema
   (Google Cloud + Cadastros → E-mail da clínica + "Enviar e-mail como" com os 15 endereços).
+
+### 28/11/2026 — Central de atendimento ligada na Meta ("WhatsApp da clínica")
+- Número novo **+55 21 97873-4616**, nome de exibição "Consumed Clínica de Olhos", na MESMA WABA da Orientação
+  (1459910998987910); phone number ID **1412700881936910** salvo pela dona em `WHATSAPP_PHONE_NUMBER_ID`. PIN de duas
+  etapas definido pela dona (não guardado). Número da Orientação (+55 21 96724-7984) não mudou.
+- Teste: "Oi" da dona em 27/11 21:08 chegou no setor `clinica` (recebimento OK). Não foi preciso redeploy: as funções
+  leem `WHATSAPP_PHONE_NUMBER_ID` a cada chamada (webhook separa os setores por ele; o envio usa ele no setor clínica).
+- Modelos em análise na Meta: `lembrete_consulta` (texto igual ao do banco) e `retomar_conversa` com TEXTO NOVO (a Meta
+  classificaria o antigo como Marketing): "Olá, {{1}}! Aqui é da Consumed Clínica de Olhos, sobre o seu atendimento que está
+  em andamento conosco. Para darmos continuidade, por favor responda esta mensagem." — `whatsapp_modelos.corpo` atualizado.
+  Quando aprovados, a dona liga os dois em WhatsApp → Modelos.
