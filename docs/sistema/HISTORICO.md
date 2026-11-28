@@ -1964,3 +1964,14 @@ atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). 
 - **Spam:** botão "🚫 Spam" na lista (ações `spam_listar` / `nao_e_spam` da função: mostra o que o Google segurou nos
   últimos 30 dias, só das caixas da pessoa; "Não é spam" tira do spam no Google e traz para a caixa) e botão
   "🚫 É spam" na conversa (`marcar_spam`: manda para o spam do Google, ensinando o filtro, e arquiva).
+
+## 28/11/2026 — E-mail: Google Workspace contratado (resumo da dona)
+- Domínio `cmdolhos.com.br` verificado no Google (27/11 ~21h), Gmail ativo. DNS no Registro.br: TXT de verificação,
+  MX `smtp.google.com` (prioridade 1), SPF `v=spf1 include:_spf.google.com ~all`, DMARC `p=none` (relatórios para
+  diretoria@). **DKIM ainda falta.** `consumedolhos.com.br` e Hostinger intocados.
+- Contas: `diretoria@` (administradora) e `clinica@` (Equipe Clínica, senha provisória — definir a definitiva ANTES de
+  conectar ao sistema, porque trocar a senha depois derruba a ligação). Os 15 endereços alternativos foram criados na clinica@.
+- Plano Business Starter, flexível, 2 usuários; teste grátis até **11/12/2026**; depois R$ 39,20/usuário/mês + impostos.
+  A dona quer avaliar um plano anual mais barato antes de 11/12 (conferir se mantém Gmail com domínio e acesso pela API).
+- Falta: senha definitiva da clinica@, verificação em duas etapas nas duas contas, DKIM, e ligar ao sistema
+  (Google Cloud + Cadastros → E-mail da clínica + "Enviar e-mail como" com os 15 endereços).
