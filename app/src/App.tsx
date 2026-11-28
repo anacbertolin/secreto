@@ -64,7 +64,7 @@ const MENU: ItemMenu[] = [
   { para: "/pacientes", rotulo: "Pacientes", icone: "👤" },
   // Central de atendimento (23/11): quem atende usa só ela (WhatsApp + telefone + conversa interna);
   // médicos, enfermagem e faturamento entram nela para a conversa interna e consultam o WhatsApp no item abaixo.
-  { para: "/central", rotulo: "Central de atendimento", icone: "🎧", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
+  { para: "/central", rotulo: "Central de agendamento telefônico e WhatsApp", icone: "🎧", funcoes: ["medico", "enfermagem", "recepcao", "admin", "faturamento"] },
   // E-mail da clínica (0190): cada um vê só as suas caixas (a tela confere); admin vê todas
   { para: "/email", rotulo: "E-mail", icone: "✉️" },
   { para: "/whatsapp", rotulo: "WhatsApp (consulta)", icone: "💬", funcoes: ["medico", "enfermagem", "faturamento"] },
@@ -174,7 +174,6 @@ export default function App() {
   }
 
   let grupoAtual = "";
-  // Central de atendimento: tela cheia, sem o menu do sistema (igual ao Talklogos)
   return (
     <TelefoneProvider>
     <CentralProvider>

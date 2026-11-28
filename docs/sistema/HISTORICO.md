@@ -1988,3 +1988,7 @@ atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). 
   Quando aprovados, a dona liga os dois em WhatsApp → Modelos.
 - (28/11) **DKIM ativo** (TXT `google._domainkey` no Registro.br, 2048 bits). O painel do Google não deixou trocar para um
   plano mais barato: continua Business Starter mensal. Falta: senha definitiva da clinica@, duas etapas, ligar ao sistema.
+
+### 28/11/2026 — Nome da Central
+- Pedido da dona: o item do menu e o título da tela passam a se chamar **"Central de agendamento telefônico e WhatsApp"**
+  (antes "Central de atendimento"). Rota continua `/central`.

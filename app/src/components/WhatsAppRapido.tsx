@@ -115,7 +115,7 @@ export function WhatsAppRapido({ paciente, aoFechar }: { paciente: PacienteWA; a
         </div>
         {conversa && !procurando && (
           <div className="pequeno muted" style={{ marginTop: 6 }}>
-            Esta é a mesma conversa da {setor === "orientacao" ? "aba Orientação cirúrgica" : "Central de atendimento"} — tudo fica guardado lá também.
+            Esta é a mesma conversa da {setor === "orientacao" ? "aba Orientação cirúrgica" : "Central de agendamento"} — tudo fica guardado lá também.
             {" "}<button className="mini" onClick={() => setVersao((v) => v + 1)}>↻ Atualizar</button>
           </div>
         )}
