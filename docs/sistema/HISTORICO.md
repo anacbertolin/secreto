@@ -1990,5 +1990,5 @@ atende a Orientação (Alessandra, Andrea) e o faturamento (Luciano, Soraline). 
   plano mais barato: continua Business Starter mensal. Falta: senha definitiva da clinica@, duas etapas, ligar ao sistema.
 
 ### 28/11/2026 — Nome da Central
-- Pedido da dona: o item do menu e o título da tela passam a se chamar **"Central de agendamento telefônico e WhatsApp"**
+- Pedido da dona: o item do menu e o título da tela passam a se chamar **"Agendamento telefônico e WhatsApp"** (primeiro tentamos "Central de agendamento telefônico e WhatsApp", ficou grande)
   (antes "Central de atendimento"). Rota continua `/central`.

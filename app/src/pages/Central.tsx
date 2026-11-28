@@ -48,7 +48,7 @@ export default function Central({ setor: setorFixo }: { setor?: SetorWA } = {}) 
   const consulta = !atende && !!setorFixo && podeVerSetor(eu, setor);
   const veCanais = atende || consulta;
   const ferramentas = setor === "orientacao" ? "/orientacao-cirurgica/ferramentas" : "/whatsapp";
-  const titulo = setor === "orientacao" ? "Orientação cirúrgica" : "Central de agendamento telefônico e WhatsApp";
+  const titulo = setor === "orientacao" ? "Orientação cirúrgica" : "Agendamento telefônico e WhatsApp";
   const [visao, setVisao] = useState<Visao>("conversas");
   const [aba, setAba] = useState<Aba>(veCanais ? "canais" : "interno");
   const [abertaId, setAbertaId] = useState<string | null>(params.get("conversa"));
