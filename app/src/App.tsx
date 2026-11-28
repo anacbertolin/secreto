@@ -68,7 +68,7 @@ const MENU: ItemMenu[] = [
   // E-mail da clínica (0190): cada um vê só as suas caixas (a tela confere); admin vê todas
   { para: "/email", rotulo: "E-mail", icone: "✉️" },
   { para: "/whatsapp", rotulo: "WhatsApp (consulta)", icone: "💬", funcoes: ["medico", "enfermagem", "faturamento"] },
-  { para: "/orientacao-cirurgica", rotulo: "Orientação cirúrgica (consulta)", icone: "🩹", ve: (eu) => podeVerSetor(eu, "orientacao") && !eu?.orientacao_cirurgica },
+  { para: "/orientacao-cirurgica", rotulo: "Orientação cirúrgica (WhatsApp)", icone: "🩹", ve: (eu) => podeVerSetor(eu, "orientacao") && !eu?.orientacao_cirurgica },
   // Ligações: dentro da Central de atendimento, aba Telefone (pedido da dona, 23/11); a página /ligacoes continua para consulta
   { para: "/ligacoes", rotulo: "Ligações (consulta)", icone: "☎️", funcoes: ["medico", "enfermagem", "faturamento"] },
   { para: "/whatsapp/assistente", rotulo: "Assistente do WhatsApp", icone: "🤖", funcoes: ["recepcao", "admin"] },
